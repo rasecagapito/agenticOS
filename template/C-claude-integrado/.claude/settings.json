@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -Command \"$date = Get-Date -Format 'yyyy-MM-dd HH:mm'; $content = \\\"# Sessão $date\\nSessão encerrada. Executar /wrapup para consolidar aprendizados.\\\"; $path = Join-Path $PSScriptRoot '../memory/history'; if(!(Test-Path $path)){New-Item -ItemType Directory -Force -Path $path}; Set-Content -Path (Join-Path $path \\\"$(Get-Date -Format 'yyyy-MM-dd-HH')-sessao.md\\\") -Value $content\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Write(memory/**)",
+      "Write(projects/**)",
+      "Bash(git status)",
+      "Bash(git log*)",
+      "Bash(git diff*)"
+    ],
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push --force*)"
+    ]
+  }
+}
