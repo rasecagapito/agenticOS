@@ -1,0 +1,40 @@
+# Agentic OS v1.0.0
+
+Primeiro release do plugin **Agentic OS** para Claude Code — metodologia de organização
+de ficheiros que permite a um agente IA operar com autonomia entre sessões: elimina cold
+start, otimiza tokens e constrói memória persistente.
+
+## Instalação
+
+```
+/plugin marketplace add rasecagapito/agenticOS
+/plugin install agentic-os@agentic-os
+```
+
+Reiniciar o Claude Code após instalar.
+
+> Plugins do Claude Code instalam via `/plugin`, **não** via `npm install`.
+
+## Inclui
+
+- **Skill `agentic-os`** — monta (projeto novo) ou adapta (projeto existente) ao padrão Agentic OS
+- **3 templates**:
+  - `A-generico` — conteúdo/marketing (workers: roteirista, pesquisador, analista)
+  - `B-saas-n8n` — SaaS + automações n8n (workers: developer, workflow-designer, arquiteto, qa)
+  - `C-claude-integrado` — SaaS integrado com Claude Code Superpowers
+- **As 5 camadas**: Identity (`CLAUDE.md`) · Knowledge (`context/`) · Memory (`memory/`) · Workers (`workers/`) · Automation (`automation/`)
+- **Change workflow**: `/propose` → `/worker` → `/wrapup`
+  - cada mudança = pasta `changes/<nome>/` com proposal + tasks + design
+  - delta semi-automático em `context/` (`+` adicionar · `~` modificar · `-` remover), humano confirma
+  - ponte brainstorming → artefatos
+- **Reorganização brownfield segura** (`/propose reorganize-<alvo>`): scan read-only → plano → aprovação → mover. Nunca deleta (quarentena), verifica referências, dry-run por defeito.
+- **Docs**: [`docs/CHANGE-WORKFLOW.md`](docs/CHANGE-WORKFLOW.md) — ciclo completo com exemplo `add-dark-mode`
+
+## Comandos
+
+| Comando | Ação |
+|---------|------|
+| `/propose <nome>` | Criar mudança estruturada |
+| `/worker [nome]` | Ativar especialista (executa a mudança ativa) |
+| `/wrapup` | Arquivar mudança + atualizar `context/` (delta) + memória |
+| `/status` | Estado atual do projeto |
