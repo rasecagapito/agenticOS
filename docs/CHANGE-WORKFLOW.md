@@ -94,6 +94,55 @@ Confirmar? [1 s/n] [2 s/n] [3 s/n]
 ```
 Aprovados → editados em context/. Pasta → changes/archive/. Registo em memory/.
 
+## Módulos / Domínios (opcional)
+
+Projetos com vários módulos de código (auth, billing, pagamentos…) podem organizar o
+conhecimento por **domínio**, em vez de ficheiros soltos. É **opt-in** — projetos pequenos
+continuam flat.
+
+### Estrutura modular
+
+```
+context/
+├── _global.md           # stack + convenções partilhadas
+├── auth/
+│   ├── produto.md        # o que o módulo faz
+│   └── arquitetura.md    # como funciona
+└── billing/
+    └── produto.md
+
+changes/
+├── auth-add-2fa/         # nome prefixado pelo módulo
+│   ├── proposal.md       # contém "## Módulo: auth"
+│   └── tasks.md
+└── billing-add-invoices/
+```
+
+### Regras
+
+| Peça | Regra |
+|------|-------|
+| `context/<modulo>/` | 1 subpasta por módulo; `_global.md` para o partilhado |
+| `changes/<modulo>-<feature>/` | nome prefixado; `proposal.md` declara `## Módulo: <nome>` |
+| Delta no `/wrapup` | mira `context/<modulo>/` do módulo declarado |
+| `workers/` | globais — carregam só `_global.md` + `context/<modulo>/` da tarefa |
+| `CLAUDE.md` | lista módulos (`@context/auth/`); carrega só o ativo → poupa tokens |
+
+### Deteção flat vs modular
+
+- `context/` tem subpastas → **modular**: comandos aplicam as regras acima.
+- `context/` só tem `.md` soltos → **flat**: comportamento normal, inalterado.
+
+### Exemplo: `/propose add-2fa` (projeto modular)
+
+```
+/propose add-2fa
+→ deteta modular (existem context/auth/, context/billing/)
+→ pergunta: "Que módulo? [auth/billing/novo]"   (resposta: auth)
+→ cria changes/auth-add-2fa/ com proposal contendo "## Módulo: auth"
+```
+No /wrapup, o delta sugere updates só em context/auth/.
+
 ## Reorganização de projetos existentes (brownfield)
 
 Reorganizar é uma mudança: `/propose reorganize-<alvo>`.
