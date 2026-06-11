@@ -28,6 +28,8 @@ Consolida a sessão atual. Executa em ordem:
    - **Sugerir deltas em `context/`** — analisar o que a mudança alterou e propor updates,
      SEM aplicar sozinho. Notação: `+` ADICIONAR · `~` MODIFICAR · `-` REMOVER.
      Apresentar cada ficheiro de context/ afetado e pedir confirmação item a item.
+     - Se a mudança declara `## Módulo: <nome>` (projeto modular), mirar as sugestões de
+       delta em `context/<modulo>/` (e `context/_global.md` se afetar o partilhado).
    - Aplicar **só** os deltas confirmados pelo humano.
    - Mover a pasta da mudança para `changes/archive/YYYY-MM-DD-<nome>/`.
    - Ver `docs/CHANGE-WORKFLOW.md` para o formato do delta.
