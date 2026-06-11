@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "project_type": "saas-n8n-superpowers",
+  "gates": {
+    "implementacao": [
+      "brainstorming completado e aprovado",
+      "plano escrito antes de código",
+      "verification-before-completion passou"
+    ],
+    "code_review": [
+      "/code-review executado",
+      "sem findings críticos",
+      "segurança verificada se relevante"
+    ],
+    "deploy_producao": [
+      "todos os gates de code_review passaram",
+      "testado em staging",
+      "migrations reversíveis confirmadas"
+    ],
+    "workflow_n8n": [
+      "n8n-validation-expert passou",
+      "error handler presente",
+      "testado em staging"
+    ]
+  },
+  "skills_obrigatorios": {
+    "antes_implementar": ["superpowers:brainstorming"],
+    "antes_merge": ["/code-review"],
+    "antes_publicar_n8n": ["anthropic-skills:n8n-validation-expert"],
+    "fim_sessao": ["anthropic-skills:consolidate-memory"]
+  }
+}

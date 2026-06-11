@@ -1,0 +1,19 @@
+{
+  "name": "agentic-os",
+  "description": "Marketplace do plugin Agentic OS",
+  "owner": {
+    "name": "rasecagapito",
+    "url": "https://github.com/rasecagapito"
+  },
+  "plugins": [
+    {
+      "name": "agentic-os",
+      "description": "Agentic OS — memória persistente, contexto modular, workers e change workflow para agentes IA.",
+      "version": "1.0.0",
+      "source": "./",
+      "author": {
+        "name": "rasecagapito"
+      }
+    }
+  ]
+}

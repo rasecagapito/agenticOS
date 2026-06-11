@@ -1,0 +1,13 @@
+{
+  "name": "agentic-os",
+  "version": "1.0.0",
+  "description": "Metodologia de organização de ficheiros que permite a um agente IA operar com autonomia entre sessões: elimina cold start, otimiza tokens e constrói memória persistente. Inclui templates, workers e change workflow.",
+  "author": {
+    "name": "rasecagapito",
+    "url": "https://github.com/rasecagapito"
+  },
+  "homepage": "https://github.com/rasecagapito/agenticOS",
+  "repository": "https://github.com/rasecagapito/agenticOS",
+  "license": "MIT",
+  "keywords": ["agentic", "memory", "context-engineering", "templates", "workflow", "claude-code"]
+}

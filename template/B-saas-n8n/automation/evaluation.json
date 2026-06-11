@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "project_type": "saas-n8n",
+  "schemas": {
+    "feature_implementation": {
+      "required": ["feature", "ficheiros_alterados", "migracao_necessaria", "testes_necessarios"],
+      "rules": [
+        "sem credenciais hardcoded",
+        "sem 'any' em TypeScript",
+        "migrations em ficheiro separado se necessário"
+      ]
+    },
+    "workflow_n8n": {
+      "required": ["workflow_nome", "trigger", "nodes", "error_handling", "credenciais_necessarias"],
+      "rules": [
+        "error_handling obrigatório",
+        "todos os nodes nomeados",
+        "sem credenciais hardcoded"
+      ]
+    },
+    "code_review": {
+      "required": ["ficheiro_revisado", "severidade_geral", "findings", "aprovado"],
+      "rules": [
+        "findings críticos bloqueiam aprovação",
+        "severidade geral reflete o pior finding"
+      ]
+    }
+  },
+  "gates": {
+    "deploy_producao": [
+      "code_review.aprovado == true",
+      "sem findings de severidade critica",
+      "migracao testada em staging"
+    ],
+    "workflow_ativacao": [
+      "testado em staging",
+      "error_handling presente",
+      "credenciais configuradas"
+    ]
+  }
+}

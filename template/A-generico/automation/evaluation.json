@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "schemas": {
+    "roteiro": {
+      "required": ["titulo", "gancho", "estrutura", "cta"],
+      "rules": [
+        "gancho deve ter menos de 150 caracteres",
+        "estrutura deve ter mínimo 3 blocos",
+        "cta deve ser único e claro"
+      ]
+    },
+    "analise": {
+      "required": ["periodo_analisado", "metricas_chave", "recomendacoes"],
+      "rules": [
+        "mínimo 3 recomendações",
+        "cada recomendação deve ter prioridade definida"
+      ]
+    },
+    "pesquisa": {
+      "required": ["topico", "fontes", "insights_principais"],
+      "rules": [
+        "mínimo 2 fontes",
+        "fontes devem ter URL e data"
+      ]
+    }
+  },
+  "criterios_sucesso": {
+    "contexto_carregado": true,
+    "output_schema_validado": true,
+    "revisao_humana_para_publicacao": true
+  }
+}
