@@ -45,6 +45,8 @@ Listar ficheiros e pastas na raiz do projeto. Procurar:
 - `/workers/` — especialistas com role/função/schema
 - `/automation/` com `evaluation.json` e `guardrails.md`
 - Equivalentes funcionais: `checkpoint/`, `LICOES.md`, `PROD.md`, `AGENTS.md`, etc.
+- Módulos de código separados (ex: `src/auth/`, `src/billing/`) — se existirem, considerar
+  organização modular do `context/` (uma subpasta por módulo). Ver `docs/CHANGE-WORKFLOW.md`.
 
 ### Passo 2: Gap Analysis
 
@@ -137,6 +139,23 @@ aprovada**, nunca silenciosamente:
 │   └── archive/                # Mudanças fechadas
 └── projects/                   # Entregáveis finais
 ```
+
+**Variante modular (projetos com vários módulos de código):** `context/` pode usar subpastas
+por módulo em vez de ficheiros soltos:
+
+```
+context/
+├── _global.md           # stack + convenções partilhadas
+├── auth/                # 1 pasta por módulo
+│   ├── produto.md
+│   └── arquitetura.md
+└── billing/
+    └── produto.md
+```
+
+Neste caso, as mudanças são prefixadas (`changes/<modulo>-<feature>/`) e cada `proposal.md`
+declara `## Módulo: <nome>`. Ver `docs/CHANGE-WORKFLOW.md` secção "Módulos / Domínios".
+É opt-in — projetos pequenos mantêm `context/` flat.
 
 ### Fase de descoberta (antes de criar ficheiros)
 
@@ -246,6 +265,9 @@ Instruções para Claude:
 1. Determinar nome kebab-case (clarificar se ambíguo).
 2. Verificar ponte de brainstorming em `docs/superpowers/specs/` — se há spec do tema, pré-preencher artefatos (referenciar, não duplicar).
 3. Criar `changes/<nome>/` com `proposal.md` + `tasks.md` (+ `design.md` se não-trivial).
+- **Projeto modular**: se `context/` tem subpastas, detetar projeto modular. Se o nome da
+  mudança não começa por um módulo conhecido, perguntar qual módulo. Prefixar o nome
+  (`<modulo>-<feature>`) e incluir `## Módulo: <nome>` no `proposal.md`.
 4. Caso `reorganize-*`: scan read-only + plano de movimentos com regras de segurança.
 5. Confirmar com nome da mudança e próximos passos.
 6. Sem argumento: listar mudanças ativas em `changes/`.
@@ -354,3 +376,6 @@ Adaptar ao contexto real do projeto — não forçar workers que não fazem sent
 Memory/learnings cresce com o tempo via /wrapup.
 Context/ e workers/ actualizados manualmente quando projecto evolui.
 CLAUDE.md mantém-se estável — é as regras, não a memória.
+
+Em projetos modulares, as mudanças são prefixadas pelo módulo (`auth-add-2fa`) e o delta do
+`/wrapup` mira `context/<modulo>/`. Ver `docs/CHANGE-WORKFLOW.md`.
