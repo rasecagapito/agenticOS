@@ -1,7 +1,26 @@
+# Agentic OS v1.1.0
+
+Suporte opcional a **módulos / domínios** — organize o conhecimento por módulo de código
+em projetos grandes, sem quebrar o modo flat (projetos pequenos continuam simples).
+
+## Novidades
+
+- **`context/<modulo>/`** — uma subpasta por módulo (ex: `auth/`, `folha-pagamento/`, `bem-estar/`) + `_global.md` para o que é compartilhado.
+- **Mudanças prefixadas** — `changes/<modulo>-<feature>/` com o campo `## Módulo: <nome>` na proposal.
+- **`/propose` detecta projeto modular** — se `context/` tem subpastas, pergunta o módulo e prefixa o nome da mudança.
+- **Delta por módulo no `/wrapup`** — as sugestões de atualização miram só `context/<modulo>/` do módulo da mudança (economiza tokens, isola conhecimento).
+- **Detecção flat vs modular** — automática, pela presença de subpastas em `context/`. Sem subpastas = comportamento atual, inalterado.
+
+Tudo opt-in. Migração de projeto flat → modular é feita com segurança via `/propose reorganize-context-modular` (nunca deleta, usa quarentena + MOVES.md para rollback).
+
+Detalhes: [`docs/CHANGE-WORKFLOW.md`](docs/CHANGE-WORKFLOW.md) → seção "Módulos / Domínios".
+
+---
+
 # Agentic OS v1.0.0
 
 Primeiro release do plugin **Agentic OS** para Claude Code — metodologia de organização
-de ficheiros que permite a um agente IA operar com autonomia entre sessões: elimina cold
+de arquivos que permite a um agente IA operar com autonomia entre sessões: elimina cold
 start, otimiza tokens e constrói memória persistente.
 
 ## Instalação
