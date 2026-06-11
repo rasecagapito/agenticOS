@@ -39,6 +39,14 @@ Ver `docs/CHANGE-WORKFLOW.md` para o ciclo completo.
    `design.md` — **criar apenas se** a mudança for técnica/não-trivial (decisões de arquitetura,
    migrations, risco). Caso contrário, omitir.
 
+3b. **Projeto modular** (se `context/` tem subpastas, ex: `context/auth/`):
+   - Detetar que o projeto é modular.
+   - Se o nome da mudança não começa por um módulo existente, perguntar:
+     "Que módulo? [<lista das subpastas de context/>/novo]".
+   - Prefixar o nome da pasta: `changes/<modulo>-<feature>/`.
+   - Incluir no `proposal.md` a linha `## Módulo: <nome>` (após o título).
+   Projeto flat (sem subpastas) → ignorar este passo.
+
 4. **Caso especial — reorganização** (`/propose reorganize-<alvo>`):
    - Fazer scan **read-only** da estrutura atual (NÃO mover nada).
    - Gerar `tasks.md` listando CADA movimento como uma linha `MOVER`/`AGRUPAR`/`MARCAR`.
