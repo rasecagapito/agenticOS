@@ -11,8 +11,11 @@ description: |
   - "workers", "subagentes especializados" para projeto
   - "estrutura de pastas para agente IA"
   - Quer inicializar novo projeto com estrutura de agente
+  - "multi-provedor", "várias IAs", "Claude e Codex juntos", "cérebro partilhado entre IAs"
+  - "continuar de onde o Claude/Codex parou", "handoff entre IAs", "sincronizar IAs"
 
   Dois modos: ANALISAR projeto existente (gap analysis + adaptação) ou INICIALIZAR novo projeto do zero.
+  Camada opt-in Multi-Provedor: cérebro partilhado + handoff para várias IAs (ver docs/MULTI-PROVIDER.md).
 ---
 
 # Agentic OS
@@ -337,6 +340,56 @@ Criar na raiz do projeto com:
 - Ciclo de uso em formato de lista numerada
 - Tabela de módulos /context com conteúdo de cada ficheiro
 - Tabela de workers com função e contexto que carregam
+
+---
+
+## Camada Multi-Provedor (opt-in)
+
+Torna o cérebro e o workflow **provider-neutros** para várias IAs (Claude, Codex, Gemini,
+GLM, DeepSeek…) trabalharem sincronizadas sobre o mesmo cérebro. Quando uma IA para, a próxima
+continua exatamente do mesmo ponto — **sem drift**. É **opt-in**; projetos single-IA ignoram.
+Template pronto: `template/D-multi-provedor/`. Detalhes: `docs/MULTI-PROVIDER.md`.
+
+**Duas peças:**
+1. **Fonte única + ponteiros** — um só ficheiro cérebro é canónico; os outros são `@import` dele
+   (nunca duplicar conteúdo → sem "delírio").
+2. **Handoff** (`memory/handoff.md`) — estado vivo que a próxima IA lê para retomar. O **cursor**
+   (próxima tarefa) é **derivado** da primeira `[ ]` em `changes/<ativa>/tasks.md`, nunca
+   recodificado. Gravado **incremental** ao fechar cada tarefa (à prova de crash).
+
+A lógica dos comandos vive em `automation/procedures/{propose,worker,wrapup,status,handoff}.md`
+(fonte única, provider-neutra). As `.claude/commands/` são wrappers finos. Codex/Gemini pedem em
+linguagem natural e leem o procedimento.
+
+### Caminho — projeto novo
+Cérebro canónico = **`AGENTS.md`** (standard cross-provider; Codex lê-o nativamente). Criar:
+- `AGENTS.md` (orquestrador + protocolo de arranque de sessão) + ponteiros finos `CLAUDE.md`
+  (`@AGENTS.md`) e `GEMINI.md` (import de `AGENTS.md`).
+- `automation/procedures/` (5 procedimentos) + `.claude/commands/` wrappers finos (incl. `/handoff`).
+- `memory/handoff.md` (estado vivo) + `providers/registry.md` (ficheiro de entrada por IA).
+
+### Caminho — projeto existente
+Regra de ouro do Modo A mantém-se: **só criar/ponteirar; nunca mover/renomear/apagar comandos ou ficheiros existentes.**
+1. **Detetar o cérebro** e aplicar precedência:
+   - Existe orquestrador ativo (`CLAUDE.md`/`GEMINI.md`/`AGENTS.md` com conteúdo real) → **mantém-se canónico**.
+   - Vários → o **maior/efetivamente orquestrador** vence; os outros viram ponteiros.
+   - Empate/ambíguo → **perguntar** ao humano.
+   - Nenhum → `AGENTS.md` canónico.
+2. Criar **ponteiros** `@<canónico>` para os provedores em falta.
+3. Adicionar `automation/procedures/` + `memory/handoff.md` + `providers/registry.md`.
+4. **Não tocar** nos `.claude/commands/` existentes (UX do Claude fica idêntica).
+
+### Formato de `memory/handoff.md`
+```markdown
+# Handoff — estado vivo da sessão
+## Último provedor
+- IA: [Claude|Codex|Gemini|…] · Quando: [YYYY-MM-DD HH:mm]
+## Mudança ativa
+- Pasta: changes/<nome>/   (ou "nenhuma")
+- Cursor: primeira [ ] em tasks.md  (derivar — não copiar aqui)
+## Narrativa
+- Feito: … · Decidido: … · Gotchas: … · Próxima intenção: …
+```
 
 ---
 

@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "project_type": "multi-provedor",
+  "brain": {
+    "canonical_file": "AGENTS.md",
+    "pointers": ["CLAUDE.md", "GEMINI.md"],
+    "rule": "um só ficheiro canónico; os outros são @import — nunca duplicar conteúdo"
+  },
+  "handoff": {
+    "file": "memory/handoff.md",
+    "cursor_rule": "cursor = primeira [ ] em changes/<ativa>/tasks.md; nunca recodificar no handoff",
+    "write_policy": "incremental ao fechar cada tarefa (à prova de crash), não só no wrapup"
+  },
+  "schemas": {
+    "feature_implementation": {
+      "required": ["feature", "ficheiros_alterados", "testes_necessarios", "provedor"],
+      "rules": [
+        "sem credenciais hardcoded",
+        "handoff atualizado ao fechar a tarefa"
+      ]
+    },
+    "code_review": {
+      "required": ["ficheiro_revisado", "severidade_geral", "findings", "aprovado"],
+      "rules": [
+        "findings críticos bloqueiam aprovação",
+        "severidade geral reflete o pior finding"
+      ]
+    }
+  },
+  "gates": {
+    "trocar_de_provedor": [
+      "memory/handoff.md atualizado com último provedor + narrativa",
+      "mudança ativa tem cursor claro (primeira [ ] em tasks.md)",
+      "nenhuma tarefa a meio sem nota em Gotchas"
+    ],
+    "fechar_mudanca": [
+      "todas as tarefas de tasks.md [x]",
+      "deltas de context/ confirmados pelo humano",
+      "pasta movida para changes/archive/"
+    ]
+  }
+}
