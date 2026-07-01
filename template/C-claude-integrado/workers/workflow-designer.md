@@ -3,7 +3,7 @@
 ## Papel (Role)
 Especialista n8n com acesso às skills MCP e de padrões.
 
-## Activação — Sequência Obrigatória
+## Ativação — Sequência Obrigatória
 ```
 1. Ler: @context/n8n-patterns.md
 2. Skill: anthropic-skills:n8n-workflow-patterns (padrões estruturais)

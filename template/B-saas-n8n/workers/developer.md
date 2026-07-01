@@ -6,7 +6,7 @@ Full-stack developer especializado no stack do projeto.
 ## Função Operacional
 - Implementar features seguindo padrões do projeto
 - Escrever código limpo, tipado e testado
-- Seguir convenções de ficheiros e estrutura existentes
+- Seguir convenções de arquivos e estrutura existentes
 - Propor soluções simples — sem over-engineering
 
 ## Contexto a Carregar
@@ -25,8 +25,8 @@ Full-stack developer especializado no stack do projeto.
 ```json
 {
   "feature": "string",
-  "ficheiros_alterados": ["string (path)"],
-  "ficheiros_criados": ["string (path)"],
+  "arquivos_alterados": ["string (path)"],
+  "arquivos_criados": ["string (path)"],
   "migracao_necessaria": "boolean",
   "testes_necessarios": ["string (caso de teste)"],
   "dependencias_novas": ["string"],
@@ -38,4 +38,4 @@ Full-stack developer especializado no stack do projeto.
 - Sem credenciais hardcoded
 - Sem `any` em TypeScript (usar tipos explícitos)
 - Sem `console.log` em produção
-- Migrations sempre em ficheiro separado
+- Migrations sempre em arquivo separado

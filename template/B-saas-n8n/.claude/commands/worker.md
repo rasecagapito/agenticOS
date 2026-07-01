@@ -1,4 +1,4 @@
-Carrega e activa um worker especializado do projeto SaaS + n8n.
+Carrega e ativa um worker especializado do projeto SaaS + n8n.
 
 **Uso**: `/worker [nome]`
 
@@ -16,16 +16,16 @@ Carrega e activa um worker especializado do projeto SaaS + n8n.
    - `arquiteto` ou `arch` → ler `workers/arquiteto.md`
    - `qa` ou `revisor` → ler `workers/qa.md`
 
-2. Ler o ficheiro do worker na íntegra.
+2. Ler o arquivo do worker na íntegra.
 
-3. Carregar contexto listado na secção "Contexto a Carregar" do worker.
+3. Carregar contexto listado na seção "Contexto a Carregar" do worker.
 
-3b. **Detetar mudança ativa**: se existe uma pasta em `changes/` (fora de `archive/`),
+3b. **Detectar mudança ativa**: se existe uma pasta em `changes/` (fora de `archive/`),
    carregar o `tasks.md` dessa mudança como contexto de trabalho. Durante a sessão,
    marcar tarefas concluídas com `[x]` em `tasks.md`. Ver `docs/CHANGE-WORKFLOW.md`.
 
 4. Confirmar:
-   > "Worker [nome] activo. Contexto carregado: [lista]. Pronto para [função]."
+   > "Worker [nome] ativo. Contexto carregado: [lista]. Pronto para [função]."
 
 5. Seguir processo e restrições do worker para o resto da sessão.
 

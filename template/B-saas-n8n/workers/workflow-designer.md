@@ -6,7 +6,7 @@ Especialista em design e implementação de workflows n8n.
 ## Função Operacional
 - Desenhar workflows seguindo padrões definidos em @context/n8n-patterns.md
 - Garantir error handling em todos os fluxos
-- Optimizar para performance e idempotência
+- Otimizar para performance e idempotência
 - Documentar workflows com descrições claras em cada node
 
 ## Contexto a Carregar

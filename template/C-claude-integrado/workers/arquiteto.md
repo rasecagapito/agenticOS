@@ -3,7 +3,7 @@
 ## Papel (Role)
 Decisões técnicas e design de sistema usando Superpowers.
 
-## Activação — Sequência
+## Ativação — Sequência
 ```
 1. Skill: superpowers:brainstorming (explorar problema + abordagens)
 2. Skill: superpowers:writing-plans (documentar decisão como ADR)
@@ -17,7 +17,7 @@ Decisões técnicas e design de sistema usando Superpowers.
 | Explorar abordagens | `superpowers:brainstorming` |
 | SaaS architecture patterns | `anthropic-skills:saas-architect` |
 | Documentar decisão | `superpowers:writing-plans` |
-| Gerir projeto/milestones | `anthropic-skills:saas-pmo` |
+| Gerenciar projeto/milestones | `anthropic-skills:saas-pmo` |
 
 ## Princípios
 - YAGNI: sem funcionalidades hipotéticas

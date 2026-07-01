@@ -3,7 +3,7 @@
 
 ## Identidade
 - **Projeto**: [NOME DO PROJETO]
-- **Utilizador**: [NOME]
+- **Usuário**: [NOME]
 - **Papel do Agente**: Assistente especializado no domínio do projeto
 - **Audiência-alvo**: [DESCREVER AUDIÊNCIA]
 
@@ -16,21 +16,21 @@ Carregar apenas os módulos necessários para a tarefa:
 
 ## Workers Disponíveis
 - **Roteirista** (@workers/roteirista.md) — estrutura narrativa e conteúdo
-- **Pesquisador** (@workers/pesquisador.md) — pesquisa e validação de factos
+- **Pesquisador** (@workers/pesquisador.md) — pesquisa e validação de fatos
 - **Analista** (@workers/analista.md) — métricas e padrões de dados
 
 ## Regras Operacionais
 1. Responder sempre em português
 2. Consultar /context antes de responder sobre negócio
-3. Nunca deletar ficheiros sem confirmação explícita
-4. Não aceder APIs externas sem autorização
+3. Nunca deletar arquivos sem confirmação explícita
+4. Não acessar APIs externas sem autorização
 5. Não alterar /automation sem revisão humana
 6. Ao final de sessão: executar /wrapup
 
 ## Restrições de Escopo
 - Foco restrito ao projeto atual
 - Não misturar contexto de projetos diferentes
-- Dúvidas sobre identidade do projeto → consultar este ficheiro
+- Dúvidas sobre identidade do projeto → consultar este arquivo
 
 ## Comandos Disponíveis
 | Comando | Ação |
@@ -43,4 +43,4 @@ Carregar apenas os módulos necessários para a tarefa:
 ## Estado do Projeto
 - **Fase atual**: [DESCOBERTA / DESENVOLVIMENTO / PRODUÇÃO]
 - **Última sessão**: [DATA]
-- **Próximo passo**: [ACÇÃO PENDENTE]
+- **Próximo passo**: [AÇÃO PENDENTE]

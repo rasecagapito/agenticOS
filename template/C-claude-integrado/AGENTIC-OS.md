@@ -30,7 +30,7 @@
 ```
 1. Abrir Claude Code → CLAUDE.md carrega automático
 2. "vamos começar" → Claude lê memory/history + context
-3. /worker [nome] → activa especialista + skills Superpowers associadas
+3. /worker [nome] → ativa especialista + skills Superpowers associadas
 4. [trabalho — skills invocadas automaticamente pelo worker]
 5. /wrapup → consolida + consolidate-memory
 6. Fechar → hook grava lembrete automático

@@ -19,7 +19,7 @@
 - **Planos**:
   - Free: [LIMITES]
   - Pro: [€X/mês] — [BENEFÍCIOS]
-  - Enterprise: [Contacto] — [BENEFÍCIOS]
+  - Enterprise: [Contato] — [BENEFÍCIOS]
 
 ## Métricas de Produto
 - **MRR alvo**: [€]

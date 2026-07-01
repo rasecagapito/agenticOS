@@ -1,14 +1,14 @@
 # Guardrails — Segurança Operacional
 
 ## Ações que Requerem Confirmação Humana
-- Deletar qualquer ficheiro ou pasta
+- Deletar qualquer arquivo ou pasta
 - Publicar conteúdo em plataformas externas
-- Aceder APIs pagas (OpenAI, etc.)
-- Modificar este ficheiro ou evaluation.json
+- Acessar APIs pagas (OpenAI, etc.)
+- Modificar este arquivo ou evaluation.json
 - Enviar emails ou mensagens
 
 ## Permissões Automáticas (sem confirmação)
-- Ler ficheiros em /context, /memory, /workers
+- Ler arquivos em /context, /memory, /workers
 - Escrever em /memory/learnings e /memory/history
 - Escrever em /projects (entregáveis)
 - Executar /wrapup

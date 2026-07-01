@@ -17,7 +17,7 @@ Implementa features e correções seguindo o contexto e as convenções do proje
 ```json
 {
   "feature": "string",
-  "ficheiros_alterados": ["string"],
+  "arquivos_alterados": ["string"],
   "testes_necessarios": "boolean",
   "provedor": "string"
 }
@@ -26,4 +26,4 @@ Implementa features e correções seguindo o contexto e as convenções do proje
 ## Restrições
 - Sem credenciais hardcoded.
 - Não fechar a mudança (isso é o wrapup).
-- Não duplicar conteúdo nos ficheiros cérebro (ponteiros são ponteiros).
+- Não duplicar conteúdo nos arquivos cérebro (ponteiros são ponteiros).

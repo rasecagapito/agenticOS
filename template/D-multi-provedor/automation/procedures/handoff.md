@@ -4,7 +4,7 @@
 > executa isto — via `/handoff` no Claude ou a pedido ("lê/atualiza o handoff") nas outras.
 
 O handoff é o que permite a **outra IA continuar exatamente onde a anterior parou**.
-Ficheiro: `memory/handoff.md`.
+Arquivo: `memory/handoff.md`.
 
 ## Princípio anti-drift (importante)
 - O **cursor** (qual a próxima tarefa) é **derivado** da mudança ativa: a primeira `[ ]`

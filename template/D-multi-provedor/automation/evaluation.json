@@ -4,7 +4,7 @@
   "brain": {
     "canonical_file": "AGENTS.md",
     "pointers": ["CLAUDE.md", "GEMINI.md"],
-    "rule": "um só ficheiro canónico; os outros são @import — nunca duplicar conteúdo"
+    "rule": "um só arquivo canônico; os outros são @import — nunca duplicar conteúdo"
   },
   "handoff": {
     "file": "memory/handoff.md",
@@ -13,17 +13,25 @@
   },
   "schemas": {
     "feature_implementation": {
-      "required": ["feature", "ficheiros_alterados", "testes_necessarios", "provedor"],
+      "required": ["feature", "arquivos_alterados", "testes_necessarios", "provedor"],
       "rules": [
         "sem credenciais hardcoded",
         "handoff atualizado ao fechar a tarefa"
       ]
     },
     "code_review": {
-      "required": ["ficheiro_revisado", "severidade_geral", "findings", "aprovado"],
+      "required": ["arquivo_revisado", "severidade_geral", "findings", "aprovado"],
       "rules": [
         "findings críticos bloqueiam aprovação",
         "severidade geral reflete o pior finding"
+      ]
+    },
+    "conformance_audit": {
+      "required": ["mode", "resultado", "divergencias", "instrucoes_para_B", "requires_user_approval"],
+      "rules": [
+        "resultado PASS só quando todos os itens necessários da SPEC = CONFORME",
+        "qualquer violação D1-D5 força FAIL",
+        "auditor é read-only; verifica o disco, não a narrativa do executor"
       ]
     }
   },
@@ -37,6 +45,13 @@
       "todas as tarefas de tasks.md [x]",
       "deltas de context/ confirmados pelo humano",
       "pasta movida para changes/archive/"
+    ],
+    "agentic_os_conformance": [
+      "camadas base B1-B6 presentes (ver docs/CONFORMANCE-SPEC.md)",
+      "multi-provedor M1-M7 presentes quando opt-in ativo",
+      "zero violações anti-drift D1-D5 (sem commands/ na raiz; ponteiro não duplica cérebro; handoff não copia tarefas; evaluation reflete provedores reais)",
+      "re-auditoria do Agente A = PASS antes de declarar sucesso",
+      "EXISTENTE: zero arquivos pré-existentes movidos/apagados/renomeados sem aprovação"
     ]
   }
 }

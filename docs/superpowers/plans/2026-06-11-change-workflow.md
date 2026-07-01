@@ -4,9 +4,9 @@
 
 **Goal:** Adicionar uma camada de mudança estruturada (`changes/`) ao plugin Agentic OS — comando `/propose`, ciclo propose→worker→wrapup com delta semi-automático em `context/`, e capacidade de reorganização brownfield segura — em todos os 3 templates, na skill e na documentação.
 
-**Architecture:** Plugin baseado em ficheiros markdown (não código executável). Cada mudança vive em `changes/<nome>/` com proposal/tasks/design. `/propose` cria; `/worker` executa; `/wrapup` arquiva e sugere deltas em `context/`. Brownfield: nada existente é removido; movimentos só dentro de mudança aprovada. Fonte única de documentação em `docs/CHANGE-WORKFLOW.md`.
+**Architecture:** Plugin baseado em arquivos markdown (não código executável). Cada mudança vive em `changes/<nome>/` com proposal/tasks/design. `/propose` cria; `/worker` executa; `/wrapup` arquiva e sugere deltas em `context/`. Brownfield: nada existente é removido; movimentos só dentro de mudança aprovada. Fonte única de documentação em `docs/CHANGE-WORKFLOW.md`.
 
-**Tech Stack:** Markdown, slash commands do Claude Code (`.claude/commands/*.md`), PowerShell (hooks/datas no Windows). Sem framework de testes — verificação é estrutural (ficheiro existe + conteúdo correto).
+**Tech Stack:** Markdown, slash commands do Claude Code (`.claude/commands/*.md`), PowerShell (hooks/datas no Windows). Sem framework de testes — verificação é estrutural (arquivo existe + conteúdo correto).
 
 **Spec:** `docs/superpowers/specs/2026-06-11-change-workflow-design.md`
 
@@ -16,20 +16,20 @@
 
 ## File Structure
 
-**Novos ficheiros:**
+**Novos arquivos:**
 - `docs/CHANGE-WORKFLOW.md` — documentação fonte-única do workflow
 - `README.md` — visão geral do plugin + link p/ doc
 - `template/{A-generico,B-saas-n8n,C-claude-integrado}/.claude/commands/propose.md` — comando novo (idêntico nos 3)
 - `template/{A,B,C}/changes/.gitkeep` + `template/{A,B,C}/changes/archive/.gitkeep` — scaffolding da pasta
 
-**Ficheiros modificados:**
+**Arquivos modificados:**
 - `template/{A,B,C}/.claude/commands/wrapup.md` — passo de archive + delta sync
-- `template/{A,B,C}/.claude/commands/worker.md` — deteção de mudança ativa
+- `template/{A,B,C}/.claude/commands/worker.md` — detecção de mudança ativa
 - `template/{A,B,C}/CLAUDE.md` — linha `/propose` na tabela de comandos
-- `template/{A,B,C}/AGENTIC-OS.md` — secção que referencia o doc
+- `template/{A,B,C}/AGENTIC-OS.md` — seção que referencia o doc
 - `skill/agentic-os/SKILL.md` — MODO B (estrutura), MODO A (reorg brownfield), formatos de artefato
 
-**Responsabilidade por ficheiro:** cada command tem uma responsabilidade (propose=criar, worker=executar, wrapup=arquivar+sync). O doc é a única fonte narrativa; AGENTIC-OS.md de cada template só referencia.
+**Responsabilidade por arquivo:** cada command tem uma responsabilidade (propose=criar, worker=executar, wrapup=arquivar+sync). O doc é a única fonte narrativa; AGENTIC-OS.md de cada template só referencia.
 
 ---
 
@@ -137,7 +137,7 @@ Mudança "add-dark-mode" concluída. Sugiro atualizar context/:
   + context/stack.md       ADICIONAR nota: preferência em localStorage
 Confirmar? [1 s/n] [2 s/n] [3 s/n]
 \`\`\`
-Aprovados → editados em context/. Pasta → changes/archive/. Registo em memory/.
+Aprovados → editados em context/. Pasta → changes/archive/. Registro em memory/.
 
 ## Reorganização de projetos existentes (brownfield)
 
@@ -157,20 +157,20 @@ Reorganizar é uma mudança: `/propose reorganize-<alvo>`.
 - **Nunca deletar.** Redundantes vão para `_quarantine/` (ou `docs/archive/`), nunca apagados.
 - **Nunca mover código sem verificar referências.** Procurar imports/links antes; atualizar todos ou não mover.
 - **Verificar git primeiro.** Se for repo git, exigir working tree limpo — movimentos reversíveis.
-- **Registar movimentos** em `changes/reorganize-<alvo>/MOVES.md` (mapa origem→destino) p/ rollback.
-- **Dry-run por defeito.** Só `/worker` após aprovação move.
+- **Registrar movimentos** em `changes/reorganize-<alvo>/MOVES.md` (mapa origem→destino) p/ rollback.
+- **Dry-run por padrão.** Só `/worker` após aprovação move.
 - **Em dúvida → parar e perguntar.**
 
 ### Redundância — critérios (sugestão; humano decide)
-- Conteúdo idêntico (hash) a outro ficheiro
+- Conteúdo idêntico (hash) a outro arquivo
 - Backup óbvio (`.bak`, `~`, `-copy`, `-old`, datado e superseded)
 - Doc coberto integralmente por outro mais recente
 
-Nunca marcar automaticamente: ficheiros referenciados por código, configs ativas,
+Nunca marcar automaticamente: arquivos referenciados por código, configs ativas,
 ou qualquer coisa fora de `docs/`/notas sem análise de referências.
 ```
 
-- [ ] **Step 2: Verificar o ficheiro**
+- [ ] **Step 2: Verificar o arquivo**
 
 Run: `powershell -command "Test-Path 'docs/CHANGE-WORKFLOW.md'; (Get-Content 'docs/CHANGE-WORKFLOW.md' | Measure-Object -Line).Lines"`
 Expected: `True` e contagem de linhas > 100.
@@ -196,7 +196,7 @@ Criar `README.md` com este conteúdo exato:
 ```markdown
 # Agentic OS
 
-Metodologia de organização de ficheiros que permite a um agente IA operar com
+Metodologia de organização de arquivos que permite a um agente IA operar com
 autonomia entre sessões: elimina cold start, otimiza tokens e constrói memória persistente.
 
 ## Estrutura do repositório
@@ -261,7 +261,7 @@ git commit -m "docs: add repository README"
 
 - [ ] **Step 1: Criar o comando nos 3 caminhos**
 
-Criar **o mesmo conteúdo** nos três ficheiros acima:
+Criar **o mesmo conteúdo** nos três arquivos acima:
 
 ```markdown
 Cria uma mudança estruturada em `changes/<nome>/`.
@@ -309,7 +309,7 @@ Ver `docs/CHANGE-WORKFLOW.md` para o ciclo completo.
    - Fazer scan **read-only** da estrutura atual (NÃO mover nada).
    - Gerar `tasks.md` listando CADA movimento como uma linha `MOVER`/`AGRUPAR`/`MARCAR`.
    - Aplicar as Regras de Segurança de `docs/CHANGE-WORKFLOW.md` (nunca deletar, verificar
-     referências, exigir git limpo, registar em MOVES.md, dry-run por defeito).
+     referências, exigir git limpo, registrar em MOVES.md, dry-run por padrão).
 
 5. **Confirmar**:
    > "Mudança '<nome>' criada em changes/<nome>/. Artefatos: [lista]. Execute /worker para implementar."
@@ -318,7 +318,7 @@ Ver `docs/CHANGE-WORKFLOW.md` para o ciclo completo.
 Listar mudanças ativas em `changes/` (excluindo `archive/`) com 1 linha cada.
 ```
 
-- [ ] **Step 2: Verificar os 3 ficheiros**
+- [ ] **Step 2: Verificar os 3 arquivos**
 
 Run: `powershell -command "@('A-generico','B-saas-n8n','C-claude-integrado') | ForEach-Object { Test-Path \"template/$_/.claude/commands/propose.md\" }"`
 Expected: `True` três vezes.
@@ -342,7 +342,7 @@ git commit -m "feat: add /propose command to all templates"
 - Create: `template/C-claude-integrado/changes/.gitkeep`
 - Create: `template/C-claude-integrado/changes/archive/.gitkeep`
 
-- [ ] **Step 1: Criar os ficheiros `.gitkeep`**
+- [ ] **Step 1: Criar os arquivos `.gitkeep`**
 
 Cada `.gitkeep` tem como conteúdo uma única linha:
 
@@ -350,7 +350,7 @@ Cada `.gitkeep` tem como conteúdo uma única linha:
 # Pasta de mudanças estruturadas — ver docs/CHANGE-WORKFLOW.md
 ```
 
-(O mesmo conteúdo nos 6 ficheiros.)
+(O mesmo conteúdo nos 6 arquivos.)
 
 - [ ] **Step 2: Verificar**
 
@@ -366,7 +366,7 @@ git commit -m "feat: scaffold changes/ folder in all templates"
 
 ---
 
-## Task 5: Atualizar `worker.md` — deteção de mudança ativa (3 templates)
+## Task 5: Atualizar `worker.md` — detecção de mudança ativa (3 templates)
 
 **Files:**
 - Modify: `template/A-generico/.claude/commands/worker.md`
@@ -376,14 +376,14 @@ git commit -m "feat: scaffold changes/ folder in all templates"
 O bloco a inserir é o **mesmo** nos três. Difere apenas o ponto de inserção (depois do passo
 que carrega o contexto do worker, antes do passo de confirmação).
 
-- [ ] **Step 1: A-generico — inserir bloco de deteção**
+- [ ] **Step 1: A-generico — inserir bloco de detecção**
 
 Em `template/A-generico/.claude/commands/worker.md`, depois da linha
-`3. Carregar contexto listado na secção "Contexto a Carregar" do worker.`
+`3. Carregar contexto listado na seção "Contexto a Carregar" do worker.`
 inserir:
 
 ```markdown
-3b. **Detetar mudança ativa**: se existe uma pasta em `changes/` (fora de `archive/`),
+3b. **Detectar mudança ativa**: se existe uma pasta em `changes/` (fora de `archive/`),
    carregar o `tasks.md` dessa mudança como contexto de trabalho. Durante a sessão,
    marcar tarefas concluídas com `[x]` em `tasks.md`. Ver `docs/CHANGE-WORKFLOW.md`.
 ```
@@ -391,18 +391,18 @@ inserir:
 - [ ] **Step 2: B-saas-n8n — inserir o mesmo bloco**
 
 Em `template/B-saas-n8n/.claude/commands/worker.md`, depois da linha
-`3. Carregar contexto da secção "Contexto a Carregar".` inserir o **mesmo bloco** do Step 1
+`3. Carregar contexto da seção "Contexto a Carregar".` inserir o **mesmo bloco** do Step 1
 (renumerar para `3b` mantendo o texto idêntico).
 
 - [ ] **Step 3: C-claude-integrado — inserir o mesmo bloco**
 
 Em `template/C-claude-integrado/.claude/commands/worker.md`, depois da linha
-`3. Carregar contexto da secção "Contexto a Carregar".` inserir o **mesmo bloco** do Step 1
+`3. Carregar contexto da seção "Contexto a Carregar".` inserir o **mesmo bloco** do Step 1
 (renumerar para `3b`).
 
 - [ ] **Step 4: Verificar**
 
-Run: `powershell -command "@('A-generico','B-saas-n8n','C-claude-integrado') | ForEach-Object { Select-String -Path \"template/$_/.claude/commands/worker.md\" -Pattern 'Detetar mudança ativa' -Quiet }"`
+Run: `powershell -command "@('A-generico','B-saas-n8n','C-claude-integrado') | ForEach-Object { Select-String -Path \"template/$_/.claude/commands/worker.md\" -Pattern 'Detectar mudança ativa' -Quiet }"`
 Expected: `True` três vezes.
 
 - [ ] **Step 5: Commit (opcional)**
@@ -426,14 +426,14 @@ de confirmação (o passo "Confirmar: ...").
 
 - [ ] **Step 1: Definir o bloco a inserir**
 
-Bloco (texto idêntico nos 3 ficheiros):
+Bloco (texto idêntico nos 3 arquivos):
 
 ```markdown
 N. **Fechar mudança ativa** (se existe pasta em `changes/` fora de `archive/`):
    - Verificar se as tarefas em `tasks.md` estão concluídas.
-   - **Sugerir deltas em `context/`** — analisar o que a mudança alterou e propor updates,
+   - **Sugerenciar deltas em `context/`** — analisar o que a mudança alterou e propor updates,
      SEM aplicar sozinho. Notação: `+` ADICIONAR · `~` MODIFICAR · `-` REMOVER.
-     Apresentar cada ficheiro de context/ afetado e pedir confirmação item a item.
+     Apresentar cada arquivo de context/ afetado e pedir confirmação item a item.
    - Aplicar **só** os deltas confirmados pelo humano.
    - Mover a pasta da mudança para `changes/archive/YYYY-MM-DD-<nome>/`.
    - Ver `docs/CHANGE-WORKFLOW.md` para o formato do delta.
@@ -479,7 +479,7 @@ git commit -m "feat: wrapup archives change and suggests context deltas"
 
 - [ ] **Step 1: A-generico**
 
-Em `template/A-generico/CLAUDE.md`, na secção "Comandos Disponíveis", substituir:
+Em `template/A-generico/CLAUDE.md`, na seção "Comandos Disponíveis", substituir:
 
 ```
 | Comando | Ação |
@@ -496,7 +496,7 @@ por:
 
 - [ ] **Step 2: B-saas-n8n**
 
-Em `template/B-saas-n8n/CLAUDE.md`, na secção "Comandos", substituir:
+Em `template/B-saas-n8n/CLAUDE.md`, na seção "Comandos", substituir:
 
 ```
 | Comando | Ação |
@@ -513,7 +513,7 @@ por:
 
 - [ ] **Step 3: C-claude-integrado**
 
-Em `template/C-claude-integrado/CLAUDE.md`, na secção "Comandos", substituir:
+Em `template/C-claude-integrado/CLAUDE.md`, na seção "Comandos", substituir:
 
 ```
 | Comando | Ação |
@@ -552,9 +552,9 @@ git commit -m "docs: add /propose to command tables"
 - [ ] **Step 1: Ler o final de cada AGENTIC-OS.md**
 
 Run: `powershell -command "@('A-generico','B-saas-n8n','C-claude-integrado') | ForEach-Object { Write-Output \"--- $_ ---\"; Get-Content \"template/$_/AGENTIC-OS.md\" -Tail 5 }"`
-Expected: ver as últimas linhas de cada ficheiro para inserir a secção no fim.
+Expected: ver as últimas linhas de cada arquivo para inserir a seção no fim.
 
-- [ ] **Step 2: Acrescentar secção ao fim dos 3 ficheiros**
+- [ ] **Step 2: Acrescentar seção ao fim dos 3 arquivos**
 
 Acrescentar (append) ao final de cada `AGENTIC-OS.md` o **mesmo bloco**:
 
@@ -593,12 +593,12 @@ git commit -m "docs: reference change workflow in AGENTIC-OS quick refs"
 - Modify: `skill/agentic-os/SKILL.md`
 
 Quatro edições: (a) estrutura do MODO B inclui `changes/`; (b) lista de criação do MODO A
-inclui changes/ + propose; (c) nova subsecção de reorganização brownfield no MODO A;
-(d) nova secção de comando `/propose` na zona de Slash Commands.
+inclui changes/ + propose; (c) nova subseção de reorganização brownfield no MODO A;
+(d) nova seção de comando `/propose` na zona de Slash Commands.
 
 - [ ] **Step 1: MODO B — adicionar `changes/` à árvore de estrutura**
 
-Na secção "MODO B", na árvore de estrutura ASCII, depois do bloco `automation/` e antes de
+Na seção "MODO B", na árvore de estrutura ASCII, depois do bloco `automation/` e antes de
 `projects/`, inserir:
 
 ```
@@ -614,7 +614,7 @@ E na lista `.claude/commands/`, adicionar `propose.md` ao lado de `wrapup.md`/`s
 
 - [ ] **Step 2: MODO A — adicionar à lista "Criar apenas"**
 
-Na secção "MODO A > Passo 4: Criar o que falta", na lista numerada "Criar apenas", adicionar
+Na seção "MODO A > Passo 4: Criar o que falta", na lista numerada "Criar apenas", adicionar
 um item novo após o item 6 (slash commands):
 
 ```
@@ -622,9 +622,9 @@ um item novo após o item 6 (slash commands):
 6c. `/.claude/commands/propose.md` — comando /propose
 ```
 
-- [ ] **Step 3: MODO A — nova subsecção de reorganização brownfield**
+- [ ] **Step 3: MODO A — nova subseção de reorganização brownfield**
 
-No fim da secção "MODO A" (antes de "MODO B"), acrescentar:
+No fim da seção "MODO A" (antes de "MODO B"), acrescentar:
 
 ```markdown
 ### Passo 5: Reorganização brownfield (opcional, via mudança aprovada)
@@ -641,13 +641,13 @@ aprovada**, nunca silenciosamente:
 - Nunca deletar — redundantes vão para `_quarantine/` ou `docs/archive/`.
 - Nunca mover código sem verificar referências (imports/links).
 - Exigir working tree git limpo antes de mover.
-- Registar movimentos em `changes/reorganize-<alvo>/MOVES.md` para rollback.
-- Dry-run por defeito; em dúvida → parar e perguntar.
+- Registrar movimentos em `changes/reorganize-<alvo>/MOVES.md` para rollback.
+- Dry-run por padrão; em dúvida → parar e perguntar.
 ```
 
 - [ ] **Step 4: Documentar o comando `/propose` na zona de Slash Commands**
 
-Na secção "Slash Commands", antes de `### /.claude/commands/wrapup.md`, inserir:
+Na seção "Slash Commands", antes de `### /.claude/commands/wrapup.md`, inserir:
 
 ```markdown
 ### /.claude/commands/propose.md
@@ -664,7 +664,7 @@ Ver `docs/CHANGE-WORKFLOW.md` para o ciclo completo.
 
 - [ ] **Step 5: Atualizar o "Ciclo de Operação" no fim da skill**
 
-Na secção "Ciclo de Operação", substituir o bloco do ciclo por:
+Na seção "Ciclo de Operação", substituir o bloco do ciclo por:
 
 ```
 1. Abrir Claude Code na pasta → CLAUDE.md carrega automático
@@ -697,22 +697,22 @@ git commit -m "feat: skill teaches change workflow + brownfield reorg"
 
 Run:
 ```
-powershell -command "$ok=$true; @('docs/CHANGE-WORKFLOW.md','README.md') | %{ if(!(Test-Path $_)){$ok=$false; Write-Output \"FALTA: $_\"} }; @('A-generico','B-saas-n8n','C-claude-integrado') | %{ @(\"template/$_/.claude/commands/propose.md\",\"template/$_/changes/.gitkeep\",\"template/$_/changes/archive/.gitkeep\") | %{ if(!(Test-Path $_)){$ok=$false; Write-Output \"FALTA: $_\"} } }; if($ok){Write-Output 'TODOS OS FICHEIROS OK'}"
+powershell -command "$ok=$true; @('docs/CHANGE-WORKFLOW.md','README.md') | %{ if(!(Test-Path $_)){$ok=$false; Write-Output \"FALTA: $_\"} }; @('A-generico','B-saas-n8n','C-claude-integrado') | %{ @(\"template/$_/.claude/commands/propose.md\",\"template/$_/changes/.gitkeep\",\"template/$_/changes/archive/.gitkeep\") | %{ if(!(Test-Path $_)){$ok=$false; Write-Output \"FALTA: $_\"} } }; if($ok){Write-Output 'TODOS OS ARQUIVOS OK'}"
 ```
-Expected: `TODOS OS FICHEIROS OK`.
+Expected: `TODOS OS ARQUIVOS OK`.
 
 - [ ] **Step 2: Confirmar todas as edições aplicadas**
 
 Run:
 ```
-powershell -command "@('A-generico','B-saas-n8n','C-claude-integrado') | %{ $t=$_; @(\".claude/commands/worker.md|Detetar mudança ativa\",\".claude/commands/wrapup.md|Fechar mudança ativa\",\"CLAUDE.md|/propose\",\"AGENTIC-OS.md|Change Workflow\") | %{ $p=$_.Split('|'); $hit=Select-String -Path \"template/$t/$($p[0])\" -Pattern $p[1] -Quiet; if(!$hit){Write-Output \"FALTA EDIT: $t/$($p[0])\"} } }; Write-Output 'CHECK CONCLUIDO'"
+powershell -command "@('A-generico','B-saas-n8n','C-claude-integrado') | %{ $t=$_; @(\".claude/commands/worker.md|Detectar mudança ativa\",\".claude/commands/wrapup.md|Fechar mudança ativa\",\"CLAUDE.md|/propose\",\"AGENTIC-OS.md|Change Workflow\") | %{ $p=$_.Split('|'); $hit=Select-String -Path \"template/$t/$($p[0])\" -Pattern $p[1] -Quiet; if(!$hit){Write-Output \"FALTA EDIT: $t/$($p[0])\"} } }; Write-Output 'CHECK CONCLUIDO'"
 ```
 Expected: `CHECK CONCLUIDO` sem linhas `FALTA EDIT`.
 
 - [ ] **Step 3: Verificação manual da experiência**
 
 Ler `docs/CHANGE-WORKFLOW.md` de ponta a ponta e confirmar que o exemplo `add-dark-mode`
-e a secção de reorganização brownfield estão coerentes com os comandos criados.
+e a seção de reorganização brownfield estão coerentes com os comandos criados.
 
 - [ ] **Step 4: Commit final (opcional)**
 
@@ -736,7 +736,7 @@ git commit -m "chore: change workflow rollout complete"
 - Documentação fonte-única → Tasks 1, 2, 8
 - Critérios de sucesso 1-7 → cobertos por Tasks 3,5,6,7 + verificação Task 10
 
-**Placeholder scan:** sem TODO/TBD; todo o conteúdo de ficheiro está mostrado integralmente.
+**Placeholder scan:** sem TODO/TBD; todo o conteúdo de arquivo está mostrado integralmente.
 
 **Type/naming consistency:** `changes/`, `changes/archive/YYYY-MM-DD-<nome>/`, `/propose`,
 `proposal.md`/`tasks.md`/`design.md`, `MOVES.md`, `_quarantine/`, notação `+`/`~`/`-`

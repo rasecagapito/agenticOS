@@ -1,6 +1,6 @@
 # Agentic OS
 
-Metodologia de organização de ficheiros que permite a um agente IA operar com
+Metodologia de organização de arquivos que permite a um agente IA operar com
 autonomia entre sessões: elimina cold start, otimiza tokens e constrói memória persistente.
 
 ## Instalação (Claude Code plugin)
@@ -23,9 +23,9 @@ quando mencionas montar/adaptar um projeto ao padrão Agentic OS.
 - `template/A-generico/` — template para conteúdo/marketing
 - `template/B-saas-n8n/` — template para SaaS + automações n8n
 - `template/C-claude-integrado/` — template SaaS integrado com Claude Code Superpowers
-- `template/D-multi-provedor/` — cérebro partilhado entre várias IAs (Claude, Codex, Gemini…)
+- `template/D-multi-provedor/` — cérebro compartilhado entre várias IAs (Claude, Codex, Gemini…)
 - `docs/CHANGE-WORKFLOW.md` — **[Change Workflow](docs/CHANGE-WORKFLOW.md)**: ciclo de mudança estruturada
-- `docs/MULTI-PROVIDER.md` — **[Multi-Provedor](docs/MULTI-PROVIDER.md)**: cérebro partilhado + handoff entre IAs
+- `docs/MULTI-PROVIDER.md` — **[Multi-Provedor](docs/MULTI-PROVIDER.md)**: cérebro compartilhado + handoff entre IAs
 - `docs/superpowers/` — specs e planos de desenvolvimento do próprio plugin
 
 ## As 5 camadas
@@ -42,7 +42,7 @@ quando mencionas montar/adaptar um projeto ao padrão Agentic OS.
 
 Várias IAs (Claude, Codex, Gemini, GLM, DeepSeek…) sobre o **mesmo cérebro**. Quando uma para,
 a próxima continua exatamente do mesmo ponto — **sem drift**. Duas peças: **fonte única + ponteiros**
-(um `AGENTS.md` canónico; `CLAUDE.md`/`GEMINI.md` são `@import`) e **handoff** (`memory/handoff.md`,
+(um `AGENTS.md` canônico; `CLAUDE.md`/`GEMINI.md` são `@import`) e **handoff** (`memory/handoff.md`,
 estado vivo que a próxima IA lê). Template: `template/D-multi-provedor/`. Detalhes em
 **[docs/MULTI-PROVIDER.md](docs/MULTI-PROVIDER.md)**.
 

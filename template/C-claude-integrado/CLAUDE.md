@@ -15,8 +15,8 @@
 
 ## Skills Disponíveis (Claude Code Superpowers)
 
-### Planeamento e Design
-- `/gsd-plan-phase` — planear fase de implementação
+### Planejamento e Design
+- `/gsd-plan-phase` — planejar fase de implementação
 - `/gsd-new-project` — criar roadmap de novo projeto
 - `superpowers:brainstorming` — explorar ideias antes de implementar
 - `superpowers:writing-plans` — escrever plano de implementação
@@ -61,9 +61,9 @@
 | /wrapup | Consolidar sessão + arquivar mudança ativa |
 | /status  | Estado: features, bugs, próximo passo |
 | /review  | Code review do diff atual |
-| /plan [feature] | Planear implementação de feature |
+| /plan [feature] | Planejar implementação de feature |
 
 ## Estado do Projeto
 - **Fase**: [MVP / BETA / PRODUÇÃO]
 - **Última sessão**: [DATA]
-- **Próximo passo**: [ACÇÃO]
+- **Próximo passo**: [AÇÃO]
