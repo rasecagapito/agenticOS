@@ -23,7 +23,9 @@ quando mencionas montar/adaptar um projeto ao padrão Agentic OS.
 - `template/A-generico/` — template para conteúdo/marketing
 - `template/B-saas-n8n/` — template para SaaS + automações n8n
 - `template/C-claude-integrado/` — template SaaS integrado com Claude Code Superpowers
+- `template/D-multi-provedor/` — cérebro partilhado entre várias IAs (Claude, Codex, Gemini…)
 - `docs/CHANGE-WORKFLOW.md` — **[Change Workflow](docs/CHANGE-WORKFLOW.md)**: ciclo de mudança estruturada
+- `docs/MULTI-PROVIDER.md` — **[Multi-Provedor](docs/MULTI-PROVIDER.md)**: cérebro partilhado + handoff entre IAs
 - `docs/superpowers/` — specs e planos de desenvolvimento do próprio plugin
 
 ## As 5 camadas
@@ -35,6 +37,14 @@ quando mencionas montar/adaptar um projeto ao padrão Agentic OS.
 | Memory | `memory/` | Persistência: learnings + history |
 | Workers | `workers/` | Especialistas com role/função/schema |
 | Automation | `automation/` | Gates de qualidade + guardrails |
+
+## Multi-Provedor (opt-in)
+
+Várias IAs (Claude, Codex, Gemini, GLM, DeepSeek…) sobre o **mesmo cérebro**. Quando uma para,
+a próxima continua exatamente do mesmo ponto — **sem drift**. Duas peças: **fonte única + ponteiros**
+(um `AGENTS.md` canónico; `CLAUDE.md`/`GEMINI.md` são `@import`) e **handoff** (`memory/handoff.md`,
+estado vivo que a próxima IA lê). Template: `template/D-multi-provedor/`. Detalhes em
+**[docs/MULTI-PROVIDER.md](docs/MULTI-PROVIDER.md)**.
 
 ## Ciclo de mudança
 

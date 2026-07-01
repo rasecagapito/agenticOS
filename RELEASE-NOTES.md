@@ -1,3 +1,25 @@
+# Agentic OS v1.2.0
+
+Camada opt-in **Multi-Provedor** — várias IAs (Claude, Codex, Gemini, GLM, DeepSeek…)
+trabalham sincronizadas sobre o mesmo cérebro. Quando uma para, a próxima continua exatamente
+do mesmo ponto, **sem drift** ("sem delírio").
+
+## Novidades
+
+- **Fonte única + ponteiros** — um só ficheiro cérebro é canónico (`AGENTS.md` em projetos novos); `CLAUDE.md`/`GEMINI.md` são ponteiros `@import`. Zero duplicação = zero drift.
+- **Handoff** (`memory/handoff.md`) — estado vivo que a próxima IA lê para retomar. O cursor (próxima tarefa) é derivado da primeira `[ ]` em `tasks.md`; gravado incremental ao fechar cada tarefa (à prova de crash, sobrevive a sessão morta sem `/wrapup`).
+- **Procedimentos provider-neutros** — `automation/procedures/{propose,worker,wrapup,status,handoff}.md` são a fonte única da lógica; `.claude/commands/` são wrappers finos. Codex/Gemini pedem em linguagem natural e leem o procedimento.
+- **`providers/registry.md`** — que ficheiro cada IA lê + suporte a import + limitações; isola factos por provedor.
+- **Novo template `D-multi-provedor/`** — exemplo completo pronto a copiar.
+- **Skill atualizada** — deteta o cérebro em projetos existentes (regra de precedência), cria ponteiros em falta e adiciona a camada **sem tocar** nos comandos existentes.
+- **Novo comando `/handoff`** — ler/gravar o estado vivo.
+
+Tudo opt-in. Projetos single-IA (templates A/B/C) ficam inalterados.
+
+Detalhes: [`docs/MULTI-PROVIDER.md`](docs/MULTI-PROVIDER.md).
+
+---
+
 # Agentic OS v1.1.0
 
 Suporte opcional a **módulos / domínios** — organize o conhecimento por módulo de código

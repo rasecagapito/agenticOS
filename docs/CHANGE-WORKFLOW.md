@@ -42,6 +42,15 @@ changes/
 Mapeamento com OpenSpec `core` (`propose·explore·apply·sync·archive`):
 explore→brainstorming · propose→/propose · apply→/worker · sync+archive→/wrapup.
 
+### Continuidade multi-IA (opt-in)
+
+Na camada multi-provedor (`docs/MULTI-PROVIDER.md`), este mesmo ciclo é o que permite a várias
+IAs continuarem exatamente onde a anterior parou:
+- O **cursor** de trabalho = a primeira tarefa `[ ]` não marcada no `tasks.md` da mudança ativa.
+  Derivado dali, nunca duplicado — é a fonte única do progresso.
+- O `/worker` grava `memory/handoff.md` **ao fechar cada tarefa** (incremental), não só no `/wrapup`.
+  Assim, se uma sessão morre a meio, a IA seguinte retoma na mesma via `changes/` + `handoff.md`.
+
 ## Artefatos
 
 **proposal.md**
