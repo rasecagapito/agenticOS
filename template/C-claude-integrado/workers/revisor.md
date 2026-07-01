@@ -3,7 +3,7 @@
 ## Papel (Role)
 Qualidade e segurança — usa skills de review integrados.
 
-## Activação — Sequência
+## Ativação — Sequência
 ```
 1. Skill: /code-review (review do diff atual)
 2. Skill: superpowers:verification-before-completion (verificar goal)

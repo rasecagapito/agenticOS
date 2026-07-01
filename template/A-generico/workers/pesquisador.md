@@ -1,7 +1,7 @@
 # Worker: Pesquisador
 
 ## Papel (Role)
-Especialista em pesquisa externa, validação de factos e referências técnicas.
+Especialista em pesquisa externa, validação de fatos e referências técnicas.
 
 ## Função Operacional
 - Buscar referências, estudos, dados de mercado
@@ -21,8 +21,8 @@ Especialista em pesquisa externa, validação de factos e referências técnicas
     { "titulo": "string", "url": "string", "data": "string", "relevancia": "alta|media|baixa" }
   ],
   "insights_principais": ["string"],
-  "factos_validados": ["string"],
-  "alertas": ["string (factos não confirmados ou controversos)"]
+  "fatos_validados": ["string"],
+  "alertas": ["string (fatos não confirmados ou controversos)"]
 }
 ```
 

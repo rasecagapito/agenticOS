@@ -27,8 +27,8 @@ created_at  timestamptz DEFAULT now()
 - Foreign keys: sempre com `ON DELETE CASCADE` ou `RESTRICT` explícito
 
 ## Row Level Security (RLS)
-- RLS ativo em todas as tabelas com dados de utilizadores
-- Policy padrão: utilizador acede apenas aos seus próprios registos
+- RLS ativo em todas as tabelas com dados de usuários
+- Policy padrão: usuário acessa apenas aos seus próprios registros
 
 ```sql
 -- Template de policy RLS

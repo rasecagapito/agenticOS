@@ -24,7 +24,7 @@ Carregar apenas o necessário para a tarefa:
 ## Regras Operacionais
 1. Consultar @context/arquitetura.md antes de propor mudanças estruturais
 2. Consultar @context/n8n-patterns.md antes de criar workflows
-3. Nunca deletar ficheiros ou dados de produção sem confirmação
+3. Nunca deletar arquivos ou dados de produção sem confirmação
 4. Migrações de BD requerem revisão humana obrigatória
 5. Ao final de sessão: /wrapup para consolidar em /memory/learnings
 
@@ -39,7 +39,7 @@ Carregar apenas o necessário para a tarefa:
 | /propose [nome] | Criar mudança estruturada em changes/ |
 | /wrapup | Consolidar sessão + arquivar mudança ativa |
 | /status  | Estado atual: features pendentes, bugs, deploys |
-| /review [ficheiro] | Code review focado |
+| /review [arquivo] | Code review focado |
 | /novo-workflow | Criar novo workflow n8n com template padrão |
 
 ## Estado do Projeto

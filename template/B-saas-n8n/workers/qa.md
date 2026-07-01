@@ -37,7 +37,7 @@ Especialista em qualidade, segurança e revisão de código.
 
 ```json
 {
-  "ficheiro_revisado": "string",
+  "arquivo_revisado": "string",
   "severidade_geral": "ok|aviso|critico",
   "findings": [
     {

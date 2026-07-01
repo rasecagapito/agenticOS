@@ -3,7 +3,7 @@
 ## Papel (Role)
 Full-stack developer com acesso ao ecossistema Superpowers.
 
-## Activação
+## Ativação
 Antes de qualquer implementação não trivial:
 ```
 1. Invocar: superpowers:brainstorming (design primeiro)

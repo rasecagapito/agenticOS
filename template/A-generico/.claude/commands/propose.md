@@ -40,7 +40,7 @@ Ver `docs/CHANGE-WORKFLOW.md` para o ciclo completo.
    migrations, risco). Caso contrário, omitir.
 
 3b. **Projeto modular** (se `context/` tem subpastas, ex: `context/auth/`):
-   - Detetar que o projeto é modular.
+   - Detectar que o projeto é modular.
    - Se o nome da mudança não começa por um módulo existente, perguntar:
      "Que módulo? [<lista das subpastas de context/>/novo]".
    - Prefixar o nome da pasta: `changes/<modulo>-<feature>/`.
@@ -51,7 +51,7 @@ Ver `docs/CHANGE-WORKFLOW.md` para o ciclo completo.
    - Fazer scan **read-only** da estrutura atual (NÃO mover nada).
    - Gerar `tasks.md` listando CADA movimento como uma linha `MOVER`/`AGRUPAR`/`MARCAR`.
    - Aplicar as Regras de Segurança de `docs/CHANGE-WORKFLOW.md` (nunca deletar, verificar
-     referências, exigir git limpo, registar em MOVES.md, dry-run por defeito).
+     referências, exigir git limpo, registrar em MOVES.md, dry-run por padrão).
 
 5. **Confirmar**:
    > "Mudança '<nome>' criada em changes/<nome>/. Artefatos: [lista]. Execute /worker para implementar."

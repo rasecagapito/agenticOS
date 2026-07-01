@@ -14,7 +14,7 @@ Cria uma mudança em `changes/<nome>/`.
    - `proposal.md` — `# Mudança: <nome>` + `## Porquê` + `## Escopo` (entra / NÃO entra) + `## Abordagem`.
    - `tasks.md` — `# Tarefas: <nome>` + checklist `- [ ] 1. …`.
    - `design.md` — **só se** técnica/não-trivial (arquitetura, migrations, risco).
-3b. **Projeto modular** (se `context/` tem subpastas): detetar módulo; se o nome não começa por módulo existente, perguntar "Que módulo? [<subpastas>/novo]"; prefixar `changes/<modulo>-<feature>/`; incluir `## Módulo: <nome>` no proposal.
+3b. **Projeto modular** (se `context/` tem subpastas): detectar módulo; se o nome não começa por módulo existente, perguntar "Que módulo? [<subpastas>/novo]"; prefixar `changes/<modulo>-<feature>/`; incluir `## Módulo: <nome>` no proposal.
 4. **Reorganização** (`propose reorganize-<alvo>`): scan read-only; `tasks.md` lista CADA movimento (`MOVER`/`AGRUPAR`/`MARCAR`); aplicar Regras de Segurança de `docs/CHANGE-WORKFLOW.md`.
 5. **Marcar como ativa no handoff**: atualizar `memory/handoff.md` → Mudança ativa = `changes/<nome>/` (seguir `procedures/handoff.md`).
 6. **Confirmar**: "Mudança '<nome>' criada. Artefatos: [lista]. Executar o worker para implementar."

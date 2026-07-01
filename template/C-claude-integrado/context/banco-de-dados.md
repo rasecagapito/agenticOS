@@ -9,4 +9,4 @@
 ## Convenções
 - IDs: UUID via `gen_random_uuid()`
 - Timestamps: `timestamptz DEFAULT now()`
-- RLS: ativo em todas as tabelas de utilizadores
+- RLS: ativo em todas as tabelas de usuários
