@@ -6,8 +6,8 @@
 1. `git branch --show-current` — branch atual.
 2. `git log --oneline -5` — últimos commits.
 3. Ler `memory/handoff.md` — último provedor, mudança ativa, próxima intenção.
-4. Ler `AGENTS.md` — secção "Estado do Projeto".
-5. Ler ficheiro mais recente em `memory/history/`.
+4. Ler `AGENTS.md` — seção "Estado do Projeto".
+5. Ler arquivo mais recente em `memory/history/`.
 6. Ler `context/produto.md` — estado das features.
 
 ## Apresentar

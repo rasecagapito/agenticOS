@@ -1,20 +1,20 @@
 # Agentic OS — Template D (Multi-Provedor)
 
-Cérebro partilhado entre várias IAs (Claude, Codex, Gemini, GLM, DeepSeek…). Quando uma IA
+Cérebro compartilhado entre várias IAs (Claude, Codex, Gemini, GLM, DeepSeek…). Quando uma IA
 para, a próxima continua exatamente do mesmo ponto. **Sem drift** — fonte única de verdade.
 
 ## Como funciona (fonte única + ponteiros)
 
 | Peça | Papel |
 |------|-------|
-| `AGENTS.md` | **Cérebro canónico** — orquestrador que todas as IAs leem. |
+| `AGENTS.md` | **Cérebro canônico** — orquestrador que todas as IAs leem. |
 | `CLAUDE.md` | Ponteiro fino (`@AGENTS.md`) para o Claude Code. |
 | `GEMINI.md` | Ponteiro fino (import de `AGENTS.md`) para o Gemini CLI. |
-| `providers/registry.md` | Que ficheiro cada IA lê + limitações. |
+| `providers/registry.md` | Que arquivo cada IA lê + limitações. |
 | `automation/procedures/` | Lógica dos comandos, **provider-neutra** (fonte única). |
 | `.claude/commands/` | Wrappers finos → `procedures/` (UX de slash no Claude). |
 | `memory/handoff.md` | **Estado vivo** — quem parou onde, e a narrativa p/ retomar. |
-| `context/` · `memory/` · `changes/` | Cérebro neutro partilhado (igual aos outros templates). |
+| `context/` · `memory/` · `changes/` | Cérebro neutro compartilhado (igual aos outros templates). |
 
 ## Continuidade entre IAs
 

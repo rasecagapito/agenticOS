@@ -101,19 +101,19 @@ Mudança "add-dark-mode" concluída. Sugiro atualizar context/:
   + context/stack.md       ADICIONAR nota: preferência em localStorage
 Confirmar? [1 s/n] [2 s/n] [3 s/n]
 ```
-Aprovados → editados em context/. Pasta → changes/archive/. Registo em memory/.
+Aprovados → editados em context/. Pasta → changes/archive/. Registro em memory/.
 
 ## Módulos / Domínios (opcional)
 
 Projetos com vários módulos de código (auth, billing, pagamentos…) podem organizar o
-conhecimento por **domínio**, em vez de ficheiros soltos. É **opt-in** — projetos pequenos
+conhecimento por **domínio**, em vez de arquivos soltos. É **opt-in** — projetos pequenos
 continuam flat.
 
 ### Estrutura modular
 
 ```
 context/
-├── _global.md           # stack + convenções partilhadas
+├── _global.md           # stack + convenções compartilhadas
 ├── auth/
 │   ├── produto.md        # o que o módulo faz
 │   └── arquitetura.md    # como funciona
@@ -131,13 +131,13 @@ changes/
 
 | Peça | Regra |
 |------|-------|
-| `context/<modulo>/` | 1 subpasta por módulo; `_global.md` para o partilhado |
+| `context/<modulo>/` | 1 subpasta por módulo; `_global.md` para o compartilhado |
 | `changes/<modulo>-<feature>/` | nome prefixado; `proposal.md` declara `## Módulo: <nome>` |
 | Delta no `/wrapup` | mira `context/<modulo>/` do módulo declarado |
 | `workers/` | globais — carregam só `_global.md` + `context/<modulo>/` da tarefa |
 | `CLAUDE.md` | lista módulos (`@context/auth/`); carrega só o ativo → poupa tokens |
 
-### Deteção flat vs modular
+### Detecção flat vs modular
 
 - `context/` tem subpastas → **modular**: comandos aplicam as regras acima.
 - `context/` só tem `.md` soltos → **flat**: comportamento normal, inalterado.
@@ -146,7 +146,7 @@ changes/
 
 ```
 /propose add-2fa
-→ deteta modular (existem context/auth/, context/billing/)
+→ detecta modular (existem context/auth/, context/billing/)
 → pergunta: "Que módulo? [auth/billing/novo]"   (resposta: auth)
 → cria changes/auth-add-2fa/ com proposal contendo "## Módulo: auth"
 ```
@@ -170,14 +170,14 @@ Reorganizar é uma mudança: `/propose reorganize-<alvo>`.
 - **Nunca deletar.** Redundantes vão para `_quarantine/` (ou `docs/archive/`), nunca apagados.
 - **Nunca mover código sem verificar referências.** Procurar imports/links antes; atualizar todos ou não mover.
 - **Verificar git primeiro.** Se for repo git, exigir working tree limpo — movimentos reversíveis.
-- **Registar movimentos** em `changes/reorganize-<alvo>/MOVES.md` (mapa origem→destino) p/ rollback.
-- **Dry-run por defeito.** Só `/worker` após aprovação move.
+- **Registrar movimentos** em `changes/reorganize-<alvo>/MOVES.md` (mapa origem→destino) p/ rollback.
+- **Dry-run por padrão.** Só `/worker` após aprovação move.
 - **Em dúvida → parar e perguntar.**
 
 ### Redundância — critérios (sugestão; humano decide)
-- Conteúdo idêntico (hash) a outro ficheiro
+- Conteúdo idêntico (hash) a outro arquivo
 - Backup óbvio (`.bak`, `~`, `-copy`, `-old`, datado e superseded)
 - Doc coberto integralmente por outro mais recente
 
-Nunca marcar automaticamente: ficheiros referenciados por código, configs ativas,
+Nunca marcar automaticamente: arquivos referenciados por código, configs ativas,
 ou qualquer coisa fora de `docs/`/notas sem análise de referências.

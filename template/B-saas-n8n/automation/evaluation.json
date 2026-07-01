@@ -3,11 +3,11 @@
   "project_type": "saas-n8n",
   "schemas": {
     "feature_implementation": {
-      "required": ["feature", "ficheiros_alterados", "migracao_necessaria", "testes_necessarios"],
+      "required": ["feature", "arquivos_alterados", "migracao_necessaria", "testes_necessarios"],
       "rules": [
         "sem credenciais hardcoded",
         "sem 'any' em TypeScript",
-        "migrations em ficheiro separado se necessário"
+        "migrations em arquivo separado se necessário"
       ]
     },
     "workflow_n8n": {
@@ -19,7 +19,7 @@
       ]
     },
     "code_review": {
-      "required": ["ficheiro_revisado", "severidade_geral", "findings", "aprovado"],
+      "required": ["arquivo_revisado", "severidade_geral", "findings", "aprovado"],
       "rules": [
         "findings críticos bloqueiam aprovação",
         "severidade geral reflete o pior finding"

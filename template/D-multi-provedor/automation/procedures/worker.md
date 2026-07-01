@@ -9,8 +9,8 @@
 
 ## Execução
 1. Identificar o worker pelo argumento e ler `workers/<worker>.md` na íntegra.
-2. Carregar o contexto listado na secção "Contexto a Carregar" do worker.
-3. **Detetar mudança ativa**: se há pasta em `changes/` (fora de `archive/`), carregar o `tasks.md` dela.
+2. Carregar o contexto listado na seção "Contexto a Carregar" do worker.
+3. **Detectar mudança ativa**: se há pasta em `changes/` (fora de `archive/`), carregar o `tasks.md` dela.
    Localizar a primeira `[ ]` (o cursor, do `procedures/handoff.md`) e retomar aí.
 4. Confirmar: "Worker [nome] ativo. Contexto: [lista]. A retomar na tarefa [N]."
 5. Trabalhar seguindo processo e restrições do worker.

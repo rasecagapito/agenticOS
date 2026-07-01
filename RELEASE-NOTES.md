@@ -1,3 +1,28 @@
+# Agentic OS v1.3.0
+
+Loop de **Conformidade auto-corretivo (Agente A/B)** — o skill deixa de só descrever o padrão e
+passa a **verificar e corrigir** até o projeto ficar exatamente no padrão desenhado, sendo
+**exigente sobretudo em projetos novos**.
+
+## Novidades
+
+- **Loop A/B** — Agente A audita (read-only) → gate humano → Agente B aplica só o aprovado → A
+  re-audita, até PASS (máx. 3 ciclos, depois escala). Spec: [`docs/CONFORMANCE-LOOP.md`](docs/CONFORMANCE-LOOP.md).
+- **`docs/CONFORMANCE-SPEC.md`** — o "padrão desenhado" tornado **verificável**: camadas base
+  (B1–B6), multi-provedor (M1–M7) e **regras anti-drift invioláveis** (D1–D5), incl. proibir
+  `commands/` na raiz duplicando `.claude/commands/` + `procedures/`.
+- **Gate duro no MODO B** — o skill não declara sucesso sem re-auditoria `PASS` completa.
+- **Híbrido/portável** — no Claude Code, A e B são subagentes reais (Task/Agent); em Codex/Gemini,
+  um só agente faz role-switch A→B→A seguindo `automation/procedures/conform.md`.
+- **Novo comando `/conform`** — wrapper fino sobre o procedimento provider-neutro (sem argumento =
+  só auditar/dry-run).
+- **`evaluation.json`** — novo gate `agentic_os_conformance` + schema `conformance_audit`.
+
+Compatível com v1.2.0 — a estrutura e o workflow multi-provedor mantêm-se; isto acrescenta a
+camada de verificação.
+
+---
+
 # Agentic OS v1.2.0
 
 Camada opt-in **Multi-Provedor** — várias IAs (Claude, Codex, Gemini, GLM, DeepSeek…)
@@ -6,12 +31,12 @@ do mesmo ponto, **sem drift** ("sem delírio").
 
 ## Novidades
 
-- **Fonte única + ponteiros** — um só ficheiro cérebro é canónico (`AGENTS.md` em projetos novos); `CLAUDE.md`/`GEMINI.md` são ponteiros `@import`. Zero duplicação = zero drift.
+- **Fonte única + ponteiros** — um só arquivo cérebro é canônico (`AGENTS.md` em projetos novos); `CLAUDE.md`/`GEMINI.md` são ponteiros `@import`. Zero duplicação = zero drift.
 - **Handoff** (`memory/handoff.md`) — estado vivo que a próxima IA lê para retomar. O cursor (próxima tarefa) é derivado da primeira `[ ]` em `tasks.md`; gravado incremental ao fechar cada tarefa (à prova de crash, sobrevive a sessão morta sem `/wrapup`).
 - **Procedimentos provider-neutros** — `automation/procedures/{propose,worker,wrapup,status,handoff}.md` são a fonte única da lógica; `.claude/commands/` são wrappers finos. Codex/Gemini pedem em linguagem natural e leem o procedimento.
-- **`providers/registry.md`** — que ficheiro cada IA lê + suporte a import + limitações; isola factos por provedor.
+- **`providers/registry.md`** — que arquivo cada IA lê + suporte a import + limitações; isola fatos por provedor.
 - **Novo template `D-multi-provedor/`** — exemplo completo pronto a copiar.
-- **Skill atualizada** — deteta o cérebro em projetos existentes (regra de precedência), cria ponteiros em falta e adiciona a camada **sem tocar** nos comandos existentes.
+- **Skill atualizada** — detecta o cérebro em projetos existentes (regra de precedência), cria ponteiros em falta e adiciona a camada **sem tocar** nos comandos existentes.
 - **Novo comando `/handoff`** — ler/gravar o estado vivo.
 
 Tudo opt-in. Projetos single-IA (templates A/B/C) ficam inalterados.
@@ -68,7 +93,7 @@ Reiniciar o Claude Code após instalar.
   - cada mudança = pasta `changes/<nome>/` com proposal + tasks + design
   - delta semi-automático em `context/` (`+` adicionar · `~` modificar · `-` remover), humano confirma
   - ponte brainstorming → artefatos
-- **Reorganização brownfield segura** (`/propose reorganize-<alvo>`): scan read-only → plano → aprovação → mover. Nunca deleta (quarentena), verifica referências, dry-run por defeito.
+- **Reorganização brownfield segura** (`/propose reorganize-<alvo>`): scan read-only → plano → aprovação → mover. Nunca deleta (quarentena), verifica referências, dry-run por padrão.
 - **Docs**: [`docs/CHANGE-WORKFLOW.md`](docs/CHANGE-WORKFLOW.md) — ciclo completo com exemplo `add-dark-mode`
 
 ## Comandos

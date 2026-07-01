@@ -1,7 +1,7 @@
 # Spec: Suporte a Módulos / Domínios no Agentic OS
 
 **Data**: 2026-06-11
-**Estado**: Aprovado para planeamento
+**Estado**: Aprovado para planejamento
 **Depende de**: [Change Workflow](2026-06-11-change-workflow-design.md)
 **Inspiração**: conceito "Domain" do OpenSpec
 
@@ -9,7 +9,7 @@
 
 ## Problema
 
-O Agentic OS é **flat**: `context/` tem ficheiros soltos por tema, `changes/` é plano.
+O Agentic OS é **flat**: `context/` tem arquivos soltos por tema, `changes/` é plano.
 Projetos com vários módulos de código (auth, billing, pagamentos…) misturam conhecimento
 num só nível — carregam contexto irrelevante (desperdício de tokens) e perdem isolamento.
 
@@ -33,7 +33,7 @@ flat (projetos pequenos continuam simples). Brownfield: nada existente é força
 
 ```
 context/
-├── _global.md           # stack + convenções partilhadas por todos os módulos
+├── _global.md           # stack + convenções compartilhadas por todos os módulos
 ├── auth/
 │   ├── produto.md        # o que o módulo faz
 │   └── arquitetura.md    # como funciona
@@ -53,24 +53,24 @@ workers/                  # globais — worker lê só o context/<modulo>/ relev
 
 | Peça | Regra modular |
 |------|---------------|
-| `context/<modulo>/` | 1 subpasta por módulo. Conhecimento isolado. `_global.md` para o partilhado. |
+| `context/<modulo>/` | 1 subpasta por módulo. Conhecimento isolado. `_global.md` para o compartilhado. |
 | `changes/<modulo>-<feature>/` | Nome prefixado pelo módulo. `proposal.md` tem linha `## Módulo: <nome>`. |
 | Delta no `/wrapup` | Sugestões de update miram `context/<modulo>/` do módulo declarado na mudança. |
 | `workers/` | Globais. Worker carrega só `context/_global.md` + `context/<modulo>/` da tarefa. |
 | `CLAUDE.md` | Lista módulos: `@context/auth/`, `@context/billing/`. Carrega só o módulo ativo. |
 
-### Deteção flat vs modular
+### Detecção flat vs modular
 
 - Se `context/` tem subpastas → projeto modular. Comandos aplicam regras de módulo.
-- Se `context/` só tem ficheiros `.md` soltos → projeto flat. Comportamento atual, inalterado.
-- `/propose` deteta: se modular e o nome não tem prefixo de módulo conhecido, pergunta qual módulo.
+- Se `context/` só tem arquivos `.md` soltos → projeto flat. Comportamento atual, inalterado.
+- `/propose` detecta: se modular e o nome não tem prefixo de módulo conhecido, pergunta qual módulo.
 
 ### Exemplo: `/propose add-2fa` num projeto modular
 
 ```
 /propose add-2fa
-→ deteta projeto modular (context/auth/, context/billing/ existem)
-→ pergunta: "Que módulo? [auth/billing/novo]"  (utilizador: auth)
+→ detecta projeto modular (context/auth/, context/billing/ existem)
+→ pergunta: "Que módulo? [auth/billing/novo]"  (usuário: auth)
 → cria changes/auth-add-2fa/ com proposal.md contendo "## Módulo: auth"
 ```
 
@@ -82,9 +82,9 @@ No `/wrapup`, o delta sugere updates só em `context/auth/`.
 
 | Alvo | Alteração |
 |------|-----------|
-| `docs/CHANGE-WORKFLOW.md` | Nova secção "Módulos / Domínios": estrutura, regras, deteção, exemplo |
-| `skills/agentic-os/SKILL.md` | MODO B: opção modular na estrutura. MODO A: detetar módulos existentes. `/propose`: deteção + prefixo + campo Módulo. Ciclo: nota de módulo |
-| `template/{A,B,C}/.claude/commands/propose.md` | Passo: detetar projeto modular → perguntar módulo → prefixar nome → declarar `## Módulo:` na proposal |
+| `docs/CHANGE-WORKFLOW.md` | Nova seção "Módulos / Domínios": estrutura, regras, detecção, exemplo |
+| `skills/agentic-os/SKILL.md` | MODO B: opção modular na estrutura. MODO A: detectar módulos existentes. `/propose`: detecção + prefixo + campo Módulo. Ciclo: nota de módulo |
+| `template/{A,B,C}/.claude/commands/propose.md` | Passo: detectar projeto modular → perguntar módulo → prefixar nome → declarar `## Módulo:` na proposal |
 | `template/{A,B,C}/.claude/commands/wrapup.md` | Delta mira `context/<modulo>/` quando a mudança declara módulo |
 
 (Templates `context/` NÃO são reestruturados — modular é opt-in documentado.)
@@ -92,8 +92,8 @@ No `/wrapup`, o delta sugere updates só em `context/auth/`.
 ## Critérios de sucesso
 
 1. `docs/CHANGE-WORKFLOW.md` explica o padrão modular com exemplo `auth-add-2fa`.
-2. Num projeto com subpastas em `context/`, `/propose` deteta modular e pergunta/prefixa o módulo.
+2. Num projeto com subpastas em `context/`, `/propose` detecta modular e pergunta/prefixa o módulo.
 3. `proposal.md` de uma mudança modular contém `## Módulo: <nome>`.
 4. `/wrapup` mira deltas em `context/<modulo>/` do módulo declarado.
 5. Projetos flat (sem subpastas) mantêm comportamento atual, sem mudanças.
-6. SKILL.md MODO A deteta módulos existentes ao adaptar projeto brownfield.
+6. SKILL.md MODO A detecta módulos existentes ao adaptar projeto brownfield.

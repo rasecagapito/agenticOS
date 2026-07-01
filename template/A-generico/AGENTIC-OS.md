@@ -19,16 +19,16 @@
 |---------|-----------|
 | `/wrapup` | Consolida sessão → checkpoint em memory/history + aprendizados em memory/learnings |
 | `/status` | Resumo: fase atual, última sessão, próximos passos |
-| `/worker roteirista` | Activa worker de estrutura narrativa e CTAs |
-| `/worker pesquisador` | Activa worker de pesquisa e validação de factos |
-| `/worker analista` | Activa worker de métricas e padrões |
+| `/worker roteirista` | Ativa worker de estrutura narrativa e CTAs |
+| `/worker pesquisador` | Ativa worker de pesquisa e validação de fatos |
+| `/worker analista` | Ativa worker de métricas e padrões |
 
 ## Ciclo de Uso
 
 ```
 1. Abrir Claude Code nesta pasta → CLAUDE.md carrega automático
 2. "vamos começar" → Claude lê memory/history + estado do projeto
-3. /worker [nome] → activa especialista com contexto carregado
+3. /worker [nome] → ativa especialista com contexto carregado
 4. [trabalho da sessão]
 5. /wrapup → consolida sessão
 6. Fechar → hook grava lembrete automático
@@ -36,7 +36,7 @@
 
 ## Módulos de Conhecimento (/context)
 
-| Ficheiro | Conteúdo |
+| Arquivo | Conteúdo |
 |----------|---------|
 | `canal.md` | Nicho, plataformas, proposta de valor |
 | `produtos.md` | Catálogo, posicionamento, modelo de receita |
@@ -48,7 +48,7 @@
 | Worker | Função |
 |--------|--------|
 | `roteirista.md` | Estrutura narrativa, ganchos, CTAs |
-| `pesquisador.md` | Pesquisa externa, validação de factos |
+| `pesquisador.md` | Pesquisa externa, validação de fatos |
 | `analista.md` | Métricas, padrões, recomendações |
 
 ## Change Workflow

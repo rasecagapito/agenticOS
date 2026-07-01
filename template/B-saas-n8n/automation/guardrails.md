@@ -2,7 +2,7 @@
 
 ## Ações de Alto Impacto (Confirmação Obrigatória)
 - Executar migrations em produção
-- Deletar dados de utilizadores
+- Deletar dados de usuários
 - Alterar schema de tabelas existentes
 - Ativar workflows n8n em produção
 - Alterar configurações de RLS
@@ -10,7 +10,7 @@
 - Remover dependências do package.json
 
 ## Ações Automáticas Permitidas
-- Ler qualquer ficheiro do projeto
+- Ler qualquer arquivo do projeto
 - Escrever código em desenvolvimento
 - Criar migrations (não aplicar)
 - Criar/editar workflows n8n em staging
@@ -19,7 +19,7 @@
 
 ## Regras de Segurança
 - Credenciais: sempre via variáveis de ambiente, nunca em código
-- RLS: obrigatório em tabelas com dados de utilizadores
+- RLS: obrigatório em tabelas com dados de usuários
 - Webhooks n8n: validar assinatura HMAC quando disponível
 - Logs: nunca incluir dados sensíveis (passwords, tokens, PII)
 
@@ -30,4 +30,4 @@
 
 ## Escalação
 Se em dúvida: **parar, documentar a dúvida, perguntar**.
-Melhor pergunta desnecessária do que acção irreversível.
+Melhor pergunta desnecessária do que ação irreversível.
