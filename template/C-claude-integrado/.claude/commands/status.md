@@ -1,8 +1,8 @@
 Mostra estado atual do projeto. Executa em ordem:
 
 1. `git branch --show-current` + `git log --oneline -5`
-2. Ler `CLAUDE.md` — secção "Estado do Projeto"
-3. Ler ficheiro mais recente em `memory/history/`
+2. Ler `CLAUDE.md` — seção "Estado do Projeto"
+3. Ler arquivo mais recente em `memory/history/`
 4. Ler `context/produto.md` — features e estado
 
 Apresentar:

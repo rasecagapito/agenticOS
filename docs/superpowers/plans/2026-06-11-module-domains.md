@@ -4,7 +4,7 @@
 
 **Goal:** Adicionar suporte opcional a módulos/domínios ao plugin Agentic OS — `context/<modulo>/`, mudanças prefixadas `<modulo>-<feature>` com campo `## Módulo:`, e deltas que miram a pasta do módulo — sem quebrar o modo flat.
 
-**Architecture:** Plugin markdown. Padrão modular é opt-in detetado por presença de subpastas em `context/`. Atualiza doc fonte-única, skill e os comandos propose/wrapup dos 3 templates.
+**Architecture:** Plugin markdown. Padrão modular é opt-in detectado por presença de subpastas em `context/`. Atualiza doc fonte-única, skill e os comandos propose/wrapup dos 3 templates.
 
 **Tech Stack:** Markdown, slash commands, PowerShell (verificação).
 
@@ -17,9 +17,9 @@
 ## File Structure
 
 **Modificados:**
-- `docs/CHANGE-WORKFLOW.md` — nova secção "Módulos / Domínios"
-- `skills/agentic-os/SKILL.md` — MODO B (estrutura modular), MODO A (deteção), /propose, ciclo
-- `template/{A-generico,B-saas-n8n,C-claude-integrado}/.claude/commands/propose.md` — deteção + prefixo + campo Módulo
+- `docs/CHANGE-WORKFLOW.md` — nova seção "Módulos / Domínios"
+- `skills/agentic-os/SKILL.md` — MODO B (estrutura modular), MODO A (detecção), /propose, ciclo
+- `template/{A-generico,B-saas-n8n,C-claude-integrado}/.claude/commands/propose.md` — detecção + prefixo + campo Módulo
 - `template/{A,B,C}/.claude/commands/wrapup.md` — delta mira context/<modulo>/
 
 ---
@@ -29,23 +29,23 @@
 **Files:**
 - Modify: `docs/CHANGE-WORKFLOW.md`
 
-- [ ] **Step 1: Acrescentar secção "Módulos / Domínios"**
+- [ ] **Step 1: Acrescentar seção "Módulos / Domínios"**
 
-Ler `docs/CHANGE-WORKFLOW.md`. Inserir a secção abaixo IMEDIATAMENTE ANTES da secção
+Ler `docs/CHANGE-WORKFLOW.md`. Inserir a seção abaixo IMEDIATAMENTE ANTES da seção
 `## Reorganização de projetos existentes (brownfield)`:
 
 ```markdown
 ## Módulos / Domínios (opcional)
 
 Projetos com vários módulos de código (auth, billing, pagamentos…) podem organizar o
-conhecimento por **domínio**, em vez de ficheiros soltos. É **opt-in** — projetos pequenos
+conhecimento por **domínio**, em vez de arquivos soltos. É **opt-in** — projetos pequenos
 continuam flat.
 
 ### Estrutura modular
 
 \`\`\`
 context/
-├── _global.md           # stack + convenções partilhadas
+├── _global.md           # stack + convenções compartilhadas
 ├── auth/
 │   ├── produto.md        # o que o módulo faz
 │   └── arquitetura.md    # como funciona
@@ -63,13 +63,13 @@ changes/
 
 | Peça | Regra |
 |------|-------|
-| `context/<modulo>/` | 1 subpasta por módulo; `_global.md` para o partilhado |
+| `context/<modulo>/` | 1 subpasta por módulo; `_global.md` para o compartilhado |
 | `changes/<modulo>-<feature>/` | nome prefixado; `proposal.md` declara `## Módulo: <nome>` |
 | Delta no `/wrapup` | mira `context/<modulo>/` do módulo declarado |
 | `workers/` | globais — carregam só `_global.md` + `context/<modulo>/` da tarefa |
 | `CLAUDE.md` | lista módulos (`@context/auth/`); carrega só o ativo → poupa tokens |
 
-### Deteção flat vs modular
+### Detecção flat vs modular
 
 - `context/` tem subpastas → **modular**: comandos aplicam as regras acima.
 - `context/` só tem `.md` soltos → **flat**: comportamento normal, inalterado.
@@ -78,7 +78,7 @@ changes/
 
 \`\`\`
 /propose add-2fa
-→ deteta modular (existem context/auth/, context/billing/)
+→ detecta modular (existem context/auth/, context/billing/)
 → pergunta: "Que módulo? [auth/billing/novo]"   (resposta: auth)
 → cria changes/auth-add-2fa/ com proposal contendo "## Módulo: auth"
 \`\`\`
@@ -107,16 +107,16 @@ git push origin main
 
 - [ ] **Step 1: MODO B — mostrar opção modular na estrutura**
 
-Em `skills/agentic-os/SKILL.md`, na secção "MODO B", logo após a árvore de estrutura ASCII
+Em `skills/agentic-os/SKILL.md`, na seção "MODO B", logo após a árvore de estrutura ASCII
 (a seguir ao bloco que termina em `projects/`), inserir:
 
 ```markdown
 **Variante modular (projetos com vários módulos de código):** `context/` pode usar subpastas
-por módulo em vez de ficheiros soltos:
+por módulo em vez de arquivos soltos:
 
 \`\`\`
 context/
-├── _global.md           # stack + convenções partilhadas
+├── _global.md           # stack + convenções compartilhadas
 ├── auth/                # 1 pasta por módulo
 │   ├── produto.md
 │   └── arquitetura.md
@@ -125,13 +125,13 @@ context/
 \`\`\`
 
 Neste caso, as mudanças são prefixadas (`changes/<modulo>-<feature>/`) e cada `proposal.md`
-declara `## Módulo: <nome>`. Ver `docs/CHANGE-WORKFLOW.md` secção "Módulos / Domínios".
+declara `## Módulo: <nome>`. Ver `docs/CHANGE-WORKFLOW.md` seção "Módulos / Domínios".
 É opt-in — projetos pequenos mantêm `context/` flat.
 ```
 
-- [ ] **Step 2: MODO A — detetar módulos existentes**
+- [ ] **Step 2: MODO A — detectar módulos existentes**
 
-Na secção "MODO A", no "Passo 1: Explorar estrutura", acrescentar ao fim da lista de coisas
+Na seção "MODO A", no "Passo 1: Explorar estrutura", acrescentar ao fim da lista de coisas
 a procurar:
 
 ```markdown
@@ -141,18 +141,18 @@ a procurar:
 
 - [ ] **Step 3: `/propose` — instruções de módulo na zona de Slash Commands**
 
-Na secção "Slash Commands", dentro do bloco `### /.claude/commands/propose.md`, acrescentar
+Na seção "Slash Commands", dentro do bloco `### /.claude/commands/propose.md`, acrescentar
 um ponto após o passo de criação da pasta:
 
 ```markdown
-- **Projeto modular**: se `context/` tem subpastas, detetar projeto modular. Se o nome da
+- **Projeto modular**: se `context/` tem subpastas, detectar projeto modular. Se o nome da
   mudança não começa por um módulo conhecido, perguntar qual módulo. Prefixar o nome
   (`<modulo>-<feature>`) e incluir `## Módulo: <nome>` no `proposal.md`.
 ```
 
 - [ ] **Step 4: Ciclo de Operação — nota de módulo**
 
-Na secção "Ciclo de Operação", logo após o bloco numerado do ciclo, acrescentar:
+Na seção "Ciclo de Operação", logo após o bloco numerado do ciclo, acrescentar:
 
 ```markdown
 Em projetos modulares, as mudanças são prefixadas pelo módulo (`auth-add-2fa`) e o delta do
@@ -174,7 +174,7 @@ git push origin main
 
 ---
 
-## Task 3: Atualizar `propose.md` nos 3 templates — deteção de módulo
+## Task 3: Atualizar `propose.md` nos 3 templates — detecção de módulo
 
 **Files:**
 - Modify: `template/A-generico/.claude/commands/propose.md`
@@ -188,7 +188,7 @@ O bloco inserido é o **mesmo** nos três. Inserir como novo passo logo APÓS o 
 
 ```markdown
 3b. **Projeto modular** (se `context/` tem subpastas, ex: `context/auth/`):
-   - Detetar que o projeto é modular.
+   - Detectar que o projeto é modular.
    - Se o nome da mudança não começa por um módulo existente, perguntar:
      "Que módulo? [<lista das subpastas de context/>/novo]".
    - Prefixar o nome da pasta: `changes/<modulo>-<feature>/`.
@@ -196,9 +196,9 @@ O bloco inserido é o **mesmo** nos três. Inserir como novo passo logo APÓS o 
    Projeto flat (sem subpastas) → ignorar este passo.
 ```
 
-- [ ] **Step 2: Inserir nos 3 ficheiros**
+- [ ] **Step 2: Inserir nos 3 arquivos**
 
-Ler cada ficheiro e inserir o bloco (texto idêntico) na posição indicada com a Edit tool.
+Ler cada arquivo e inserir o bloco (texto idêntico) na posição indicada com a Edit tool.
 
 - [ ] **Step 3: Verificar**
 
@@ -227,15 +227,15 @@ delta para considerar módulo. O texto a acrescentar é o **mesmo** nos três.
 
 - [ ] **Step 1: Definir a linha a acrescentar**
 
-Dentro do passo "Fechar mudança ativa", logo após a linha que descreve "Sugerir deltas em
+Dentro do passo "Fechar mudança ativa", logo após a linha que descreve "Sugerenciar deltas em
 `context/`", acrescentar:
 
 ```markdown
      - Se a mudança declara `## Módulo: <nome>` (projeto modular), mirar as sugestões de
-       delta em `context/<modulo>/` (e `context/_global.md` se afetar o partilhado).
+       delta em `context/<modulo>/` (e `context/_global.md` se afetar o compartilhado).
 ```
 
-- [ ] **Step 2: Inserir nos 3 ficheiros**
+- [ ] **Step 2: Inserir nos 3 arquivos**
 
 Ler cada `wrapup.md`, localizar o passo "Fechar mudança ativa" e o sub-ponto de delta,
 inserir a linha com a Edit tool (indentação consistente com as linhas vizinhas).
@@ -290,11 +290,11 @@ git push origin v1.1.0
 
 **Spec coverage:**
 - Estrutura modular + regras → Tasks 1, 2
-- Deteção flat vs modular → Tasks 1, 2, 3
-- `/propose` deteta + prefixa + campo Módulo → Task 3
+- Detecção flat vs modular → Tasks 1, 2, 3
+- `/propose` detecta + prefixa + campo Módulo → Task 3
 - Delta mira context/<modulo>/ → Task 4
-- Flat inalterado → garantido por "opt-in" em todos os blocos (deteção por subpastas)
-- MODO A deteta módulos → Task 2 Step 2
+- Flat inalterado → garantido por "opt-in" em todos os blocos (detecção por subpastas)
+- MODO A detecta módulos → Task 2 Step 2
 - Critérios 1-6 → Tasks 1-4 + verificação Task 5
 
 **Placeholder scan:** sem TODO/TBD; conteúdo completo mostrado.

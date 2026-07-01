@@ -2,14 +2,14 @@
 
 ## Ações de Alto Impacto (Confirmação Obrigatória)
 - Migrations em produção
-- Deletar dados de utilizadores
+- Deletar dados de usuários
 - Push para main/production
 - Ativar workflows n8n em produção
 - Modificar `.claude/settings.json`
 - Alterar permissões de segurança ou RLS
 
 ## Ações Automáticas Permitidas
-- Ler qualquer ficheiro
+- Ler qualquer arquivo
 - Escrever em /memory, /projects
 - Invocar qualquer skill de análise ou revisão
 - Criar branches e commits

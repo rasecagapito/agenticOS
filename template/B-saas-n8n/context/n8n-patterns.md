@@ -23,7 +23,7 @@ Trigger → [Lógica principal]
 ```
 
 ### Idempotência
-- Verificar se registo já existe antes de criar
+- Verificar se registro já existe antes de criar
 - Usar `upsert` em vez de `insert` quando possível
 - Workflows com webhook: validar `execution_id` para evitar duplicados
 
