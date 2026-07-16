@@ -3,23 +3,47 @@
 Metodologia de organização de arquivos que permite a um agente IA operar com
 autonomia entre sessões: elimina cold start, otimiza tokens e constrói memória persistente.
 
-## Instalação (Claude Code plugin)
+## Instalação
 
-Este é um **plugin do Claude Code** — instala-se via marketplace git, não via `npm install`
-(npm é para CLIs como o OpenSpec; plugins do Claude Code usam `/plugin`).
+O repositório distribui o mesmo núcleo do Agentic OS para Codex e Claude Code. A instalação é
+feita uma vez no perfil da ferramenta; depois, a skill pode ser usada em qualquer projeto.
 
-```
+### Claude Code
+
+```text
 /plugin marketplace add rasecagapito/agenticOS
 /plugin install agentic-os@agentic-os
 ```
 
-Reiniciar o Claude Code após instalar. Depois, a skill `agentic-os` ativa-se automaticamente
-quando mencionas montar/adaptar um projeto ao padrão Agentic OS.
+Reiniciar o Claude Code após instalar.
+
+### Codex
+
+Adicionar o repositório como marketplace:
+
+```powershell
+codex plugin marketplace add rasecagapito/agenticOS
+```
+
+Depois, abrir **Plugins** no Codex, selecionar **Agentic OS**, instalar o plugin e iniciar uma nova
+tarefa para carregar a skill. Não é necessário instalar novamente ao trocar de projeto usando o
+mesmo perfil do Codex.
+
+### Gemini e outros provedores
+
+Gemini e as demais IAs continuam suportados pela camada multi-provedor criada dentro de cada
+projeto: `AGENTS.md`, `GEMINI.md`, `providers/registry.md`, `memory/handoff.md` e
+`automation/procedures/`. Eles não dependem de um manifesto nativo neste repositório.
+
+Depois da instalação, pedir para montar ou adaptar um projeto ao padrão Agentic OS ativa a skill
+`agentic-os` automaticamente.
 
 ## Estrutura do repositório
 
-- `.claude-plugin/` — manifests do plugin (`plugin.json`, `marketplace.json`)
-- `skills/agentic-os/SKILL.md` — a skill que monta/adapta projetos ao padrão Agentic OS
+- `.codex-plugin/plugin.json` — manifesto oficial do plugin para Codex
+- `.agents/plugins/marketplace.json` — catálogo Git do plugin para Codex
+- `.claude-plugin/` — manifesto e marketplace do plugin para Claude Code
+- `skills/agentic-os/SKILL.md` — skill compartilhada e provider-neutra
 - `template/A-generico/` — template para conteúdo/marketing
 - `template/B-saas-n8n/` — template para SaaS + automações n8n
 - `template/C-claude-integrado/` — template SaaS integrado com Claude Code Superpowers
