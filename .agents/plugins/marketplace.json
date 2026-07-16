@@ -1,0 +1,20 @@
+{
+  "name": "agentic-os",
+  "interface": {
+    "displayName": "Agentic OS"
+  },
+  "plugins": [
+    {
+      "name": "agentic-os",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

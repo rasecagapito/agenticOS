@@ -1,0 +1,39 @@
+{
+  "name": "agentic-os",
+  "version": "1.3.0",
+  "description": "Agentic OS para memoria persistente, contexto modular, workers, workflow de mudancas, multi-provedor e conformidade A/B.",
+  "author": {
+    "name": "rasecagapito",
+    "url": "https://github.com/rasecagapito"
+  },
+  "homepage": "https://github.com/rasecagapito/agenticOS",
+  "repository": "https://github.com/rasecagapito/agenticOS",
+  "license": "MIT",
+  "keywords": [
+    "agentic",
+    "memory",
+    "context-engineering",
+    "multi-provider",
+    "conformance"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Agentic OS",
+    "shortDescription": "Contexto, memoria e conformidade para agentes.",
+    "longDescription": "Organiza projetos para agentes operarem entre sessoes com contexto modular, memoria persistente, workers, mudancas estruturadas, suporte multi-provedor e conformidade auto-corretiva.",
+    "developerName": "rasecagapito",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/rasecagapito/agenticOS",
+    "defaultPrompt": [
+      "Audite este projeto conforme o Agentic OS.",
+      "Adapte este projeto ao Agentic OS com seguranca.",
+      "Mostre o status e o handoff do Agentic OS."
+    ],
+    "brandColor": "#10A37F"
+  }
+}
