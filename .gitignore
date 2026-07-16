@@ -7,3 +7,6 @@ desktop.ini
 *.log
 *.tmp
 node_modules/
+
+# Local isolated worktrees
+.worktrees/
