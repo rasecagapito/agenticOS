@@ -1,23 +1,7 @@
 ---
 name: agentic-os
 description: |
-  Configura e gerencia um Agentic OS — metodologia de organização de arquivos para agentes IA operarem com memória persistente, contexto modular e workers especializados entre sessões.
-
-  Usar SEMPRE quando o usuário mencionar:
-  - "agentic os", "sistema agêntico", "montar agentic os"
-  - "analisar projeto" para ver se segue padrão de agente
-  - "adaptar projeto" ao padrão de agente
-  - "memória persistente entre sessões", "contexto modular"
-  - "workers", "subagentes especializados" para projeto
-  - "estrutura de pastas para agente IA"
-  - Quer inicializar novo projeto com estrutura de agente
-  - "multi-provedor", "várias IAs", "Claude e Codex juntos", "cérebro compartilhado entre IAs"
-  - "continuar de onde o Claude/Codex parou", "handoff entre IAs", "sincronizar IAs"
-  - "auditar agentic os", "conformidade", "auto-corrigir estrutura", "loop A/B", "pôr no padrão"
-
-  Dois modos: ANALISAR projeto existente (gap analysis + adaptação) ou INICIALIZAR novo projeto do zero.
-  Camada opt-in Multi-Provedor: cérebro compartilhado + handoff para várias IAs (ver docs/MULTI-PROVIDER.md).
-  Execução via loop de conformidade auto-corretivo Agente A/B (ver docs/CONFORMANCE-LOOP.md).
+  Use quando o usuário pedir para configurar, auditar, inicializar ou adaptar um projeto ao Agentic OS. Também ao mencionar sistema agêntico, memória persistente, contexto modular, workers, estrutura para agentes IA, multi-provedor, cérebro compartilhado entre Claude/Codex/Gemini, handoff entre IAs, conformidade, auto-correção ou loop A/B.
 ---
 
 # Agentic OS
