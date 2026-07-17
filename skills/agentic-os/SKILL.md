@@ -102,9 +102,10 @@ Criar apenas:
 3. `/workers/` — um arquivo por especialista (ver formato abaixo)
 4. `/automation/evaluation.json` — gates de qualidade
 5. `/automation/guardrails.md` — ações que requerem confirmação
-6. `/.claude/commands/` — slash commands (wrapup, status, worker)
+6. `/.claude/commands/` — slash commands (wrapup, status, worker, conform)
 6b. `/changes/` e `/changes/archive/` — pasta de mudanças estruturadas
 6c. `/.claude/commands/propose.md` — comando /propose
+6d. `/.claude/commands/conform.md` + `/automation/procedures/conform.md` — loop de conformidade A/B (wrapper fino + procedimento provider-neutro)
 7. Atualizar `/.claude/settings.json` ou `settings.local.json` — Stop hook
 8. `AGENTIC-OS.md` na raiz — referência rápida do sistema
 
@@ -141,7 +142,8 @@ aprovada**, nunca silenciosamente:
 │       ├── propose.md          # /propose
 │       ├── wrapup.md           # /wrapup
 │       ├── status.md           # /status
-│       └── worker.md           # /worker [nome]
+│       ├── worker.md           # /worker [nome]
+│       └── conform.md          # /conform (loop A/B)
 ├── context/                    # Conhecimento modular
 │   ├── produto.md
 │   ├── arquitetura.md
@@ -345,7 +347,31 @@ Instruções para Claude:
 
 ## Stop Hook (settings.json)
 
-Adicionar ao `.claude/settings.json` ou `settings.local.json` (preservar permissões existentes):
+Adicionar ao `.claude/settings.json` ou `settings.local.json` (preservar permissões existentes).
+Escolher a variante conforme o SO do usuário — **padrão portátil (`sh`)** cobre macOS, Linux e
+Windows com Git Bash; a variante **PowerShell** é para Windows nativo sem shell POSIX. Instalar só uma.
+
+**Padrão portátil (macOS / Linux / Windows+Git Bash):**
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'dir=\"${CLAUDE_PROJECT_DIR:-.}/memory/history\"; mkdir -p \"$dir\"; f=\"$dir/$(date +%Y-%m-%d-%H)-sessao.md\"; printf \"# Sessao %s\\n\\nSessao encerrada automaticamente.\\nExecutar /wrapup para consolidar aprendizados.\\n\" \"$(date \"+%Y-%m-%d %H:%M\")\" > \"$f\"'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Alternativa Windows nativo (PowerShell, sem Git Bash):**
 
 ```json
 {
@@ -357,7 +383,7 @@ Adicionar ao `.claude/settings.json` ou `settings.local.json` (preservar permiss
           {
             "type": "command",
             "shell": "powershell",
-            "command": "$date = Get-Date; $fileName = $date.ToString('yyyy-MM-dd-HH') + '-sessao.md'; $content = '# Sessao ' + $date.ToString('yyyy-MM-dd HH:mm') + \"`n`nSessao encerrada automaticamente.`nExecutar /wrapup para consolidar aprendizados.\"; $dir = Join-Path $PSScriptRoot '../memory/history'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Set-Content -Path (Join-Path $dir $fileName) -Value $content -Encoding UTF8"
+            "command": "$date = Get-Date; $fileName = $date.ToString('yyyy-MM-dd-HH') + '-sessao.md'; $content = '# Sessao ' + $date.ToString('yyyy-MM-dd HH:mm') + \"`n`nSessao encerrada automaticamente.`nExecutar /wrapup para consolidar aprendizados.\"; $dir = Join-Path $env:CLAUDE_PROJECT_DIR 'memory/history'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Set-Content -Path (Join-Path $dir $fileName) -Value $content -Encoding UTF8"
           }
         ]
       }
@@ -366,7 +392,7 @@ Adicionar ao `.claude/settings.json` ou `settings.local.json` (preservar permiss
 }
 ```
 
-**Explicar ao usuário** o que o hook faz antes de adicionar — requer confirmação explícita por ser modificação de settings.
+**Explicar ao usuário** o que o hook faz antes de adicionar — requer confirmação explícita por ser modificação de settings. Detectar o SO e instalar a variante correspondente (não as duas).
 
 ---
 

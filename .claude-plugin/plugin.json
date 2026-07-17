@@ -1,6 +1,6 @@
 {
   "name": "agentic-os",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Metodologia de organização de arquivos que permite a um agente IA operar com autonomia entre sessões: elimina cold start, otimiza tokens e constrói memória persistente. Inclui templates, workers, change workflow, camada multi-provedor (cérebro compartilhado entre IAs) e loop de conformidade auto-corretivo (Agente A/B).",
   "author": {
     "name": "rasecagapito",

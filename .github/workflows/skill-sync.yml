@@ -1,0 +1,21 @@
+name: skill-sync
+
+on:
+  push:
+    paths:
+      - "skills/agentic-os/SKILL.md"
+      - "agentic-os.skill"
+      - "scripts/**"
+  pull_request:
+    paths:
+      - "skills/agentic-os/SKILL.md"
+      - "agentic-os.skill"
+      - "scripts/**"
+
+jobs:
+  check-skill-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar sincronia do agentic-os.skill
+        run: bash scripts/check-skill-sync.sh

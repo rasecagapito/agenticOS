@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -Command \"$date = Get-Date; $fileName = $date.ToString('yyyy-MM-dd-HH') + '-sessao.md'; $content = '# Sessao ' + $date.ToString('yyyy-MM-dd HH:mm') + \"`n`nSessao encerrada automaticamente.`nExecutar /wrapup para consolidar aprendizados.\"; $dir = Join-Path $PSScriptRoot '../memory/history'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Set-Content -Path (Join-Path $dir $fileName) -Value $content -Encoding UTF8\""
+            "command": "sh -c 'dir=\"${CLAUDE_PROJECT_DIR:-.}/memory/history\"; mkdir -p \"$dir\"; f=\"$dir/$(date +%Y-%m-%d-%H)-sessao.md\"; printf \"# Sessao %s\\n\\nSessao encerrada automaticamente.\\nExecutar /wrapup para consolidar aprendizados.\\n\" \"$(date \"+%Y-%m-%d %H:%M\")\" > \"$f\"'"
           }
         ]
       }
