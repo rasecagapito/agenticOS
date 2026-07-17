@@ -1,6 +1,6 @@
 {
   "name": "agentic-os",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Agentic OS para memoria persistente, contexto modular, workers, workflow de mudancas, multi-provedor e conformidade A/B.",
   "author": {
     "name": "rasecagapito",

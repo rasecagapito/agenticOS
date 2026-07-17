@@ -1,3 +1,27 @@
+# Agentic OS v1.3.1
+
+Release de **manutenção/consistência**: fecha lacunas entre o que a documentação promete e o que os
+templates entregam, e torna o hook de sessão cross-platform. Sem mudança de comportamento do núcleo —
+compatível com v1.3.0.
+
+## Correções
+
+- **`/conform` em todos os templates** — o comando `/conform` e o procedimento provider-neutro
+  `automation/procedures/conform.md` passam a existir também em `A-generico`, `B-saas-n8n` e
+  `C-claude-integrado` (antes só em `D-multi-provedor`). Agora qualquer projeto scaffoldado roda o
+  loop de conformidade A/B como a doc descreve, inclusive no caminho role-switch de Codex/Gemini.
+  A skill também cria `/conform` em projetos novos (MODO B) e ao adaptar existentes (MODO A).
+- **Stop hook cross-platform** — o hook de fim de sessão deixa de ser PowerShell hardcoded. Padrão
+  agora é um comando POSIX `sh` portátil (macOS, Linux e Windows via Git Bash), usando
+  `$CLAUDE_PROJECT_DIR`. A variante PowerShell nativa continua documentada no `SKILL.md` para Windows
+  sem shell POSIX. Aplicado aos 4 templates.
+- **`agentic-os.skill` sincronizado** — o artefato empacotado para Codex estava com o `SKILL.md`
+  antigo (drift, ironicamente contra a própria regra D5). Agora é regenerado a partir da fonte única
+  `skills/agentic-os/SKILL.md` via `scripts/build-skill.sh`, e um `scripts/check-skill-sync.sh` +
+  workflow CI (`.github/workflows/skill-sync.yml`) impedem que volte a divergir.
+
+---
+
 # Agentic OS v1.3.0
 
 Loop de **Conformidade auto-corretivo (Agente A/B)** — o skill deixa de só descrever o padrão e
