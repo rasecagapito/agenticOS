@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -Command \"$date = Get-Date -Format 'yyyy-MM-dd HH:mm'; $content = \\\"# Sessão $date\\nSessão encerrada. Executar /wrapup para consolidar aprendizados.\\\"; $path = Join-Path $PSScriptRoot '../memory/history'; if(!(Test-Path $path)){New-Item -ItemType Directory -Force -Path $path}; Set-Content -Path (Join-Path $path \\\"$(Get-Date -Format 'yyyy-MM-dd-HH')-sessao.md\\\") -Value $content\""
+            "command": "sh -c 'dir=\"${CLAUDE_PROJECT_DIR:-.}/memory/history\"; mkdir -p \"$dir\"; f=\"$dir/$(date +%Y-%m-%d-%H)-sessao.md\"; printf \"# Sessao %s\\n\\nSessao encerrada automaticamente.\\nExecutar /wrapup para consolidar aprendizados.\\n\" \"$(date \"+%Y-%m-%d %H:%M\")\" > \"$f\"'"
           }
         ]
       }
