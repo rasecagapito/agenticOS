@@ -457,6 +457,31 @@ Regra de ouro do Modo A mantém-se: **só criar/ponteirar; nunca mover/renomear/
 
 ---
 
+## Motor de Estrutura da Aplicação (opt-in)
+
+Enquanto o resto do Agentic OS organiza o **cérebro do agente**, o Motor organiza e audita a
+**estrutura do código-fonte da aplicação** — multi-stack e multi-agent — de forma **verificável**
+(não prosa de orientação). Comando: `/structure`. Specs: `docs/STRUCTURE-SPEC.md` (regras S/DS) e
+`docs/STRUCTURE-MIGRATION.md` (tiers). Procedimento provider-neutro: `automation/procedures/structure.md`.
+
+**Perfis** (`structure-profiles/<perfil>/`): `next-app` (App Router, colocação C:
+`_components/_actions/_data-access` por rota + `components/{ui,shared}` promovido) e `generico`
+(fallback por feature). Cada perfil tem `blueprint.md` + `rules/` (fonte única, provider-neutra).
+
+**Regra única → todos os agentes.** As regras com escopo por glob vivem uma vez em
+`structure-profiles/<perfil>/rules/*.md` e são transpiladas por `scripts/emit-rules.sh` para o
+formato nativo de cada agente: Cursor (`.cursor/rules/*.mdc`), Copilot
+(`.github/instructions/*.instructions.md`). O cérebro sempre-ativo é o `AGENTS.md` (lido nativamente
+por Cursor, Copilot, Codex/ChatGPT e Gemini). `scripts/check-rules-sync.sh` + CI garantem que o
+emitido nunca divirja da fonte (DS1) — mesma disciplina anti-drift da D5.
+
+**Projeto implantado = Tier 0 por padrão.** Instala só `AGENTS.md` + regras (código intocado; tudo
+novo já nasce no formato). Migração real é opt-in, módulo a módulo, via `/propose migrate-<módulo>`,
+com reescrita reference-safe de imports e **gate de build** (build/typecheck/testes verdes ou
+rollback — DS2). Ver a escada de 4 tiers em `docs/STRUCTURE-MIGRATION.md`.
+
+---
+
 ## Workers Típicos por Tipo de Projeto
 
 ### SaaS + n8n

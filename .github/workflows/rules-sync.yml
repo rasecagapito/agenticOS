@@ -1,0 +1,21 @@
+name: rules-sync
+
+on:
+  push:
+    paths:
+      - "structure-profiles/**"
+      - "scripts/emit-rules.sh"
+      - "scripts/check-rules-sync.sh"
+  pull_request:
+    paths:
+      - "structure-profiles/**"
+      - "scripts/emit-rules.sh"
+      - "scripts/check-rules-sync.sh"
+
+jobs:
+  check-rules-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar sincronia das regras de estrutura (DS1)
+        run: bash scripts/check-rules-sync.sh
