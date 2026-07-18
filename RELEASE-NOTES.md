@@ -1,3 +1,36 @@
+# Agentic OS v1.3.2
+
+Release de **feature**: introduz o **Motor de Estrutura da Aplicação** — o Agentic OS deixa de
+organizar só o cérebro do agente e passa a definir, montar e **auditar a estrutura do código-fonte**,
+de forma multi-stack e multi-agent, com a mesma disciplina verificável (spec + loop A/B) já usada no
+resto do sistema. Compatível com v1.3.1.
+
+## Novidades
+
+- **Motor de Estrutura + `/structure`** — monta (projeto novo) e audita (existente) a estrutura da
+  aplicação. Procedimento provider-neutro em `automation/procedures/structure.md`; comando em todos os
+  templates.
+- **Perfis de estrutura** (`structure-profiles/`) — `next-app` (App Router, colocação híbrida C:
+  `_components/_actions/_data-access` por rota + compartilhado promovido) e `generico` (fallback por
+  feature). Cada perfil: `blueprint.md` + `rules/` como fonte única provider-neutra.
+- **Regra única → todos os agentes** — `scripts/emit-rules.sh` transpila as regras com escopo por glob
+  para o formato nativo de cada agente: Cursor (`.cursor/rules/*.mdc`) e Copilot
+  (`.github/instructions/*.instructions.md`). Cérebro sempre-ativo no `AGENTS.md` (lido nativamente por
+  Cursor, Copilot, Codex/ChatGPT e Gemini). Zero duplicação.
+- **Estrutura verificável** — `docs/STRUCTURE-SPEC.md` define regras checáveis S1–S7 + anti-drift
+  DS1–DS2, integradas ao loop A/B. S5 (server-first) é WARN, não bloqueia.
+- **Brownfield seguro** — `docs/STRUCTURE-MIGRATION.md` define a escada de 4 tiers. Projeto implantado =
+  **Tier 0** por padrão (só convenções + `AGENTS.md`, código intocado). Migração real é opt-in, por
+  módulo, reference-safe, com **gate de build** (rollback se build/testes falharem).
+- **Anti-drift das regras** — `scripts/check-rules-sync.sh` + CI (`.github/workflows/rules-sync.yml`)
+  garantem que o emitido nunca divirja da fonte (DS1).
+
+## Alvos multi-agent
+Cursor · VSCode-Copilot · Copilot CLI · Claude Code · ChatGPT/Codex · Gemini — todos sobre `AGENTS.md`
+como cérebro comum.
+
+---
+
 # Agentic OS v1.3.1
 
 Release de **manutenção/consistência**: fecha lacunas entre o que a documentação promete e o que os
