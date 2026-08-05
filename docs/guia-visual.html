@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGENTS/OS — Manual Visual do Operador</title>
+<meta name="description" content="Guia visual e didático do plugin agentic-os: memória persistente, contexto modular, handoff e orquestração multi-IA.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800;900&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0f0c;
+    --ink-2:#0d130f;
+    --panel:#111814;
+    --panel-2:#0e1511;
+    --line:#1e2b23;
+    --line-soft:#16211b;
+    --text:#e9f1ea;
+    --dim:#9db0a3;
+    --faint:#5f7268;
+    --green:#4df08c;
+    --green-deep:#23d06b;
+    --green-ghost:rgba(77,240,140,.08);
+    --green-line:rgba(77,240,140,.28);
+    --amber:#ffb454;
+    --amber-line:rgba(255,180,84,.35);
+    --amber-ghost:rgba(255,180,84,.07);
+    --cyan:#6fe3f2;
+    --red:#ff7a76;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'IBM Plex Sans',system-ui,sans-serif;
+    --disp:'Unbounded',var(--sans);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--green);color:var(--ink)}
+
+  /* ---------- atmosfera ---------- */
+  body::before{ /* grid técnico */
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(var(--line-soft) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);
+    background-size:56px 56px;
+    mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 30%,transparent 75%);
+    opacity:.5;
+  }
+  body::after{ /* scanline sutil */
+    content:"";position:fixed;inset:0;z-index:60;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.11) 0 1px,transparent 1px 3px);
+    opacity:.25;mix-blend-mode:multiply;
+  }
+  .noise{position:fixed;inset:-50%;z-index:59;pointer-events:none;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .glow{position:fixed;z-index:0;pointer-events:none;border-radius:50%;filter:blur(120px)}
+  .glow.g1{width:640px;height:640px;top:-260px;left:-160px;background:rgba(35,208,107,.10)}
+  .glow.g2{width:520px;height:520px;top:220px;right:-220px;background:rgba(255,180,84,.06)}
+
+  main{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 28px 120px}
+
+  /* ---------- progresso + nav ---------- */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:100;
+    background:linear-gradient(90deg,var(--green-deep),var(--green));
+    box-shadow:0 0 12px var(--green-line)}
+  header{
+    position:fixed;top:3px;left:0;right:0;z-index:90;
+    background:rgba(10,15,12,.82);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav{max-width:1120px;margin:0 auto;padding:12px 28px;display:flex;align-items:center;gap:20px}
+  .brand{font-family:var(--disp);font-weight:800;font-size:15px;letter-spacing:.04em;white-space:nowrap;text-decoration:none;color:var(--text)}
+  .brand b{color:var(--green)}
+  .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{
+    font-family:var(--mono);font-size:11px;color:var(--dim);text-decoration:none;
+    padding:5px 10px;border:1px solid transparent;border-radius:3px;white-space:nowrap;
+    transition:.2s;
+  }
+  .chip:hover{color:var(--text);border-color:var(--line)}
+  .chip.on{color:var(--green);border-color:var(--green-line);background:var(--green-ghost)}
+
+  /* ---------- hero ---------- */
+  .hero{padding:170px 0 90px;position:relative}
+  .hero .tag{font-family:var(--mono);font-size:12px;color:var(--amber);letter-spacing:.22em;text-transform:uppercase}
+  .hero h1{
+    font-family:var(--disp);font-weight:900;
+    font-size:clamp(44px,8vw,96px);line-height:1.02;letter-spacing:-.01em;
+    margin:18px 0 10px;
+  }
+  .hero h1 .ph{color:var(--green);text-shadow:0 0 32px var(--green-line)}
+  .hero .sub{color:var(--dim);max-width:640px;font-size:18px}
+  .boot{
+    margin-top:44px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    font-family:var(--mono);font-size:13px;padding:22px 26px;position:relative;overflow:hidden;
+  }
+  .boot::before{content:"● ● ●";position:absolute;top:0;right:0;left:0;padding:7px 14px;font-size:8px;color:var(--faint);letter-spacing:4px;border-bottom:1px solid var(--line-soft);background:rgba(0,0,0,.18)}
+  .boot .lines{margin-top:18px;display:grid;gap:7px}
+  .boot .ln{opacity:0;animation:bootin .05s forwards;color:var(--dim)}
+  .boot .ln::before{content:"▸ ";color:var(--green-deep)}
+  .boot .ln.ok{color:var(--green)}
+  .boot .ln.ok::before{content:"✓ ";}
+  .boot .cursor::after{content:"▮";color:var(--green);animation:blink 1s steps(1) infinite}
+  @keyframes bootin{to{opacity:1}}
+  @keyframes blink{50%{opacity:0}}
+
+  .install{margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .inst{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;position:relative;
+  }
+  .inst .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--faint);text-transform:uppercase;margin-bottom:10px}
+  .inst code{font-family:var(--mono);font-size:13px;color:var(--green);display:block;line-height:1.9;white-space:pre-wrap;word-break:break-all}
+  .copy{
+    position:absolute;top:14px;right:14px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+    background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:4px;
+    padding:4px 9px;cursor:pointer;transition:.2s;
+  }
+  .copy:hover{color:var(--green);border-color:var(--green-line)}
+
+  /* ---------- capítulos ---------- */
+  section.ch{padding:84px 0 8px;scroll-margin-top:84px}
+  .kicker{font-family:var(--mono);font-size:12px;color:var(--green-deep);letter-spacing:.26em;display:flex;align-items:center;gap:12px}
+  .kicker::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--green-line),transparent)}
+  section.ch h2{font-family:var(--disp);font-weight:800;font-size:clamp(26px,4vw,40px);margin:14px 0 12px;letter-spacing:-.01em}
+  section.ch h2 em{font-style:normal;color:var(--green)}
+  section.ch h2 em.a{color:var(--amber)}
+  .lead{color:var(--dim);max-width:760px;margin-bottom:34px}
+  h3.sub-t{font-family:var(--disp);font-weight:600;font-size:18px;margin:40px 0 16px;color:var(--text)}
+  h3.sub-t::before{content:"//";color:var(--green-deep);font-family:var(--mono);margin-right:10px;font-size:14px}
+
+  .rv{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+  .rv.in{opacity:1;transform:none}
+
+  /* ---------- camadas ---------- */
+  .layers{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .layer{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px 16px;
+    position:relative;overflow:hidden;transition:.25s;
+  }
+  .layer:hover{border-color:var(--green-line);transform:translateY(-4px);box-shadow:0 14px 34px rgba(0,0,0,.4)}
+  .layer .n{font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .layer .g{font-size:22px;margin:10px 0 6px;filter:saturate(.9)}
+  .layer .path{font-family:var(--mono);font-size:12px;color:var(--green);margin-bottom:8px}
+  .layer p{font-size:12.5px;color:var(--dim);line-height:1.5}
+
+  .fonts{margin-top:16px;background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px;padding:16px 20px;font-size:13.5px;color:var(--dim)}
+  .fonts b{color:var(--amber);font-weight:600}
+  .fonts code{font-family:var(--mono);font-size:12px;color:var(--text);background:rgba(255,255,255,.05);padding:1px 6px;border-radius:4px}
+
+  /* ---------- templates ---------- */
+  .tpls{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .tpl{
+    border:1px solid var(--line);border-radius:8px;padding:22px;background:var(--panel);position:relative;transition:.25s;overflow:hidden;
+  }
+  .tpl:hover{border-color:var(--green-line);transform:translateY(-3px)}
+  .tpl .big{font-family:var(--disp);font-weight:900;font-size:42px;color:var(--green);opacity:.9;line-height:1}
+  .tpl h4{font-family:var(--mono);font-size:14px;margin:10px 0 4px;color:var(--text)}
+  .tpl .who{font-size:13px;color:var(--dim);margin-bottom:10px}
+  .tpl .wk{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px}
+  .tpl .wk span{border:1px solid var(--line);border-radius:4px;padding:2px 7px}
+  .tpl.star{border-color:var(--amber-line)}
+  .tpl.star .big{color:var(--amber)}
+  .tpl .flag{position:absolute;top:14px;right:14px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--amber);border:1px solid var(--amber-line);border-radius:3px;padding:3px 8px;background:var(--amber-ghost)}
+
+  /* ---------- ciclo ---------- */
+  .cycle{display:flex;align-items:stretch;gap:0;margin:8px 0 6px}
+  .cnode{
+    flex:1;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px;position:relative;transition:.25s;
+  }
+  .cnode:hover{border-color:var(--green-line)}
+  .cnode .ic{font-size:20px}
+  .cnode .cmd{font-family:var(--mono);font-size:14px;color:var(--green);margin:10px 0 6px}
+  .cnode p{font-size:12.5px;color:var(--dim)}
+  .carr{display:flex;align-items:center;padding:0 10px;color:var(--green-deep);font-family:var(--mono);font-size:20px;animation:pulseA 2.2s infinite}
+  @keyframes pulseA{0%,100%{opacity:.35}50%{opacity:1;text-shadow:0 0 10px var(--green-line)}}
+
+  /* ---------- comandos ---------- */
+  .cmds{display:grid;grid-template-columns:1fr;gap:12px}
+  .cmdc{
+    display:grid;grid-template-columns:210px 1fr;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel);transition:.2s;
+  }
+  .cmdc:hover{border-color:var(--green-line)}
+  .cmdc .name{
+    padding:18px 20px;border-right:1px solid var(--line);background:var(--panel-2);
+    display:flex;flex-direction:column;justify-content:center;gap:6px;
+  }
+  .cmdc .name .c{font-family:var(--mono);font-size:15px;color:var(--green);font-weight:600}
+  .cmdc .name .nl{font-family:var(--mono);font-size:10.5px;color:var(--faint);line-height:1.5}
+  .cmdc .body{padding:16px 22px;font-size:13.5px;color:var(--dim)}
+  .cmdc .body b{color:var(--text);font-weight:600}
+  .cmdc .body .ex{font-family:var(--mono);font-size:12px;color:var(--text);background:var(--ink-2);border:1px solid var(--line-soft);border-radius:5px;padding:9px 12px;margin-top:10px;display:block;white-space:pre-wrap}
+  .cmdc .body .ex i{color:var(--green);font-style:normal}
+
+  /* ---------- handoff ---------- */
+  .hdgrid{display:grid;grid-template-columns:1.05fr .95fr;gap:22px;align-items:start}
+  .file{
+    background:#0b120d;border:1px solid var(--green-line);border-radius:8px;overflow:hidden;
+    box-shadow:0 0 44px rgba(77,240,140,.06),0 20px 50px rgba(0,0,0,.45);
+    font-family:var(--mono);font-size:12.8px;line-height:1.75;
+  }
+  .file .bar{padding:9px 16px;border-bottom:1px solid var(--line);color:var(--green);font-size:12px;display:flex;justify-content:space-between}
+  .file .bar span:last-child{color:var(--faint)}
+  .file pre{padding:18px 20px;overflow-x:auto;white-space:pre;color:var(--dim)}
+  .file .c1{color:var(--faint)}
+  .file .c2{color:var(--amber)}
+  .file .c3{color:var(--green)}
+  .file .c4{color:var(--text)}
+  .file .c5{color:var(--cyan)}
+  .file pre mark{background:rgba(255,180,84,.16);color:var(--amber);border-radius:3px;padding:0 4px}
+
+  .principles{display:grid;gap:10px}
+  .pr{
+    border:1px solid var(--line);border-radius:8px;padding:14px 18px;background:var(--panel);
+    display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start;transition:.2s;
+  }
+  .pr:hover{border-color:var(--green-line)}
+  .pr .ix{font-family:var(--disp);font-weight:800;color:var(--green);font-size:19px;line-height:1.2}
+  .pr b{display:block;font-size:14px;margin-bottom:2px}
+  .pr p{font-size:12.8px;color:var(--dim)}
+  .pr code{font-family:var(--mono);font-size:11.5px;color:var(--green)}
+
+  .proto{margin-top:26px;border:1px dashed var(--green-line);border-radius:8px;padding:18px 22px;background:var(--green-ghost)}
+  .proto .t{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--green);text-transform:uppercase;margin-bottom:10px}
+  .proto ol{display:flex;gap:0;list-style:none;flex-wrap:wrap}
+  .proto li{font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px;margin:4px 0}
+  .proto li .sn{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--green);border-radius:4px;padding:1px 7px;font-weight:600}
+  .proto li:not(:last-child)::after{content:"→";margin:0 12px;color:var(--green-deep);font-family:var(--mono)}
+
+  /* ---------- orquestração ---------- */
+  .roles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:34px}
+  .role{border-radius:8px;padding:22px;position:relative;background:var(--panel);border:1px solid var(--line)}
+  .role .rl{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px}
+  .role h4{font-family:var(--disp);font-size:17px;font-weight:700;margin-bottom:8px}
+  .role p{font-size:13px;color:var(--dim)}
+  .role .do{margin-top:12px;font-size:12px;color:var(--dim)}
+  .role .do b{color:var(--text);font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.08em}
+  .role.hum{border-color:var(--amber-line);background:linear-gradient(180deg,var(--amber-ghost),var(--panel))}
+  .role.hum .rl{color:var(--amber)} .role.hum h4{color:var(--amber)}
+  .role.co .rl{color:var(--green)} .role.co h4{color:var(--green)} .role.co{border-color:var(--green-line)}
+  .role.ex .rl{color:var(--cyan)} .role.ex h4{color:var(--cyan)} .role.ex{border-color:rgba(111,227,242,.3)}
+
+  .swim{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel-2)}
+  .swim .head{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+  .swim .head div{padding:12px 18px;text-align:center}
+  .swim .head .h1{color:var(--green);border-right:1px solid var(--line-soft)}
+  .swim .head .h2{color:var(--amber);border-right:1px solid var(--line-soft);background:var(--amber-ghost)}
+  .swim .head .h3{color:var(--cyan)}
+  .swim .lanes{display:grid;grid-template-columns:1fr 1fr 1fr;position:relative}
+  .swim .lanes div.col{border-right:1px solid var(--line-soft);min-height:100%}
+  .swim .lanes div.col:nth-child(2){background:rgba(255,180,84,.025)}
+  .swim .lanes div.col:last-child{border-right:none}
+  .step{
+    margin:14px 12px;border:1px solid var(--line);border-radius:7px;padding:12px 14px;background:var(--panel);
+    font-size:12.5px;color:var(--dim);position:relative;transition:.2s;
+  }
+  .step:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.4)}
+  .step .st{font-family:var(--mono);font-size:10px;letter-spacing:.12em;margin-bottom:5px;display:block}
+  .step b{color:var(--text);font-weight:600}
+  .step code{font-family:var(--mono);font-size:11.5px;color:var(--green)}
+  .step.sg{border-color:var(--green-line)} .step.sg .st{color:var(--green)}
+  .step.sa{border-color:var(--amber-line);background:linear-gradient(180deg,rgba(255,180,84,.09),var(--panel))}
+  .step.sa .st{color:var(--amber)} .step.sa b{color:var(--amber)}
+  .step.sc{border-color:rgba(111,227,242,.3)} .step.sc .st{color:var(--cyan)}
+  .step.stop{border-style:dashed;border-color:var(--red)}
+  .step.stop .st{color:var(--red)}
+  .step.lock{border-color:var(--amber);box-shadow:0 0 22px rgba(255,180,84,.14)}
+  .step .arrowdn{position:absolute;left:50%;bottom:-16px;color:var(--faint);font-family:var(--mono);transform:translateX(-50%)}
+  .spacer{height:14px}
+  .loopback{
+    padding:12px 20px;border-top:1px dashed var(--line);font-family:var(--mono);font-size:12px;color:var(--dim);text-align:center;background:rgba(0,0,0,.15);
+  }
+  .loopback b{color:var(--amber)}
+
+  .rules10{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .rule{border:1px solid var(--line);border-left:3px solid var(--green);border-radius:6px;background:var(--panel);padding:14px 18px;font-size:13px;color:var(--dim)}
+  .rule b{color:var(--text)}
+  .rule.ra{border-left-color:var(--amber)}
+
+  .why{margin-top:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .why div{border:1px solid var(--line);border-radius:8px;padding:16px 18px;background:var(--panel-2);font-size:12.8px;color:var(--dim)}
+  .why div b{display:block;color:var(--green);font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+
+  /* ---------- conformidade ---------- */
+  .loopwrap{display:grid;grid-template-columns:1fr 320px;gap:26px;align-items:center}
+  .loopsteps{display:grid;gap:10px}
+  .ls{display:grid;grid-template-columns:38px 1fr;gap:14px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:13px 18px;background:var(--panel)}
+  .ls .n{font-family:var(--disp);font-weight:800;font-size:16px;color:var(--green)}
+  .ls.a .n{color:var(--green)} .ls.h .n{color:var(--amber)} .ls.b .n{color:var(--cyan)}
+  .ls p{font-size:13px;color:var(--dim)} .ls b{color:var(--text)}
+  .loopring{position:relative;width:300px;height:300px;margin:0 auto}
+  .loopring svg{position:absolute;inset:0;overflow:visible}
+  .lrnode{
+    position:absolute;width:118px;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+    border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:10px 8px;color:var(--dim);
+  }
+  .lrnode b{display:block;font-size:12px;color:var(--text);margin-bottom:2px}
+  .lrnode.n1{top:-8px;left:50%;transform:translateX(-50%);border-color:var(--green-line)}
+  .lrnode.n2{top:50%;right:-22px;transform:translateY(-50%);border-color:var(--amber-line)}
+  .lrnode.n3{bottom:-8px;left:50%;transform:translateX(-50%);border-color:rgba(111,227,242,.35)}
+  .lrnode.n4{top:50%;left:-22px;transform:translateY(-50%);border-color:var(--green-line)}
+  .loopcenter{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+  .loopcenter .x{font-family:var(--disp);font-weight:900;font-size:26px;color:var(--amber)}
+  .loopcenter .y{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.14em}
+
+  /* ---------- structure ---------- */
+  .tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:0;align-items:end;margin-top:6px}
+  .tier{
+    border:1px solid var(--line);border-radius:8px 8px 0 0;padding:18px 16px;background:var(--panel);position:relative;transition:.2s;
+  }
+  .tier:hover{border-color:var(--green-line)}
+  .tier .tn{font-family:var(--disp);font-weight:900;font-size:30px;color:var(--line);}
+  .tier h4{font-size:13.5px;margin:6px 0 6px}
+  .tier p{font-size:12px;color:var(--dim)}
+  .tier.t0{min-height:150px;border-color:var(--green-line);background:linear-gradient(180deg,var(--green-ghost),var(--panel))}
+  .tier.t0 .tn{color:var(--green)}
+  .tier.t1{min-height:195px}.tier.t1 .tn{color:var(--faint)}
+  .tier.t2{min-height:240px;border-color:var(--amber-line)}.tier.t2 .tn{color:var(--amber)}
+  .tier.t3{min-height:285px}.tier.t3 .tn{color:var(--red)}
+  .tier .badge{position:absolute;top:12px;right:12px;font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--ink);background:var(--green);border-radius:3px;padding:2px 7px;font-weight:600}
+  .tiers-note{margin-top:18px;font-size:13px;color:var(--dim);border-left:3px solid var(--amber);background:var(--amber-ghost);padding:12px 18px;border-radius:0 6px 6px 0}
+
+  /* ---------- mandamentos ---------- */
+  .mands{display:grid;gap:8px;counter-reset:m}
+  .mand{
+    display:grid;grid-template-columns:86px 1fr;gap:18px;align-items:baseline;
+    border:1px solid var(--line);border-radius:7px;padding:13px 20px;background:var(--panel);transition:.15s;
+  }
+  .mand:hover{border-color:var(--green-line);background:var(--panel-2)}
+  .mand .id{font-family:var(--disp);font-weight:800;font-size:17px;color:var(--green)}
+  .mand p{font-size:13.5px;color:var(--dim)} .mand b{color:var(--text)}
+  .mand.new{border-color:var(--amber-line)} .mand.new .id{color:var(--amber)}
+  .mand.new::after{content:"v1.4";font-family:var(--mono);font-size:9px;color:var(--amber);border:1px solid var(--amber-line);border-radius:3px;padding:1px 6px;justify-self:end}
+  .budgets{margin-top:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .bud{border:1px solid var(--line);border-radius:8px;padding:16px 18px;background:var(--panel-2);text-align:center}
+  .bud .v{font-family:var(--disp);font-weight:900;font-size:30px;color:var(--green)}
+  .bud .l{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px;letter-spacing:.06em}
+
+  /* ---------- faq ---------- */
+  details{border:1px solid var(--line);border-radius:7px;background:var(--panel);margin-bottom:8px;transition:.2s}
+  details[open]{border-color:var(--green-line)}
+  summary{cursor:pointer;padding:14px 20px;font-weight:600;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:14px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";font-family:var(--mono);color:var(--green);font-size:18px;transition:.2s}
+  details[open] summary::after{transform:rotate(45deg)}
+  details .a{padding:0 20px 16px;font-size:13.5px;color:var(--dim)}
+  details .a code{font-family:var(--mono);font-size:12px;color:var(--green)}
+
+  footer{margin-top:100px;border-top:1px solid var(--line);padding-top:30px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--faint)}
+  footer .f1 b{color:var(--green)}
+
+  @media(max-width:960px){
+    .layers{grid-template-columns:repeat(2,1fr)}
+    .tpls,.rules10{grid-template-columns:1fr}
+    .hdgrid,.loopwrap{grid-template-columns:1fr}
+    .roles,.why{grid-template-columns:1fr}
+    .tiers{grid-template-columns:repeat(2,1fr);gap:10px}
+    .tier{min-height:auto!important}
+    .cycle{flex-direction:column}
+    .carr{justify-content:center;transform:rotate(90deg);padding:6px 0}
+    .cmdc{grid-template-columns:1fr}
+    .cmdc .name{border-right:none;border-bottom:1px solid var(--line)}
+    .swim .head,.swim .lanes{grid-template-columns:1fr}
+    .swim .head div{border-right:none;border-bottom:1px solid var(--line-soft)}
+    .swim .lanes div.col{border-right:none;border-bottom:1px solid var(--line-soft)}
+    .loopring{margin:30px auto}
+    .install{grid-template-columns:1fr}
+    .budgets{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="noise"></div>
+<div class="glow g1"></div><div class="glow g2"></div>
+
+<header>
+  <nav class="nav">
+    <a class="brand" href="#top">AGENTS<b>/OS</b></a>
+    <div class="chips">
+      <a class="chip" href="#c00">00·BOOT</a>
+      <a class="chip" href="#c01">01·CAMADAS</a>
+      <a class="chip" href="#c02">02·TEMPLATES</a>
+      <a class="chip" href="#c03">03·CICLO</a>
+      <a class="chip" href="#c04">04·COMANDOS</a>
+      <a class="chip" href="#c05">05·HANDOFF</a>
+      <a class="chip" href="#c06">06·ORQUESTRAÇÃO</a>
+      <a class="chip" href="#c07">07·CONFORM</a>
+      <a class="chip" href="#c08">08·ESTRUTURA</a>
+      <a class="chip" href="#c09">09·LEI</a>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============ 00 BOOT ============ -->
+  <section class="hero" id="c00">
+    <div class="tag rv">Manual do Operador · Plugin agentic-os · v1.4.0</div>
+    <h1 class="rv">Um sistema operacional<br>para <span class="ph">agentes IA</span>.</h1>
+    <p class="sub rv">Memória persistente, contexto modular e workers especializados — organizados em arquivos, não em software. Quando uma sessão termina, a próxima começa exatamente de onde parou. Sem cold start. Sem drift. Sem delírio.</p>
+
+    <div class="boot rv">
+      <div class="lines" id="bootlines">
+        <div class="ln" style="animation-delay:.15s">montando 5 camadas ................... identity · knowledge · memory · workers · automation</div>
+        <div class="ln" style="animation-delay:.55s">carregando cérebro canônico ........... AGENTS.md ← CLAUDE.md / GEMINI.md (ponteiros @)</div>
+        <div class="ln" style="animation-delay:.95s">handoff encontrado .................... memory/handoff.md · cursor derivado de tasks.md</div>
+        <div class="ln" style="animation-delay:1.35s">orquestração ativa .................... humano = gate final · lotes de 3–5 tarefas</div>
+        <div class="ln ok" style="animation-delay:1.75s">sistema pronto. retomar na tarefa 3.</div>
+        <div class="ln cursor" style="animation-delay:2.05s"></div>
+      </div>
+    </div>
+
+    <div class="install rv">
+      <div class="inst">
+        <div class="lbl">Instalação — Claude Code</div>
+        <button class="copy" data-copy="inst1">copiar</button>
+        <code id="inst1">/plugin marketplace add rasecagapito/agenticOS
+/plugin install agentic-os@agentic-os</code>
+      </div>
+      <div class="inst">
+        <div class="lbl">Instalação — Codex</div>
+        <button class="copy" data-copy="inst2">copiar</button>
+        <code id="inst2">codex plugin marketplace add rasecagapito/agenticOS</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 01 CAMADAS ============ -->
+  <section class="ch" id="c01">
+    <div class="kicker rv">CAPÍTULO 01</div>
+    <h2 class="rv">As 5 camadas do <em>sistema</em></h2>
+    <p class="lead rv">Todo projeto Agentic OS é construído sobre cinco camadas de arquivos. Juntas, transformam qualquer pasta num ambiente onde uma IA trabalha com memória e autonomia entre sessões.</p>
+
+    <div class="layers">
+      <div class="layer rv"><div class="n">CAMADA 01</div><div class="g">◈</div><div class="path">CLAUDE.md / AGENTS.md</div><p><b>Identity</b> — o orquestrador: quem é o projeto, as regras, os workers e o protocolo de arranque.</p></div>
+      <div class="layer rv"><div class="n">CAMADA 02</div><div class="g">❖</div><div class="path">context/</div><p><b>Knowledge</b> — conhecimento modular por tema (ou por módulo de código). Carregado sob demanda.</p></div>
+      <div class="layer rv"><div class="n">CAMADA 03</div><div class="g">◐</div><div class="path">memory/</div><p><b>Memory</b> — history/ (logs de sessão) + learnings/ (aprendizados). Cresce a cada /wrapup.</p></div>
+      <div class="layer rv"><div class="n">CAMADA 04</div><div class="g">⬡</div><div class="path">workers/</div><p><b>Workers</b> — especialistas: Papel · Função · Contexto a Carregar · Schema de Saída · Restrições.</p></div>
+      <div class="layer rv"><div class="n">CAMADA 05</div><div class="g">◉</div><div class="path">automation/</div><p><b>Automation</b> — evaluation.json (gates de qualidade) + guardrails.md (ações que exigem humano).</p></div>
+    </div>
+
+    <div class="fonts rv"><b>O coração do sistema é uma só ideia: fontes únicas.</b> Cada lógica existe uma vez — comandos são wrappers de <code>automation/procedures/</code>; cada cérebro existe uma vez — os outros arquivos de IA são ponteiros <code>@import</code>; o progresso existe uma vez — <code>tasks.md</code>; o estado dinâmico existe uma vez — <code>memory/handoff.md</code>. Duplicação = drift = delírio.</div>
+  </section>
+
+  <!-- ============ 02 TEMPLATES ============ -->
+  <section class="ch" id="c02">
+    <div class="kicker rv">CAPÍTULO 02</div>
+    <h2 class="rv">Templates — <em>qual escolher</em></h2>
+    <p class="lead rv">A skill monta o projeto a partir de um dos quatro templates (ou adapta um projeto existente sem tocar no que já existe). Todos incluem as 5 camadas + change workflow + /conform.</p>
+
+    <div class="tpls">
+      <div class="tpl rv"><div class="big">A</div><h4>A-generico</h4><div class="who">Conteúdo · marketing · consultoria leve</div><div class="wk"><span>roteirista</span><span>pesquisador</span><span>analista</span></div></div>
+      <div class="tpl rv"><div class="big">B</div><h4>B-saas-n8n</h4><div class="who">SaaS + automações n8n</div><div class="wk"><span>developer</span><span>workflow-designer</span><span>arquiteto</span><span>qa</span></div></div>
+      <div class="tpl rv"><div class="big">C</div><h4>C-claude-integrado</h4><div class="who">SaaS com Claude Code Superpowers</div><div class="wk"><span>developer</span><span>workflow-designer</span><span>arquiteto</span><span>revisor</span></div></div>
+      <div class="tpl star rv"><div class="flag">MULTI-IA</div><div class="big">D</div><h4>D-multi-provedor</h4><div class="who">Várias IAs no mesmo projeto (Claude, Codex, Gemini…) com handoff + orquestração</div><div class="wk"><span>developer</span><span>arquiteto</span><span>qa</span><span>+ handoff</span><span>+ procedures</span><span>+ registry</span></div></div>
+    </div>
+  </section>
+
+  <!-- ============ 03 CICLO ============ -->
+  <section class="ch" id="c03">
+    <div class="kicker rv">CAPÍTULO 03</div>
+    <h2 class="rv">O ciclo de <em>mudança</em></h2>
+    <p class="lead rv">Toda feature, correção ou reorganização é uma <b style="color:var(--text)">mudança</b>: uma pasta em <span style="font-family:var(--mono);color:var(--green)">changes/&lt;nome&gt;/</span> que captura porquê, como e passos <i>antes</i> de mexer no código. O ciclo tem três tempos:</p>
+
+    <div class="cycle rv">
+      <div class="cnode"><div class="ic">①</div><div class="cmd">/propose add-dark-mode</div><p>Cria a mudança: <b style="color:var(--text)">proposal.md</b> (porquê/escopo/abordagem) + <b style="color:var(--text)">tasks.md</b> (checklist) + design.md se não-trivial. Em projeto modular, prefixa o módulo.</p></div>
+      <div class="carr">→</div>
+      <div class="cnode"><div class="ic">②</div><div class="cmd">/worker developer</div><p>Ativa o especialista com contexto carregado e executa tarefa a tarefa. Cada fechamento marca <b style="color:var(--text)">[x]</b> e grava o handoff incremental.</p></div>
+      <div class="carr">→</div>
+      <div class="cnode"><div class="ic">③</div><div class="cmd">/wrapup</div><p>Consolida: history + learnings, sugere deltas em <b style="color:var(--text)">context/</b> (confirmados item a item), arquiva a mudança, finaliza o handoff.</p></div>
+    </div>
+    <div class="fonts rv" style="border-left-color:var(--green)"><b style="color:var(--green)">Regra de Ouro:</b> o sistema <b style="color:var(--text)">só cria</b>. Nunca move, renomeia ou apaga arquivos existentes sem mudança aprovada (/propose + gate humano).</div>
+  </section>
+
+  <!-- ============ 04 COMANDOS ============ -->
+  <section class="ch" id="c04">
+    <div class="kicker rv">CAPÍTULO 04</div>
+    <h2 class="rv">Os 7 comandos — <em>referência</em></h2>
+    <p class="lead rv">No Claude Code são slash commands; em Codex, Gemini e outras IAs, pede-se em linguagem natural e a IA lê o procedimento provider-neutro equivalente. A lógica vive uma vez em <span style="font-family:var(--mono);color:var(--green)">automation/procedures/</span>.</p>
+
+    <div class="cmds">
+      <div class="cmdc rv"><div class="name"><span class="c">/propose &lt;nome&gt;</span><span class="nl">NL: “faz o propose add-login”</span></div><div class="body"><b>Cria uma mudança estruturada.</b> Nome kebab-case; ponte para specs de brainstorming; projeto modular pergunta o módulo e prefixa. Sem argumento, lista mudanças ativas.<span class="ex">$ <i>/propose add-dark-mode</i>
+→ changes/add-dark-mode/ criada: proposal.md + tasks.md (6 tarefas)</span></div></div>
+
+      <div class="cmdc rv"><div class="name"><span class="c">/worker [nome]</span><span class="nl">NL: “ativa o worker developer”</span></div><div class="body"><b>Ativa o especialista e executa a mudança ativa.</b> Carrega só o contexto do worker, retoma no cursor (1ª tarefa [ ]), respeita o Limite aprovado com Orquestração, grava handoff + sha a cada tarefa fechada. Sem argumento, lista workers.<span class="ex">Worker <i>developer</i> ativo. Contexto: [arquitetura, produto].
+Retomando na tarefa 3 (limite aprovado: 5).</span></div></div>
+
+      <div class="cmdc rv"><div class="name"><span class="c">/wrapup</span><span class="nl">NL: “faz o wrapup”</span></div><div class="body"><b>Consolida a sessão.</b> Registro em memory/history/, aprendizados em memory/learnings/, deltas de context/ confirmados um a um, arquivamento da mudança, fechamento do handoff. Exclusivo da coordenação quando a Orquestração está ativa.<span class="ex">Sessão consolidada. Registro: <i>2026-08-05-1430-sessao.md</i>
+Handoff atualizado. Mudança arquivada.</span></div></div>
+
+      <div class="cmdc rv"><div class="name"><span class="c">/status</span><span class="nl">NL: “mostra o status”</span></div><div class="body"><b>Fotografia do projeto:</b> branch, últimos commits, último provedor (handoff), mudança ativa + cursor, estado da Orquestração (limite/executor/aguardando?), fase e top 3 pendências — em tabela compacta.</div></div>
+
+      <div class="cmdc rv"><div class="name"><span class="c">/conform</span><span class="nl">NL: “corre o conform”</span></div><div class="body"><b>Loop de conformidade A/B.</b> Sem argumento = só auditar (dry-run). Com aprovação: Agente A audita (read-only) → gate humano → Agente B aplica só o aprovado → A re-audita o disco, até PASS (máx. 3 ciclos). Ver capítulo 07.</div></div>
+
+      <div class="cmdc rv"><div class="name"><span class="c">/handoff</span><span class="nl">NL: “lê/atualiza o handoff”</span></div><div class="body"><b>Estado vivo multi-provedor.</b> Sem argumento = LER o estado atual; com “grava” = GRAVAR o estado em memory/handoff.md. É o que permite a outra IA continuar exatamente onde esta parou. Ver capítulo 05.<span class="ex">$ <i>/handoff</i>
+Último provedor: Codex · 2026-08-05 14:12 · cursor: tarefa 3</span></div></div>
+
+      <div class="cmdc rv"><div class="name"><span class="c">/structure</span><span class="nl">NL: “audita a estrutura”</span></div><div class="body"><b>Motor de Estrutura da Aplicação.</b> Monta/audita a estrutura do código-fonte por perfil (next-app · generico): marcador de perfil, AGENTS.md canônico, emissão de regras para Cursor/Copilot a partir da fonte única, auditoria S1–S7/DS1–DS2. Projeto implantado = Tier 0 (código intocado).</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 05 HANDOFF ============ -->
+  <section class="ch" id="c05">
+    <div class="kicker rv">CAPÍTULO 05</div>
+    <h2 class="rv">O handoff — <em>continuidade exata</em></h2>
+    <p class="lead rv">Uma camada resolve dois problemas: <b style="color:var(--text)">cada IA lê um arquivo diferente</b> → fonte única + ponteiros; <b style="color:var(--text)">não há continuidade</b> → o handoff. Este é o segundo arquivo mais lido de todo o sistema — por isso tem teto rígido de 20 linhas.</p>
+
+    <div class="hdgrid">
+      <div class="file rv">
+        <div class="bar"><span>memory/handoff.md</span><span>estado vivo · ≤ 20 linhas</span></div>
+        <pre><span class="c1"># Handoff — estado vivo da sessão</span>
+<span class="c2">&gt; Lê isto PRIMEIRO. Validação: mudança ativa não existe,
+&gt; ou cursor ≠ 1ª [ ] em tasks.md, ou cursor além do Limite
+&gt; aprovado → <mark>parar e perguntar</mark>. Não improvisar.</span>
+
+<span class="c3">## Sessão</span>
+<span class="c4">- IA:</span> <span class="c5">Codex</span> <span class="c4">· Quando:</span> 2026-08-05 14:12
+
+<span class="c3">## Orquestração</span>
+<span class="c4">- Orquestrador:</span> <span class="c2">humano (gate final)</span> <span class="c4">· Coordenação:</span> <span class="c5">Claude</span>
+<span class="c4">- Limite aprovado:</span> tarefa 4 de tasks.md <span class="c4">· Executor:</span> <span class="c5">Codex</span>
+<span class="c4">- Aprovado por humano em:</span> 2026-08-05 11:40
+<span class="c4">- Âncora:</span> <span class="c3">commit a1b2c3d</span> da última aprovação
+
+<span class="c3">## Mudança ativa</span>
+<span class="c4">- Pasta:</span> changes/add-dark-mode/
+<span class="c4">- Cursor:</span> 1ª [ ] em tasks.md, ≤ Limite (derivar — não copiar)
+
+<span class="c3">## Narrativa</span> <span class="c1">(1 linha por campo)</span>
+<span class="c4">- Feito:</span> toggle + persistência <span class="c4">· Decidido:</span> localStorage
+<span class="c4">- Gotchas:</span> — <span class="c4">· Próxima intenção:</span> fechar tarefa 4</pre>
+      </div>
+
+      <div class="principles">
+        <div class="pr rv"><div class="ix">01</div><div><b>Cursor derivado</b><p>A próxima tarefa é sempre a 1ª <code>[ ]</code> de tasks.md. Nunca copiar a lista para o handoff — duas fontes de verdade é o começo do delírio (D3).</p></div></div>
+        <div class="pr rv"><div class="ix">02</div><div><b>Estado dinâmico único (D6)</b><p>Sessão, cursor e próximo passo vivem <code>só aqui</code>. O cérebro guarda apenas estado estático (fase do projeto). Zero dupla escrita.</p></div></div>
+        <div class="pr rv"><div class="ix">03</div><div><b>Âncora git</b><p>Cada tarefa fechada grava <code>commit &lt;sha&gt;</code>. “O que aconteceu desde então” deriva de <code>git diff sha..HEAD</code> — não de prosa.</p></div></div>
+        <div class="pr rv"><div class="ix">04</div><div><b>Teto rígido</b><p>≤ 20 linhas. Narrativa de 1 linha por campo. <code>Substituir, nunca acumular</code> — crescimento aqui é custo recorrente em toda sessão.</p></div></div>
+        <div class="pr rv"><div class="ix">05</div><div><b>Validação co-localizada</b><p>A instrução de arranque vive no próprio header — a IA já vai ler o arquivo mesmo. Custo zero no cérebro; conflito → parar e perguntar.</p></div></div>
+        <div class="pr rv"><div class="ix">06</div><div><b>À prova de crash</b><p>Grava <code>ao fechar cada tarefa</code>, não só no wrapup. Sessão morreu? A próxima IA retoma igual via changes/ + handoff.</p></div></div>
+      </div>
+    </div>
+
+    <div class="proto rv">
+      <div class="t">Protocolo de arranque — toda IA, sempre</div>
+      <ol>
+        <li><span class="sn">1</span> Ler handoff.md + validar</li>
+        <li><span class="sn">2</span> Abrir a mudança ativa</li>
+        <li><span class="sn">3</span> Retomar na 1ª [ ] (≤ limite)</li>
+        <li><span class="sn">4</span> Carregar só o context/ relevante</li>
+      </ol>
+    </div>
+
+    <div class="fonts rv" style="margin-top:18px;border-left-color:var(--green)"><b style="color:var(--green)">Fonte única + ponteiros:</b> <code>AGENTS.md</code> é o cérebro canônico (Codex lê nativamente); <code>CLAUDE.md</code> e <code>GEMINI.md</code> são 7 linhas de <code>@import</code>. CI <code>pointer-check</code> garante: todo ponteiro importa o canônico e o canônico nunca está vazio.</div>
+  </section>
+
+  <!-- ============ 06 ORQUESTRAÇÃO ============ -->
+  <section class="ch" id="c06">
+    <div class="kicker rv">CAPÍTULO 06</div>
+    <h2 class="rv">Orquestração — <em class="a">o humano é o gate final</em></h2>
+    <p class="lead rv">Com várias IAs no mesmo projeto, o modo seguro não é “cada uma avança sozinha”. É uma coordenação que propõe, executores que cumprem lotes aprovados, e o <b style="color:var(--amber)">humano com a palavra final</b>. Ativa quando o handoff traz a seção <span style="font-family:var(--mono);color:var(--amber)">## Orquestração</span> — sem ela, vale o modo livre.</p>
+
+    <div class="roles">
+      <div class="role hum rv"><div class="rl">Orquestrador final</div><h4>HUMANO</h4><p>Aprova lotes antes da execução e decide avançar o limite, trocar o executor ou bloquear. Nada além do limite vigente acontece sem ele.</p><div class="do"><b>PORTA</b> · aprovação de cada lote · palavra final</div></div>
+      <div class="role co rv"><div class="rl">Coordenação</div><h4>1 IA registrada</h4><p>Única autorizada a <code style="font-family:var(--mono);font-size:12px;color:var(--green)">/propose</code> e <code style="font-family:var(--mono);font-size:12px;color:var(--green)">/wrapup</code>. Propõe lotes de 3–5 tarefas, registra limite + âncora, revê via git diff e recomenda.</p><div class="do"><b>FAZ</b> · propõe · revê · recomenda · consolida</div></div>
+      <div class="role ex rv"><div class="rl">Executores</div><h4>Demais IAs</h4><p>Só <code style="font-family:var(--mono);font-size:12px;color:var(--cyan)">/worker</code>. Trabalham apenas em tarefas ≤ Limite aprovado, gravando sha + handoff por tarefa. Gotcha → param e registram.</p><div class="do"><b>NUNCA</b> · além do lote · improvisar · wrapup</div></div>
+    </div>
+
+    <div class="swim rv">
+      <div class="head"><div class="h1">◉ Coordenação (Claude)</div><div class="h2">◆ Humano</div><div class="h3">▲ Executor (Codex)</div></div>
+      <div class="lanes">
+        <div class="col">
+          <div class="step sg"><span class="st">PASSO 1</span><b>Cria a mudança</b> — <code>/propose add-dark-mode</code> gera 8 tarefas em tasks.md.</div>
+          <div class="step sg"><span class="st">PASSO 2</span><b>Propõe lote 1–4</b> para o Codex. Registra no handoff: <code>Limite: 4 · Âncora: a1b2c3</code>.</div>
+          <div class="spacer" style="height:104px"></div>
+          <div class="spacer" style="height:76px"></div>
+          <div class="step sg"><span class="st">PASSO 7</span><b>Revê o lote</b> — <code>git diff a1b2c3..HEAD</code>. Barato: o git conta a história.</div>
+          <div class="step sg"><span class="st">PASSO 8</span><b>Recomenda</b>: aprovar; próximo lote 5–8 para Gemini.</div>
+          <div class="spacer" style="height:70px"></div>
+        </div>
+        <div class="col">
+          <div class="spacer" style="height:150px"></div>
+          <div class="step sa lock"><span class="st">PASSO 3 · GATE</span><b>“Aprovado.”</b> A aprovação fica registrada no handoff com data/hora. <b>Limite só avança por aqui (D7).</b></div>
+          <div class="spacer" style="height:150px"></div>
+          <div class="spacer" style="height:70px"></div>
+          <div class="step sa lock"><span class="st">PASSO 9 · GATE</span><b>Aprova</b> → limite avança para <b>8</b>, nova âncora registrada.</div>
+        </div>
+        <div class="col">
+          <div class="spacer" style="height:130px"></div>
+          <div class="spacer" style="height:110px"></div>
+          <div class="step sc"><span class="st">PASSO 4</span><b>Retoma no cursor</b> — <code>/worker developer</code> valida cursor ≤ limite.</div>
+          <div class="step sc"><span class="st">PASSO 5</span><b>Fecha tarefa a tarefa</b>: marca [x], grava <code>sha</code> + narrativa no handoff.</div>
+          <div class="step sc stop"><span class="st">PASSO 6</span><b>Fim do lote → PARA.</b> Registra “aguardando aprovação”. Nunca avança além.</div>
+        </div>
+      </div>
+      <div class="loopback">↻ o ciclo repete: lote → <b>gate humano</b> → execução → revisão … até todas as tarefas, então a coordenação roda <b>/wrapup</b></div>
+    </div>
+
+    <h3 class="sub-t">Regras invioláveis da orquestração</h3>
+    <div class="rules10">
+      <div class="rule ra rv"><b>1.</b> O <b>Limite aprovado</b> só avança com aprovação humana registrada no handoff — tarefa [x] além do limite = DRIFT (D7), auditável pelo /conform.</div>
+      <div class="rule rv"><b>2.</b> Executor nunca improvisa além do lote; <b>gotcha → parar e registrar</b>, nunca contornar.</div>
+      <div class="rule rv"><b>3.</b> <b>/propose e /wrapup são da coordenação</b>; executores só executam tarefas aprovadas.</div>
+      <div class="rule rv"><b>4.</b> A seção de Orquestração <b>nunca copia a lista de tarefas</b> — só limite (índice), executor e âncora.</div>
+      <div class="rule ra rv"><b>5.</b> Revisão de lote sempre via <b>git diff desde a âncora</b> — a âncora é a fonte, não a memória da IA.</div>
+      <div class="rule rv"><b>6.</b> Duas IAs simultâneas são <b>serializadas pela fronteira</b>: um lote por executor, intervalos nunca duplicados.</div>
+    </div>
+
+    <h3 class="sub-t">Por que isso economiza tokens</h3>
+    <div class="why rv">
+      <div><b>Sem retrabalho</b>Duas IAs refazendo a mesma tarefa é o pior cenário de custo possível. A fronteira custa ~12 tokens por sessão para impedir isso.</div>
+      <div><b>Revisão barata</b>A coordenação não relê o projeto inteiro: o git diff desde a âncora resume o lote em segundos.</div>
+      <div><b>Estado enxuto</b>Handoff ≤ 20 linhas e cérebro ≤ 150: os arquivos quentes de toda sessão permanecem mínimos, sempre.</div>
+    </div>
+  </section>
+
+  <!-- ============ 07 CONFORM ============ -->
+  <section class="ch" id="c07">
+    <div class="kicker rv">CAPÍTULO 07</div>
+    <h2 class="rv">Conformidade — <em>loop A/B</em></h2>
+    <p class="lead rv">O padrão não é um conselho: é uma spec verificável. O loop A/B constrói e corrige o projeto até ele bater <b style="color:var(--text)">exatamente</b> o desenho — com gate humano entre a auditoria e a execução.</p>
+
+    <div class="loopwrap rv">
+      <div class="loopsteps">
+        <div class="ls a"><div class="n">A</div><p><b>Auditoria read-only.</b> Agente A compara o disco com a SPEC: cada item vira CONFORME | FALTA | DRIFT + instruction set preciso.</p></div>
+        <div class="ls h"><div class="n">⬥</div><p><b>Gate humano.</b> Aprova tudo ou item a item. Em projeto existente, default conservador: mover/apagar exige aprovação explícita.</p></div>
+        <div class="ls b"><div class="n">B</div><p><b>Executor.</b> Aplica exatamente o aprovado — sem scope creep. No Claude Code, A e B podem ser subagentes reais.</p></div>
+        <div class="ls a"><div class="n">A²</div><p><b>Re-auditoria do disco</b> (não da narrativa). PASS → sucesso. Senão → re-instrui B com o delta. Máx. 3 ciclos, depois escala.</p></div>
+      </div>
+      <div class="loopring">
+        <svg viewBox="0 0 300 300"><circle cx="150" cy="150" r="118" fill="none" stroke="var(--green-line)" stroke-width="1.5" stroke-dasharray="5 7"/><circle cx="150" cy="150" r="118" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-dasharray="60 680" stroke-linecap="round" style="animation:spin 9s linear infinite;transform-origin:center"/></svg>
+        <div class="lrnode n1"><b>A · AUDITA</b>read-only</div>
+        <div class="lrnode n2"><b>GATE</b>humano</div>
+        <div class="lrnode n3"><b>B · EXECUTA</b>só o aprovado</div>
+        <div class="lrnode n4"><b>A² · RE-AUDITA</b>o disco</div>
+        <div class="loopcenter"><div class="x">PASS</div><div class="y">MÁX 3 CICLOS</div></div>
+      </div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  </section>
+
+  <!-- ============ 08 ESTRUTURA ============ -->
+  <section class="ch" id="c08">
+    <div class="kicker rv">CAPÍTULO 08</div>
+    <h2 class="rv">Motor de <em>estrutura</em></h2>
+    <p class="lead rv">Enquanto o resto organiza o cérebro, o <b style="color:var(--text)">/structure</b> organiza e audita o código-fonte: perfis (<span style="font-family:var(--mono);color:var(--green)">next-app</span> · <span style="font-family:var(--mono);color:var(--green)">generico</span>), regras emitidas da fonte única para Cursor e Copilot, e uma escada de migração que protege produção.</p>
+
+    <div class="tiers rv">
+      <div class="tier t0"><span class="badge">DEFAULT</span><div class="tn">0</div><h4>Só convenções</h4><p>AGENTS.md + regras com escopo. Código intocado; tudo que é novo já nasce no formato. ~90% do valor, 0% de risco.</p></div>
+      <div class="tier t1"><div class="tn">1</div><h4>Auditoria</h4><p>Agente A mapeia a distância até o perfil-alvo: relatório de gap + backlog priorizado. Nada é tocado.</p></div>
+      <div class="tier t2"><div class="tn">2</div><h4>Migração incremental</h4><p>Um módulo por vez, via /propose migrate-*. Reference-safe, com gate de build: vermelho → rollback.</p></div>
+      <div class="tier t3"><div class="tn">3</div><h4>Reorg completo</h4><p>Só projetos pequenos/pouco críticos ou sob pedido explícito, com git limpo e testes decentes.</p></div>
+    </div>
+    <div class="tiers-note rv">Projeto já implantado = <b style="color:var(--amber)">Tier 0 por padrão</b>. Migração real (Tier 2) é opt-in, módulo a módulo, sempre protegida pelo gate de build (DS2). Regras verificáveis S1–S7 + DS1–DS2 em docs/STRUCTURE-SPEC.md.</div>
+  </section>
+
+  <!-- ============ 09 LEI ============ -->
+  <section class="ch" id="c09">
+    <div class="kicker rv">CAPÍTULO 09</div>
+    <h2 class="rv">A lei do sistema — <em>D1–D7</em></h2>
+    <p class="lead rv">Sete regras anti-drift invioláveis: qualquer uma força FAIL na auditoria. As marcadas em âmbar chegaram na v1.4.0 com o hardening do handoff.</p>
+
+    <div class="mands rv">
+      <div class="mand"><span class="id">D1</span><p><b>Sem commands/ na raiz</b> duplicando .claude/commands/ + procedures/ — três fontes da mesma lógica é drift garantido.</p></div>
+      <div class="mand"><span class="id">D2</span><p><b>Ponteiro nunca duplica o cérebro.</b> CLAUDE.md/GEMINI.md só apontam; o conteúdo vive no canônico.</p></div>
+      <div class="mand"><span class="id">D3</span><p><b>Handoff nunca copia a lista de tarefas.</b> O cursor é derivado; tasks.md é a única verdade do progresso.</p></div>
+      <div class="mand"><span class="id">D4</span><p><b>evaluation.json reflete os provedores reais</b> — não só um.</p></div>
+      <div class="mand"><span class="id">D5</span><p><b>Uma só fonte por lógica de comando.</b> Se existe procedures/x.md, o wrapper não reimplementa.</p></div>
+      <div class="mand new"><span class="id">D6</span><p><b>Estado dinâmico único.</b> Sessão/cursor/próximo passo vivem só em memory/handoff.md; o cérebro guarda só o estático.</p></div>
+      <div class="mand new"><span class="id">D7</span><p><b>Fronteira de aprovação.</b> Tarefa [x] além do Limite aprovado sem gate humano = DRIFT.</p></div>
+    </div>
+
+    <h3 class="sub-t">Orçamentos — concisão é gate, não conselho</h3>
+    <div class="budgets rv">
+      <div class="bud"><div class="v">≤150</div><div class="l">linhas · cérebro canônico</div></div>
+      <div class="bud"><div class="v">≤20</div><div class="l">linhas · memory/handoff.md</div></div>
+      <div class="bud"><div class="v">≤6</div><div class="l">linhas · cada wrapper de comando</div></div>
+    </div>
+
+    <h3 class="sub-t">Gotchas do operador</h3>
+    <div class="rv">
+      <details><summary>A IA recomeçou do zero</summary><div class="a">Não leu o handoff no arranque. Verifique o protocolo de arranque no cérebro e rode <code>scripts/check-pointers.sh</code>: se o ponteiro não importa o canônico, a IA só vê 7 linhas e trabalha “cega”.</div></details>
+      <details><summary>Narrativa contradiz a tasks.md</summary><div class="a">Alguém editou tarefas sem respeitar o cursor derivado. Conflito de arranque → a IA deve parar e perguntar. Resolva na tasks.md — ela é a fonte única do progresso.</div></details>
+      <details><summary>Executor avançou além do limite</summary><div class="a">DRIFT D7. Reverta o trabalho ou formalize retroativamente — <b style="color:var(--amber)">apenas com aprovação humana registrada</b> no handoff.</div></details>
+      <details><summary>Sessão morreu sem /wrapup</summary><div class="a">Sem drama: o worker grava o handoff incrementalmente a cada tarefa fechada (com sha). A próxima IA retoma pelo cursor + <code>git log</code> desde a âncora e registra o gotcha.</div></details>
+      <details><summary>Windows sem Git Bash</summary><div class="a">Use a variante PowerShell do Stop hook — a skill detecta o SO e instala a correta (nunca as duas).</div></details>
+      <details><summary>Credenciais</summary><div class="a">Sempre variáveis de ambiente. Nunca em <code>context/</code>, <code>memory/</code> ou nos arquivos cérebro.</div></details>
+    </div>
+  </section>
+
+  <footer>
+    <div class="f1"><b>AGENTS/OS</b> · manual visual do operador · plugin agentic-os v1.4.0</div>
+    <div>docs/USAGE.md — referência completa · github.com/rasecagapito/agenticOS</div>
+  </footer>
+</main>
+
+<script>
+  // progresso de leitura
+  const bar = document.getElementById('progress');
+  addEventListener('scroll', () => {
+    const h = document.documentElement;
+    bar.style.width = (h.scrollTop / (h.scrollHeight - h.clientHeight) * 100) + '%';
+  }, {passive:true});
+
+  // reveals escalonados
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }), {threshold:.12});
+  document.querySelectorAll('.rv').forEach((el,i) => { el.style.transitionDelay = (i % 4) * 60 + 'ms'; io.observe(el); });
+
+  // chip ativo por seção
+  const chips = [...document.querySelectorAll('.chip')];
+  const secs = chips.map(c => document.querySelector(c.getAttribute('href')));
+  const ioNav = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) {
+      chips.forEach(c => c.classList.remove('on'));
+      const i = secs.indexOf(e.target);
+      if (i >= 0) chips[i].classList.add('on');
+    }
+  }), {rootMargin:'-35% 0px -55% 0px'});
+  secs.forEach(s => s && ioNav.observe(s));
+
+  // copiar instalação
+  document.querySelectorAll('.copy').forEach(btn => btn.addEventListener('click', () => {
+    const txt = document.getElementById(btn.dataset.copy).textContent;
+    navigator.clipboard.writeText(txt).then(() => {
+      btn.textContent = 'copiado ✓';
+      setTimeout(() => btn.textContent = 'copiar', 1600);
+    });
+  }));
+</script>
+</body>
+</html>
