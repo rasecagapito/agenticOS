@@ -48,6 +48,7 @@ Depois da instalação, pedir para montar ou adaptar um projeto ao padrão Agent
 - `template/B-saas-n8n/` — template para SaaS + automações n8n
 - `template/C-claude-integrado/` — template SaaS integrado com Claude Code Superpowers
 - `template/D-multi-provedor/` — cérebro compartilhado entre várias IAs (Claude, Codex, Gemini…)
+- `docs/USAGE.md` — **[Guia de Uso Completo](docs/USAGE.md)**: instalação, todos os comandos com exemplos e capítulo de handoff/orquestração
 - `docs/CHANGE-WORKFLOW.md` — **[Change Workflow](docs/CHANGE-WORKFLOW.md)**: ciclo de mudança estruturada
 - `docs/MULTI-PROVIDER.md` — **[Multi-Provedor](docs/MULTI-PROVIDER.md)**: cérebro compartilhado + handoff entre IAs
 - `docs/superpowers/` — specs e planos de desenvolvimento do próprio plugin
