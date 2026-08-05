@@ -1,0 +1,19 @@
+name: pointer-check
+
+on:
+  push:
+    paths:
+      - "template/**"
+      - "scripts/check-pointers.sh"
+  pull_request:
+    paths:
+      - "template/**"
+      - "scripts/check-pointers.sh"
+
+jobs:
+  check-pointers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar integridade dos ponteiros multi-provedor (M2/D2)
+        run: bash scripts/check-pointers.sh

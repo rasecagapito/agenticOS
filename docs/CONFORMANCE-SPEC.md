@@ -30,9 +30,10 @@ Ativa quando o projeto declara multi-IA (existe `AGENTS.md` canônico + ponteiro
 | M2 | Ponteiros finos (`CLAUDE.md`, `GEMINI.md`) que fazem `@import` do canônico | Ponteiro tem `@<canônico>` e **não** duplica conteúdo |
 | M3 | `automation/procedures/{propose,worker,wrapup,status,handoff}.md` — fonte única da lógica | 5 procedimentos presentes |
 | M4 | `.claude/commands/*` são **wrappers finos** que apontam para `procedures/` | Cada wrapper ≤ ~6 linhas, referencia o procedimento |
-| M5 | `memory/handoff.md` — estado vivo; cursor **derivado** da 1ª `[ ]` em `changes/<ativa>/tasks.md` | Presente; handoff **não** copia lista de tarefas |
+| M5 | `memory/handoff.md` — estado vivo; cursor **derivado** da 1ª `[ ]` em `changes/<ativa>/tasks.md`; **≤ 20 linhas**; narrativa 1 linha/campo; header com instrução de validação | Presente; handoff **não** copia lista de tarefas; teto respeitado |
 | M6 | `providers/registry.md` — arquivo de entrada + import + limitações por IA | Presente |
 | M7 | `changes/` + `changes/archive/` | Ambas presentes |
+| M8 | **(Se Orquestração ativa)** secção `## Orquestração` bem formada: orquestrador humano como gate final, `Limite aprovado` (índice em `tasks.md`), executor, âncora `commit <sha>` | Secção presente e coerente com `tasks.md` |
 
 ---
 
@@ -44,14 +45,33 @@ Ativa quando o projeto declara multi-IA (existe `AGENTS.md` canônico + ponteiro
 - **D3 — Handoff nunca copia a lista de tarefas.** O cursor é derivado; `tasks.md` é a única verdade do progresso.
 - **D4 — `evaluation.json` reflete os provedores reais**, não só um (ex.: `platform: "Codex"` sozinho num projeto multi-IA = drift).
 - **D5 — Uma só fonte por lógica de comando.** Se existe `procedures/x.md`, o wrapper não reimplementa a lógica.
+- **D6 — Estado dinâmico único.** Com handoff presente, estado de sessão (último provedor, cursor,
+  próximo passo) vive **só** em `memory/handoff.md`. Cérebro e outros arquivos podem ter estado
+  **estático** (fase do projeto), mas não sessão/progresso. (Single-IA sem handoff: estado pode viver
+  no orquestrador, como antes.)
+- **D7 — Fronteira de aprovação.** Com Orquestração ativa, tarefa `[x]` **além do `Limite aprovado`**
+  sem aprovação humana registada no handoff = DRIFT. Limite só avança com gate humano.
+
+---
+
+## Orçamentos (custo por sessão, verificável)
+
+O cérebro e o handoff são lidos em **toda sessão de toda IA** — crescimento aí é custo recorrente.
+Concisão é gate, não conselho:
+
+| Artefato | Teto | Estouro |
+|----------|------|---------|
+| Cérebro canônico (`AGENTS.md`) | ≤ 150 linhas | DRIFT — extrair para `context/` |
+| `memory/handoff.md` | ≤ 20 linhas | DRIFT — substituir narrativa, nunca acumular |
+| `.claude/commands/*` (wrappers) | ≤ 6 linhas | DRIFT (ver M4/D5) — lógica vive em `procedures/` |
 
 ---
 
 ## Critério de sucesso por modo
 
 ### NOVO (MODO B) — estrito
-- **100%** dos itens base (B1–B6) + Multi-Provedor (M1–M7 se opt-in) = `CONFORME`.
-- **Zero** violações D1–D5.
+- **100%** dos itens base (B1–B6) + Multi-Provedor (M1–M8 se opt-in) = `CONFORME`.
+- **Zero** violações D1–D7. Orçamentos respeitados.
 - Estrutura criada do zero, limpa; conteúdo real (não placeholder).
 - O skill **não declara sucesso** sem re-auditoria `PASS` completa.
 
@@ -60,7 +80,7 @@ Ativa quando o projeto declara multi-IA (existe `AGENTS.md` canônico + ponteiro
 - **Zero** arquivos pré-existentes movidos / renomeados / apagados **sem aprovação** explícita.
 - Integridade do projeto intacta: código da app inalterado, app continua a correr, git limpo salvo o aprovado.
 - Poder do plugin presente: memory + context + workers + (handoff/procedures se multi-IA).
-- Violações D1–D5 **só** são corrigidas dentro de uma mudança aprovada (nunca silenciosamente).
+- Violações D1–D7 **só** são corrigidas dentro de uma mudança aprovada (nunca silenciosamente).
 
 ---
 

@@ -1,3 +1,49 @@
+# Agentic OS v1.4.0
+
+**Hardening do handoff multi-agente + Orquestração com fronteira de aprovação.** O handoff deixa de
+ser só convenção narrativa e ganha regras anti-drift verificáveis, orçamentos rígidos de tokens e
+um **humano como orquestrador final**. Compatível com v1.3.2.
+
+## Novidades
+
+- **Orquestração (fronteira de aprovação)** — o humano é o orquestrador final: uma IA de
+  coordenação propõe **lotes de 3–5 tarefas**; executores só trabalham até o `Limite aprovado`;
+  o limite **só avança com aprovação humana registrada no handoff**. Revisão de lote via
+  `git diff <âncora>..HEAD`. Ativa quando o handoff traz a secção `## Orquestração`
+  (template D já a inclui; sem a secção = modo livre, comportamento anterior).
+- **Estado dinâmico único (D6)** — sessão/cursor/próximo passo vivem **só** em `memory/handoff.md`;
+  o cérebro guarda apenas estado estático (fase). Zero dupla escrita, zero dupla leitura.
+- **Âncora git** — cada tarefa fechada grava `commit <sha>` no handoff; "o que aconteceu" deriva do
+  git, não de prosa. Narrativa encolhe e a retoma fica exata.
+- **Orçamentos rígidos** — concisão vira gate de auditoria: handoff **≤ 20 linhas**, cérebro
+  canônico **≤ 150**, wrappers **≤ 6**. Narrativa = 1 linha por campo, substituir nunca acumular.
+- **Validação no arranque** — o próprio header do handoff instrui a IA que chega a validar
+  coerência com `tasks.md` (e com o `Limite aprovado`); conflito → parar e perguntar.
+  Custo zero no cérebro (instrução co-localizada com o dado).
+- **Novas regras verificáveis** — anti-drift **D6** (estado dinâmico único) e **D7** (fronteira só
+  com gate humano); item **M8** (Orquestração bem formada); **M5** reforçado (teto + header de
+  validação). Auditoria A/B passa a exigir `D1–D7` e orçamentos.
+- **Verificação de ponteiros (CI)** — `scripts/check-pointers.sh` + workflow `pointer-check`:
+  todo ponteiro (`CLAUDE.md`/`GEMINI.md`) importa o canônico e o canônico nunca está vazio
+  (fecha o risco de ponteiro falhar silenciosamente). `providers/registry.md` ganha estado
+  "verificado" por provedor.
+- **Correção: colisão de mesma hora** — Stop hook e `/wrapup` passam a usar `HHMM` no nome do
+  arquivo de sessão (duas sessões na mesma hora já não se sobrescrevem). Aplicado aos 4 templates
+  e às variantes `sh`/PowerShell do skill.
+- **README** — tabela de comandos atualizada (`/conform`, `/handoff`, `/structure` faltavam).
+
+## Impacto em tokens (por sessão)
+
+| Peça | Antes | Agora |
+|------|-------|-------|
+| Cérebro (template D) | estado dinâmico duplicado | só estático + ponteiro para handoff |
+| Handoff | narrativa livre acumulável | ≤ 20 linhas, schema fixo, substitui |
+| Revisão de lotes | releitura de contexto | `git diff` desde a âncora |
+
+Nenhuma melhoria aumenta o custo por sessão; P1 (estado único) e P4 (âncora) reduzem.
+
+---
+
 # Agentic OS v1.3.2
 
 Release de **feature**: introduz o **Motor de Estrutura da Aplicação** — o Agentic OS deixa de

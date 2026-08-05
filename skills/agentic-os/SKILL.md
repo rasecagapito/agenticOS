@@ -193,9 +193,10 @@ Usar as respostas para popular os arquivos com conteúdo real — não placehold
 
 MODO B é determinístico — por isso a barra é alta. Após B criar a estrutura, o **Agente A re-audita**
 contra [`docs/CONFORMANCE-SPEC.md`](../../docs/CONFORMANCE-SPEC.md). **Não declarar sucesso** enquanto:
-- Camadas base B1–B6 (+ multi-provedor M1–M7 se opt-in) não estiverem **100% `CONFORME`**; e
-- Existir **qualquer** violação anti-drift D1–D5 (com destaque para **D1 — sem `commands/` na raiz**
-  duplicando `.claude/commands/` + `automation/procedures/`).
+- Camadas base B1–B6 (+ multi-provedor M1–M8 se opt-in) não estiverem **100% `CONFORME`**; e
+- Existir **qualquer** violação anti-drift D1–D7 (com destaque para **D1 — sem `commands/` na raiz**
+  duplicando `.claude/commands/` + `automation/procedures/`); e
+- Os **orçamentos** estourarem (cérebro canônico > 150 linhas, handoff > 20, wrapper > 6).
 
 Se a re-auditoria falhar, A re-instrui B e repete (máx. 3 ciclos). Só com `PASS` completo o skill
 confirma ao usuário que o projeto está no padrão.
@@ -311,9 +312,10 @@ Ver `docs/CHANGE-WORKFLOW.md` para o ciclo completo.
 Instruções para Claude:
 1. Obter hora real do sistema
 2. Ler arquivos alterados na sessão (git diff ou equivalente)
-3. Criar registro em `memory/history/YYYY-MM-DD-HH-sessao.md` com: data, resumo, arquivos, decisões, pendências
+3. Criar registro em `memory/history/YYYY-MM-DD-HHMM-sessao.md` com: data, resumo, arquivos, decisões, pendências
 4. Registrar aprendizados novos em `memory/learnings/YYYY-MM-DD-tema.md`
-5. Atualizar CLAUDE.md seção "Estado do Projeto"
+5. Atualizar estado **estático** do orquestrador (fase). Estado dinâmico (sessão/cursor/próximo passo):
+   single-IA fica no próprio orquestrador; multi-provedor vive **só** em `memory/handoff.md` (D6).
 6. Confirmar ao usuário com nome do arquivo criado
 
 ### /.claude/commands/status.md
@@ -362,7 +364,7 @@ Windows com Git Bash; a variante **PowerShell** é para Windows nativo sem shell
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'dir=\"${CLAUDE_PROJECT_DIR:-.}/memory/history\"; mkdir -p \"$dir\"; f=\"$dir/$(date +%Y-%m-%d-%H)-sessao.md\"; printf \"# Sessao %s\\n\\nSessao encerrada automaticamente.\\nExecutar /wrapup para consolidar aprendizados.\\n\" \"$(date \"+%Y-%m-%d %H:%M\")\" > \"$f\"'"
+            "command": "sh -c 'dir=\"${CLAUDE_PROJECT_DIR:-.}/memory/history\"; mkdir -p \"$dir\"; f=\"$dir/$(date +%Y-%m-%d-%H%M)-sessao.md\"; printf \"# Sessao %s\\n\\nSessao encerrada automaticamente.\\nExecutar /wrapup para consolidar aprendizados.\\n\" \"$(date \"+%Y-%m-%d %H:%M\")\" > \"$f\"'"
           }
         ]
       }
@@ -383,7 +385,7 @@ Windows com Git Bash; a variante **PowerShell** é para Windows nativo sem shell
           {
             "type": "command",
             "shell": "powershell",
-            "command": "$date = Get-Date; $fileName = $date.ToString('yyyy-MM-dd-HH') + '-sessao.md'; $content = '# Sessao ' + $date.ToString('yyyy-MM-dd HH:mm') + \"`n`nSessao encerrada automaticamente.`nExecutar /wrapup para consolidar aprendizados.\"; $dir = Join-Path $env:CLAUDE_PROJECT_DIR 'memory/history'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Set-Content -Path (Join-Path $dir $fileName) -Value $content -Encoding UTF8"
+            "command": "$date = Get-Date; $fileName = $date.ToString('yyyy-MM-dd-HHmm') + '-sessao.md'; $content = '# Sessao ' + $date.ToString('yyyy-MM-dd HH:mm') + \"`n`nSessao encerrada automaticamente.`nExecutar /wrapup para consolidar aprendizados.\"; $dir = Join-Path $env:CLAUDE_PROJECT_DIR 'memory/history'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Set-Content -Path (Join-Path $dir $fileName) -Value $content -Encoding UTF8"
           }
         ]
       }
@@ -414,12 +416,18 @@ GLM, DeepSeek…) trabalharem sincronizadas sobre o mesmo cérebro. Quando uma I
 continua exatamente do mesmo ponto — **sem drift**. É **opt-in**; projetos single-IA ignoram.
 Template pronto: `template/D-multi-provedor/`. Detalhes: `docs/MULTI-PROVIDER.md`.
 
-**Duas peças:**
+**Peças:**
 1. **Fonte única + ponteiros** — um só arquivo cérebro é canônico; os outros são `@import` dele
    (nunca duplicar conteúdo → sem "delírio").
-2. **Handoff** (`memory/handoff.md`) — estado vivo que a próxima IA lê para retomar. O **cursor**
-   (próxima tarefa) é **derivado** da primeira `[ ]` em `changes/<ativa>/tasks.md`, nunca
-   recodificado. Gravado **incremental** ao fechar cada tarefa (à prova de crash).
+2. **Handoff** (`memory/handoff.md`) — estado vivo que a próxima IA lê para retomar.
+   - **Cursor derivado** da primeira `[ ]` em `changes/<ativa>/tasks.md`, nunca recodificado.
+   - **Estado dinâmico único** (D6): sessão/cursor/próximo passo vivem só aqui; o cérebro guarda só estado estático.
+   - **Âncora git**: `commit <sha>` gravado ao fechar tarefa — "o que aconteceu" deriva do git, não de prosa.
+   - **Teto**: ≤ 20 linhas, narrativa 1 linha por campo, substituir nunca acumular; header traz a
+     validação de arranque (coerência handoff↔tasks → conflito = parar e perguntar).
+   - Gravado **incremental** ao fechar cada tarefa (à prova de crash).
+3. **Orquestração (opt-in)** — fronteira de aprovação com o humano como orquestrador final
+   (ver abaixo). Ativa quando o handoff traz a secção `## Orquestração`; sem ela, modo livre.
 
 A lógica dos comandos vive em `automation/procedures/{propose,worker,wrapup,status,handoff}.md`
 (fonte única, provider-neutra). As `.claude/commands/` são wrappers finos. Codex/Gemini pedem em
@@ -430,7 +438,8 @@ Cérebro canônico = **`AGENTS.md`** (standard cross-provider; Codex lê-o nativ
 - `AGENTS.md` (orquestrador + protocolo de arranque de sessão) + ponteiros finos `CLAUDE.md`
   (`@AGENTS.md`) e `GEMINI.md` (import de `AGENTS.md`).
 - `automation/procedures/` (5 procedimentos) + `.claude/commands/` wrappers finos (incl. `/handoff`).
-- `memory/handoff.md` (estado vivo) + `providers/registry.md` (arquivo de entrada por IA).
+- `memory/handoff.md` (estado vivo, com a secção `## Orquestração` — humano como gate final;
+  remover a secção para modo livre) + `providers/registry.md` (arquivo de entrada por IA).
 
 ### Caminho — projeto existente
 Regra de ouro do Modo A mantém-se: **só criar/ponteirar; nunca mover/renomear/apagar comandos ou arquivos existentes.**
@@ -446,14 +455,36 @@ Regra de ouro do Modo A mantém-se: **só criar/ponteirar; nunca mover/renomear/
 ### Formato de `memory/handoff.md`
 ```markdown
 # Handoff — estado vivo da sessão
-## Último provedor
+> Lê isto PRIMEIRO. Validação: mudança ativa não existe, ou cursor ≠ 1ª [ ] em tasks.md,
+> ou cursor além do Limite aprovado → parar e perguntar. Não improvisar. (≤ 20 linhas.)
+
+## Sessão
 - IA: [Claude|Codex|Gemini|…] · Quando: [YYYY-MM-DD HH:mm]
+
+## Orquestração
+- Orquestrador: humano (gate final) · Coordenação: [IA]
+- Limite aprovado: tarefa N de tasks.md · Executor: [IA] · Aprovado por humano em: [data/hora]
+- Âncora: commit <sha> da última aprovação
+
 ## Mudança ativa
-- Pasta: changes/<nome>/   (ou "nenhuma")
-- Cursor: primeira [ ] em tasks.md  (derivar — não copiar aqui)
-## Narrativa
+- Pasta: changes/<nome>/ (ou "nenhuma")
+- Cursor: 1ª [ ] em tasks.md, ≤ Limite aprovado (derivar — não copiar aqui)
+
+## Narrativa (1 linha por campo)
 - Feito: … · Decidido: … · Gotchas: … · Próxima intenção: …
 ```
+
+### Orquestração — fronteira de aprovação (opt-in)
+
+Com várias IAtivas no mesmo projeto, a segurança extra: o **humano é o orquestrador final**; uma IA
+coordena (propõe/revê); as demais executam apenas **lotes aprovados**.
+
+- Lotes de **3–5 tarefas**. Coordenação regista no handoff: executor, `Limite aprovado` (índice em
+  `tasks.md`), âncora `commit <sha>`.
+- **`Limite aprovado` só avança com aprovação humana registada** no handoff (D7).
+- Executor: só tarefas ≤ limite; gotcha → parar e registar, nunca contornar.
+- `/propose` e `/wrapup` exclusivos da coordenação; revisão de lote via `git diff <âncora>..HEAD`.
+- Secção nunca copia a lista de tarefas — só limite, executor, âncora (anti-drift D3 mantém-se).
 
 ---
 

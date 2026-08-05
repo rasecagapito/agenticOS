@@ -32,7 +32,7 @@ A audita (vs SPEC)
 ## Critério de sucesso
 
 `resultado == PASS` na re-auditoria de A, segundo `CONFORMANCE-SPEC.md`:
-- **NOVO:** 100% base (+ multi-provedor se opt-in), zero D1–D5, estrutura limpa do zero.
+- **NOVO:** 100% base (+ multi-provedor se opt-in), zero D1–D7, orçamentos respeitados, estrutura limpa do zero.
 - **EXISTENTE:** itens necessários aplicados, **zero** arquivos pré-existentes movidos/apagados sem
   aprovação, integridade intacta, poder do plugin presente.
 

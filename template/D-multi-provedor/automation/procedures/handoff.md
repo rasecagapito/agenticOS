@@ -2,50 +2,56 @@
 
 > Provider-neutro. Fonte única da lógica de continuidade. Qualquer IA (Claude, Codex, Gemini…)
 > executa isto — via `/handoff` no Claude ou a pedido ("lê/atualiza o handoff") nas outras.
+> Princípios: `docs/MULTI-PROVIDER.md` secção Handoff + Orquestração.
 
-O handoff é o que permite a **outra IA continuar exatamente onde a anterior parou**.
-Arquivo: `memory/handoff.md`.
+O handoff permite que **outra IA continue exatamente onde a anterior parou**.
+Arquivo: `memory/handoff.md`. **Teto: ≤ 20 linhas** — substituir, nunca acumular.
 
-## Princípio anti-drift (importante)
-- O **cursor** (qual a próxima tarefa) é **derivado** da mudança ativa: a primeira `[ ]`
-  não marcada em `changes/<ativa>/tasks.md`. **Nunca** copiar a lista de tarefas para o handoff
-  — senão passam a existir duas fontes de verdade e uma fica desatualizada ("delírio").
-- O handoff guarda só o que a mudança NÃO captura: quem mexeu por último, e a narrativa
-  (o "porquê" e o "estado mental" que não cabe num checkbox).
+## Princípios (anti-drift e anti-tokens)
+1. **Cursor derivado** — 1ª `[ ]` não marcada em `changes/<ativa>/tasks.md`. Nunca copiar a lista
+   de tarefas para o handoff (duas fontes = drift).
+2. **Estado dinâmico único** — sessão/cursor/próximo passo vivem SÓ aqui. O cérebro guarda só
+   estado estático (fase).
+3. **Âncora git** — gravar `commit <sha>` ao fechar tarefa e na última aprovação. "O que houve
+   desde então" deriva de `git diff <sha>..HEAD`, não de prosa.
+4. **Orquestração (se a secção existir)** — cursor válido só até `Limite aprovado`; o limite só
+   avança com **aprovação humana registada** (gate final). Lotes de 3–5 tarefas.
 
 ## LER (ao arrancar sessão)
-1. Ler `memory/handoff.md` inteiro.
-2. Identificar a **mudança ativa** apontada.
-3. Abrir `changes/<ativa>/tasks.md` e localizar a primeira `[ ]` → é aqui que se retoma.
-4. Ler a narrativa (Feito / Decidido / Gotchas / Próxima intenção) para recuperar contexto.
+1. Ler `memory/handoff.md` inteiro e aplicar a validação do header:
+   mudança ativa existe? cursor = 1ª `[ ]` em tasks.md? cursor ≤ Limite aprovado (se orquestração)?
+   Conflito → **parar e perguntar**; nunca improvisar nem "corrigir" em silêncio.
+2. Retomar na 1ª `[ ]`. Ler a narrativa para recuperar contexto (Feito/Decidido/Gotchas/Próxima).
 
-## GRAVAR (incremental — à prova de crash)
-Atualizar `memory/handoff.md` **ao fechar cada tarefa** e em decisões-chave, não só no wrapup.
-Assim, se a sessão morrer sem `/wrapup`, a próxima IA retoma na mesma.
-Escrever/atualizar:
-- **Último provedor**: nome da IA + data/hora real.
-- **Mudança ativa**: pasta `changes/<nome>/` (ou "nenhuma").
-- **Narrativa**: substituir pelo estado atual — Feito, Decidido, Gotchas, Próxima intenção.
-Não listar tarefas aqui; o `tasks.md` é a verdade do progresso.
+## GRAVAR (incremental — ao fechar cada tarefa; à prova de crash)
+- **Sessão**: IA + hora real.
+- **Mudança ativa**: pasta (ou "nenhuma").
+- **Orquestração** (só coordenação/humano mexem aqui): limite, executor, âncora, aprovação humana.
+- **Narrativa**: substituir pelo estado atual — 1 linha por campo. Não listar tarefas (tasks.md é a
+  verdade do progresso) nem descrever o que o git já regista (para isso há a âncora).
 
 ## Obter hora real
 `Get-Date -Format 'yyyy-MM-dd HH:mm'` (PowerShell) ou `date '+%Y-%m-%d %H:%M'` (POSIX).
+Para a âncora: `git rev-parse --short HEAD`.
 
 ## Formato de `memory/handoff.md`
 ```markdown
 # Handoff — estado vivo da sessão
-> Lê isto PRIMEIRO ao arrancar. Atualizado ao fechar cada tarefa e no wrapup.
+> Lê isto PRIMEIRO. Validação: mudança ativa não existe, ou cursor ≠ 1ª [ ] em tasks.md,
+> ou cursor além do Limite aprovado → parar e perguntar. Não improvisar. (≤ 20 linhas.)
 
-## Último provedor
-- IA: [Claude|Codex|Gemini|GLM|DeepSeek] · Quando: [YYYY-MM-DD HH:mm]
+## Sessão
+- IA: [Claude|Codex|Gemini|…] · Quando: [YYYY-MM-DD HH:mm]
+
+## Orquestração
+- Orquestrador: humano (gate final) · Coordenação: [IA]
+- Limite aprovado: tarefa N de tasks.md · Executor: [IA] · Aprovado por humano em: [data/hora]
+- Âncora: commit <sha> da última aprovação
 
 ## Mudança ativa
-- Pasta: changes/<nome>/   (ou "nenhuma")
-- Cursor: primeira [ ] em tasks.md  (derivar — não copiar aqui)
+- Pasta: changes/<nome>/ (ou "nenhuma")
+- Cursor: 1ª [ ] em tasks.md, ≤ Limite aprovado (derivar — não copiar aqui)
 
-## Narrativa
-- Feito: …
-- Decidido: …
-- Gotchas: …
-- Próxima intenção: …
+## Narrativa (1 linha por campo)
+- Feito: … · Decidido: … · Gotchas: … · Próxima intenção: …
 ```

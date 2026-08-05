@@ -12,7 +12,7 @@ faz role-switch A→B→A por fases.
 
 1. **Detectar modo**: pasta vazia/nova → **NOVO**; projeto com arquivos → **EXISTENTE**.
 2. **A — Auditar** (read-only) contra `docs/CONFORMANCE-SPEC.md`:
-   - Percorrer camadas base (B1–B6) e regras anti-drift (D1–D5). (M1–M7 só se multi-provedor.)
+   - Percorrer camadas base (B1–B6), regras anti-drift (D1–D7) e orçamentos. (M1–M8 só se multi-provedor; M8 só com Orquestração ativa.)
    - Classificar cada item `CONFORME | FALTA | DRIFT`; marcar quais correções são **necessárias**.
    - Emitir o schema de saída do auditor (ver SPEC): `mode`, `resultado`, `divergencias[]`,
      `instrucoes_para_B[]`, `requires_user_approval`.
@@ -30,7 +30,7 @@ faz role-switch A→B→A por fases.
 
 ## Critério de sucesso
 `resultado == PASS` na re-auditoria, por `docs/CONFORMANCE-SPEC.md`.
-NOVO = 100% base + zero D1–D5. EXISTENTE = necessário aplicado + zero arquivos movidos/apagados sem
+NOVO = 100% base + zero D1–D7 + orçamentos respeitados. EXISTENTE = necessário aplicado + zero arquivos movidos/apagados sem
 aprovação + integridade intacta + poder do plugin presente.
 
 ## Sem argumento
