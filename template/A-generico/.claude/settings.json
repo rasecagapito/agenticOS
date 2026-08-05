@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'dir=\"${CLAUDE_PROJECT_DIR:-.}/memory/history\"; mkdir -p \"$dir\"; f=\"$dir/$(date +%Y-%m-%d-%H)-sessao.md\"; printf \"# Sessao %s\\n\\nSessao encerrada automaticamente.\\nExecutar /wrapup para consolidar aprendizados.\\n\" \"$(date \"+%Y-%m-%d %H:%M\")\" > \"$f\"'"
+            "command": "sh -c 'dir=\"${CLAUDE_PROJECT_DIR:-.}/memory/history\"; mkdir -p \"$dir\"; f=\"$dir/$(date +%Y-%m-%d-%H%M)-sessao.md\"; printf \"# Sessao %s\\n\\nSessao encerrada automaticamente.\\nExecutar /wrapup para consolidar aprendizados.\\n\" \"$(date \"+%Y-%m-%d %H:%M\")\" > \"$f\"'"
           }
         ]
       }

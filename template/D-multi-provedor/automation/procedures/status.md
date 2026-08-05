@@ -16,6 +16,7 @@
 **Últimos commits**: [lista]
 **Último provedor**: [IA] — [quando]  (de handoff.md)
 **Mudança ativa**: [changes/<nome>/ ou nenhuma] — cursor: [primeira [ ] em tasks.md]
+**Orquestração** (se ativa): limite aprovado [N] · executor [IA] · aguardando aprovação? [sim/não]
 **Fase**: [MVP/BETA/PRODUÇÃO]
 
 **Features**:

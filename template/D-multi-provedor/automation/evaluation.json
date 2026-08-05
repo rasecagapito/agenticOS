@@ -1,22 +1,36 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "project_type": "multi-provedor",
   "brain": {
     "canonical_file": "AGENTS.md",
     "pointers": ["CLAUDE.md", "GEMINI.md"],
-    "rule": "um só arquivo canônico; os outros são @import — nunca duplicar conteúdo"
+    "rule": "um só arquivo canônico; os outros são @import — nunca duplicar conteúdo",
+    "budget": "cérebro canônico ≤ 150 linhas; detalhes vão para context/ e procedures/"
   },
   "handoff": {
     "file": "memory/handoff.md",
     "cursor_rule": "cursor = primeira [ ] em changes/<ativa>/tasks.md; nunca recodificar no handoff",
-    "write_policy": "incremental ao fechar cada tarefa (à prova de crash), não só no wrapup"
+    "write_policy": "incremental ao fechar cada tarefa (à prova de crash), com commit sha como âncora",
+    "budget": "≤ 20 linhas; narrativa 1 linha por campo; substituir, nunca acumular",
+    "dynamic_state_rule": "estado dinâmico (sessão/cursor/próximo passo) vive só aqui — cérebro guarda só estado estático"
+  },
+  "orquestracao": {
+    "ativa_quando": "handoff tem secção '## Orquestração'",
+    "orquestrador_final": "humano",
+    "lote_padrao": "3-5 tarefas",
+    "rules": [
+      "Limite aprovado só avança com aprovação humana registrada no handoff",
+      "executor nunca avança além do Limite aprovado; gotcha -> parar",
+      "/propose e /wrapup exclusivos da coordenação; executores só /worker",
+      "revisão de lote via git diff <âncora>..HEAD"
+    ]
   },
   "schemas": {
     "feature_implementation": {
       "required": ["feature", "arquivos_alterados", "testes_necessarios", "provedor"],
       "rules": [
         "sem credenciais hardcoded",
-        "handoff atualizado ao fechar a tarefa"
+        "handoff atualizado ao fechar a tarefa (com commit sha)"
       ]
     },
     "code_review": {
@@ -30,7 +44,8 @@
       "required": ["mode", "resultado", "divergencias", "instrucoes_para_B", "requires_user_approval"],
       "rules": [
         "resultado PASS só quando todos os itens necessários da SPEC = CONFORME",
-        "qualquer violação D1-D5 força FAIL",
+        "qualquer violação D1-D7 força FAIL",
+        "orçamentos estourados (cérebro >150, handoff >20, wrapper >6) contam como DRIFT",
         "auditor é read-only; verifica o disco, não a narrativa do executor"
       ]
     }
@@ -41,15 +56,23 @@
       "mudança ativa tem cursor claro (primeira [ ] em tasks.md)",
       "nenhuma tarefa a meio sem nota em Gotchas"
     ],
+    "avancar_fronteira": [
+      "lote concluído ou gotcha registrada no handoff",
+      "revisão feita via git diff <âncora>..HEAD pela coordenação",
+      "aprovação humana registrada no handoff (orquestrador final)",
+      "Limite aprovado e âncora atualizados na secção Orquestração"
+    ],
     "fechar_mudanca": [
       "todas as tarefas de tasks.md [x]",
       "deltas de context/ confirmados pelo humano",
-      "pasta movida para changes/archive/"
+      "pasta movida para changes/archive/",
+      "wrapup executado pela coordenação; handoff finalizado"
     ],
     "agentic_os_conformance": [
       "camadas base B1-B6 presentes (ver docs/CONFORMANCE-SPEC.md)",
-      "multi-provedor M1-M7 presentes quando opt-in ativo",
-      "zero violações anti-drift D1-D5 (sem commands/ na raiz; ponteiro não duplica cérebro; handoff não copia tarefas; evaluation reflete provedores reais)",
+      "multi-provedor M1-M8 presentes quando opt-in ativo (M8 só com Orquestração ativa)",
+      "zero violações anti-drift D1-D7 (sem commands/ na raiz; ponteiro não duplica cérebro; handoff não copia tarefas; evaluation reflete provedores reais; estado dinâmico único; fronteira só com gate humano)",
+      "orçamentos respeitados: cérebro ≤150 linhas, handoff ≤20, wrappers ≤6",
       "re-auditoria do Agente A = PASS antes de declarar sucesso",
       "EXISTENTE: zero arquivos pré-existentes movidos/apagados/renomeados sem aprovação"
     ]

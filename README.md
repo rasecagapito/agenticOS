@@ -88,3 +88,10 @@ Detalhes em **[docs/CHANGE-WORKFLOW.md](docs/CHANGE-WORKFLOW.md)**.
 | `/worker [nome]` | Ativar especialista (executa a mudança ativa) |
 | `/wrapup` | Consolidar sessão: arquivar mudança + memória + deltas |
 | `/status` | Estado atual do projeto |
+| `/conform` | Auditar/corrigir conformidade via loop Agente A/B |
+| `/handoff` | Ler/gravar o estado vivo multi-provedor |
+| `/structure` | Montar/auditar a estrutura da aplicação (Motor de Estrutura) |
+
+Em projetos multi-provedor com **Orquestração** ativa, o humano é o gate final: executores só
+trabalham até ao `Limite aprovado` do handoff (lotes de 3–5 tarefas). Detalhes em
+**[docs/MULTI-PROVIDER.md](docs/MULTI-PROVIDER.md)**.
