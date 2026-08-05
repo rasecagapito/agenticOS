@@ -236,6 +236,28 @@
   .proto li .sn{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--green);border-radius:4px;padding:1px 7px;font-weight:600}
   .proto li:not(:last-child)::after{content:"→";margin:0 12px;color:var(--green-deep);font-family:var(--mono)}
 
+  /* ---------- como ativar ---------- */
+  .activate{
+    border:1px solid var(--amber-line);border-radius:10px;padding:24px 26px;margin-bottom:34px;
+    background:linear-gradient(180deg,var(--amber-ghost),var(--panel));
+  }
+  .activate .at{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--amber);text-transform:uppercase;margin-bottom:4px}
+  .activate .sw{font-size:13px;color:var(--dim);margin-bottom:16px}
+  .activate .sw code{font-family:var(--mono);font-size:12px;color:var(--amber)}
+  .activate .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .apath{background:var(--ink-2);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+  .apath b{font-size:13.5px;display:block;margin-bottom:6px;color:var(--text)}
+  .apath b .pn{font-family:var(--mono);font-size:11px;color:var(--amber);margin-right:6px}
+  .apath p{font-size:12.5px;color:var(--dim)}
+  .apath code{font-family:var(--mono);font-size:11.5px;color:var(--green)}
+  .aritual{margin-top:16px;border-top:1px dashed var(--amber-line);padding-top:14px}
+  .aritual .rt{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;margin-bottom:10px}
+  .aritual ol{list-style:none;display:flex;flex-wrap:wrap;gap:4px 0;font-size:13px;color:var(--text)}
+  .aritual li{display:flex;align-items:center;gap:8px;margin:4px 0}
+  .aritual li .sn{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--amber);border-radius:4px;padding:1px 7px;font-weight:600}
+  .aritual li:not(:last-child)::after{content:"→";margin:0 12px;color:var(--amber-line);font-family:var(--mono)}
+  .aritual code{font-family:var(--mono);font-size:11.5px;color:var(--green)}
+
   /* ---------- orquestração ---------- */
   .roles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:34px}
   .role{border-radius:8px;padding:22px;position:relative;background:var(--panel);border:1px solid var(--line)}
@@ -375,6 +397,7 @@
     .loopring{margin:30px auto}
     .install{grid-template-columns:1fr}
     .budgets{grid-template-columns:1fr}
+    .activate .paths{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -569,6 +592,25 @@ Handoff atualizado. Mudança arquivada.</span></div></div>
     <div class="kicker rv">CAPÍTULO 06</div>
     <h2 class="rv">Orquestração — <em class="a">o humano é o gate final</em></h2>
     <p class="lead rv">Com várias IAs no mesmo projeto, o modo seguro não é “cada uma avança sozinha”. É uma coordenação que propõe, executores que cumprem lotes aprovados, e o <b style="color:var(--amber)">humano com a palavra final</b>. Ativa quando o handoff traz a seção <span style="font-family:var(--mono);color:var(--amber)">## Orquestração</span> — sem ela, vale o modo livre.</p>
+
+    <div class="activate rv">
+      <div class="at">Como ativar a orquestração</div>
+      <div class="sw">O interruptor é uma só coisa: a seção <code>## Orquestração</code> dentro de <code>memory/handoff.md</code>. <b style="color:var(--amber)">Seção presente = ativa</b> · <b style="color:var(--dim)">ausente = modo livre</b> (comportamento clássico).</div>
+      <div class="paths">
+        <div class="apath"><b><span class="pn">A</span>Projeto novo</b><p>Monte com o template D (ou peça à skill o modo multi-provedor): o handoff já nasce <code>com a seção</code>. É o padrão em projeto novo — para modo livre, remova a seção.</p></div>
+        <div class="apath"><b><span class="pn">B</span>Projeto existente</b><p>Peça à skill: <code>“adapta este projeto ao Agentic OS com a camada multi-provedor e orquestração”</code>. Ela cria handoff + seção sem tocar no que já existe.</p></div>
+        <div class="apath"><b><span class="pn">C</span>Manual</b><p>Num projeto já multi-provedor: copie o bloco <code>## Orquestração</code> (do capítulo 05) para o seu handoff. Para desativar: apague a seção.</p></div>
+      </div>
+      <div class="aritual">
+        <div class="rt">Ritual de primeiro uso</div>
+        <ol>
+          <li><span class="sn">1</span> Preencha <code>Coordenação</code> (quem propõe/revê) no handoff</li>
+          <li><span class="sn">2</span> Coordenação roda <code>/propose</code> e propõe o 1º lote (3–5 tarefas)</li>
+          <li><span class="sn">3</span> Humano aprova → registra <code>Aprovado por humano em: …</code> + limite + âncora</li>
+          <li><span class="sn">4</span> Executor assume o lote; o ciclo passa a correr sozinho até cada novo gate</li>
+        </ol>
+      </div>
+    </div>
 
     <div class="roles">
       <div class="role hum rv"><div class="rl">Orquestrador final</div><h4>HUMANO</h4><p>Aprova lotes antes da execução e decide avançar o limite, trocar o executor ou bloquear. Nada além do limite vigente acontece sem ele.</p><div class="do"><b>PORTA</b> · aprovação de cada lote · palavra final</div></div>
