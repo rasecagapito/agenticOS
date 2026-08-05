@@ -1,12 +1,13 @@
 # Agente: [NOME DO PROJETO]
 > Cérebro canônico — orquestrador central compartilhado por TODAS as IAs (Claude, Codex, Gemini, GLM, DeepSeek…).
-> Mantém 100-200 linhas. Este é o único arquivo de orquestração; os outros (`CLAUDE.md`, `GEMINI.md`) apenas apontam para aqui.
+> Mantém sucinto (≤ 150 linhas): protocolos e ponteiros aqui; estado dinâmico em `memory/handoff.md`; detalhes em `context/` e `automation/procedures/`.
+> Este é o único arquivo de orquestração; os outros (`CLAUDE.md`, `GEMINI.md`) apenas apontam para aqui.
 
 ## Protocolo de Arranque de Sessão (LER PRIMEIRO — qualquer IA)
 Antes de qualquer trabalho, sempre nesta ordem:
-1. Ler `memory/handoff.md` — estado vivo: último provedor, mudança ativa, narrativa.
+1. Ler `memory/handoff.md` — estado vivo: último provedor, mudança ativa, narrativa — e aplicar a validação do header (conflito → parar e perguntar).
 2. Se há mudança ativa, abrir `changes/<nome>/` e ler `tasks.md`.
-3. **Retomar na primeira tarefa `[ ]` não marcada** (o "cursor"). Não recomeçar do zero.
+3. **Retomar na primeira tarefa `[ ]` não marcada** (o "cursor"). Respeitar o `Limite aprovado` da secção Orquestração (se existir). Não recomeçar do zero.
 4. Ler os módulos de `context/` relevantes à tarefa (não todos — poupar tokens).
 Ao terminar cada tarefa e ao fechar a sessão: seguir `automation/procedures/handoff.md` e `wrapup.md`.
 
@@ -33,6 +34,7 @@ Carregar apenas o necessário para a tarefa:
 3. Nunca deletar/mover arquivos sem confirmação humana.
 4. Toda a mudança passa pelo ciclo: `/propose` → `/worker` → `/wrapup` (ver `automation/procedures/`).
 5. Atualizar `memory/handoff.md` ao fechar cada tarefa (continuidade multi-IA).
+6. Orquestração ativa: executor não avança além do `Limite aprovado`; o limite só avança com aprovação humana. `/propose` e `/wrapup` são da coordenação.
 
 ## Ciclo de Trabalho (provider-neutro)
 Os procedimentos vivem em `automation/procedures/` e são a **fonte única** da lógica.
@@ -54,5 +56,4 @@ Este `AGENTS.md` é o cérebro canônico. `CLAUDE.md` e `GEMINI.md` são ponteir
 
 ## Estado do Projeto
 - **Fase**: [fase]
-- **Última sessão**: [data] — ver `memory/handoff.md`
-- **Próximo passo**: [ação] (ou "ver cursor da mudança ativa")
+- Estado dinâmico (última sessão, mudança ativa, próximo passo): `memory/handoff.md` — fonte única (D6).

@@ -5,10 +5,13 @@
 
 | Provedor | Arquivo de entrada | Import suportado | Slash commands | Notas / limitações |
 |----------|--------------------|--------------------|----------------|--------------------|
-| **Claude** (Claude Code) | `CLAUDE.md` → `@AGENTS.md` | `@arquivo` | ✅ nativos (`.claude/commands/`) | Ponteiro fino; workflow via slash. |
-| **Codex** (OpenAI Codex CLI) | `AGENTS.md` (canônico) | lê nativo | ❌ | Sem slash: pedir em NL, IA segue `automation/procedures/`. |
-| **Gemini** (Gemini CLI) | `GEMINI.md` → import de `AGENTS.md` | `@arquivo` | ❌ | Ponteiro fino; workflow via `procedures/`. |
-| **GLM / DeepSeek / Kimi** | via harness | conforme harness | conforme harness | Se via base-url no Claude Code → herdam `CLAUDE.md`. Se via harness OpenAI-compat (aider/opencode) → tipicamente `AGENTS.md`. |
+| **Claude** (Claude Code) | `CLAUDE.md` → `@AGENTS.md` | `@arquivo` ✅ verificado | ✅ nativos (`.claude/commands/`) | Ponteiro fino; workflow via slash. |
+| **Codex** (OpenAI Codex CLI) | `AGENTS.md` (canônico) | lê nativo ✅ verificado | ❌ | Sem slash: pedir em NL, IA segue `automation/procedures/`. |
+| **Gemini** (Gemini CLI) | `GEMINI.md` → import de `AGENTS.md` | `@arquivo` ✅ verificado | ❌ | Ponteiro fino; workflow via `procedures/`. |
+| **GLM / DeepSeek / Kimi** | via harness | conforme harness ⚠️ | conforme harness | Se via base-url no Claude Code → herdam `CLAUDE.md`. Se via harness OpenAI-compat (aider/opencode) → tipicamente `AGENTS.md`. Import não verificado: confirmar no primeiro uso. |
+
+> Integridade dos ponteiros verificada por `scripts/check-pointers.sh` (CI `pointer-check`):
+> todo ponteiro importa o canônico e o canônico tem o Protocolo de Arranque (nunca cérebro vazio).
 
 ## Como adicionar um provedor novo
 1. Descobrir qual arquivo de bootstrap ele lê.

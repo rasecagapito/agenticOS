@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "agentic-os",
-      "description": "Agentic OS — memória persistente, contexto modular, workers, change workflow e cérebro multi-provedor para agentes IA.",
-      "version": "1.3.2",
+      "description": "Agentic OS — memória persistente, contexto modular, workers, change workflow, cérebro multi-provedor com orquestração (humano como gate final) e handoff hardened.",
+      "version": "1.4.0",
       "source": "./",
       "author": {
         "name": "rasecagapito"
