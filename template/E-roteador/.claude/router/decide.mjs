@@ -29,7 +29,10 @@ export function isBypass(prompt, prefixes = ['!', '/']) {
   return [...SYSTEM_PREFIXES, ...prefixes].some((x) => p.startsWith(x));
 }
 
-// Decide o tier. classification = { nivel, confianca, risco } | null (falha).
+// Decide o tier. classification | null (falha):
+//  - modo "jev":    { escolha: <agente>, confianca, risco } → vale a escolha do Jev; só a confiança
+//                   baixa sobe um nível (rede de segurança). Risco fica só no registro.
+//  - modo "regras": { nivel, confianca, risco } → classe define o tier; risco e confiança sobem.
 export function decide(cfg, classification, { override = null, erro = null } = {}) {
   const { tiers, thresholds } = cfg;
   const top = tiers.length - 1;
@@ -44,10 +47,18 @@ export function decide(cfg, classification, { override = null, erro = null } = {
     return pack(tiers[i], 'fallback', `classificador falhou (${erro || 'sem resposta'}) → ${tiers[i].agent}`);
   }
 
-  const { nivel, confianca, risco } = classification;
-  let i = baseIndex(tiers, nivel);
-  const trail = [`base=${nivel}`];
-  if (risco != null && risco > thresholds.risk_above) {
+  const { nivel, escolha, confianca, risco } = classification;
+  let i;
+  const trail = [];
+  if (escolha != null) {
+    i = tiers.findIndex((t) => t.agent === escolha);
+    if (i === -1) i = top; // escolha desconhecida → mais forte
+    trail.push(`jev=${escolha}`);
+  } else {
+    i = baseIndex(tiers, nivel);
+    trail.push(`base=${nivel}`);
+  }
+  if (escolha == null && risco != null && risco > thresholds.risk_above) {
     i += 1;
     trail.push(`risco ${fmt(risco)}>${fmt(thresholds.risk_above)} +1`);
   }

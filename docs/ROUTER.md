@@ -8,14 +8,29 @@ Classificador padrão: **Jev** (TypeSafe System One). Template: `template/E-rote
 
 ```
 mensagem → hook UserPromptSubmit (route.mjs)
-         → Jev: 1 chamada, 2 perguntas (nível = choice, risco = noul)
-         → decide.mjs (regra no código) → decisions.jsonl
+         → Jev: 1 chamada (modo jev: "qual subagente?" + risco; recebe o pedido anterior da sessão)
+         → decide.mjs (aplica a escolha + rede de segurança) → decisions.jsonl
          → contexto "ROTEADOR: ... subagent_type=X" → recepção delega via Agent tool
          → subagente executa e devolve {status, feito, verificacoes, pendencias}
          → recepção responde só com o resumo
 ```
 
-## Regra de decisão (`decide.mjs`, limiares em `config.json`)
+## Quem decide (`decision_mode` no `config.json`)
+
+### Modo `jev` (padrão desde v1.6.0) — o Jev escolhe
+
+O Jev recebe uma pergunta `choice`: "qual executor deve fazer o pedido?", com a descrição de cada
+subagente em `agent_criteria` (editável). Ele pesa complexidade e risco juntos e devolve
+`profundo (0.92)`. O código só obedece, com uma rede de segurança:
+
+- Confiança **< 0,60** → sobe 1 nível ("o Jev ficou em dúvida → o mais forte").
+- Risco é perguntado e registrado, mas **não** muda a escolha.
+- **Contexto anterior** (`context_previous: true`): vai junto o início do pedido anterior da sessão
+  e o subagente usado. Assim "sim, pode seguir" depois de uma tarefa difícil continua no Opus.
+- Justificativa: `jev=rapido; conf .55<.60 +1 → padrao`. Statusline: `roteador: jev 0.92 → profundo (Opus)`
+  (ou `jev rapido 0.55 ↑ padrao (Sonnet)` quando subiu).
+
+### Modo `regras` — o Jev classifica, o código decide
 
 | Classe (Jev) | Tier | Subagente padrão |
 |---|---|---|
@@ -24,6 +39,8 @@ mensagem → hook UserPromptSubmit (route.mjs)
 | difícil | avançado | `profundo` (Opus) |
 
 - Risco **> 0,70** → sobe 1 nível. Confiança **< 0,60** → sobe 1 nível. Acumulam; teto = avançado.
+
+### Nos dois modos
 - Classificador indisponível (sem chave, timeout 5 s, HTTP 401/422/429/529, resposta inválida) →
   `fallback_tier` (padrão: avançado — "na dúvida, o mais forte"). O erro vai para o log.
 - `justificativa` registra a trilha: `base=rotina; risco .78>.70 +1 → profundo`.

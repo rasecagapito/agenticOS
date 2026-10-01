@@ -493,10 +493,11 @@ coordena (propõe/revê); as demais executam apenas **lotes aprovados**.
 Classifica cada pedido **antes** de o modelo lê-lo e entrega ao subagente do tamanho certo. Sessão
 principal (Haiku) = **recepção**: só delega e resume. Detalhes: `docs/ROUTER.md`. Template: `template/E-roteador/`.
 
-- **Hook `UserPromptSubmit`** (`.claude/router/route.mjs`) pergunta ao **Jev** (TypeSafe) numa chamada:
-  nível (`choice`: simples/rotina/difícil) + risco de quebrar algo (`noul`).
-- **Decisão no código** (`decide.mjs`): simples→`rapido` (Haiku), rotina→`padrao` (Sonnet),
-  difícil→`profundo` (Opus); risco > 0,70 sobe 1; confiança < 0,60 sobe 1; falha do Jev → `profundo`.
+- **Hook `UserPromptSubmit`** (`.claude/router/route.mjs`) pergunta ao **Jev** (TypeSafe) numa chamada.
+- **Modo `jev` (padrão)**: o Jev **escolhe** `rapido` (Haiku) / `padrao` (Sonnet) / `profundo` (Opus)
+  pelos `agent_criteria`; confiança < 0,60 sobe 1 nível; recebe o pedido anterior da sessão
+  (respostas curtas como "sim" não caem no Haiku). **Modo `regras`**: Jev dá a classe
+  (simples/rotina/difícil) e o código decide; risco > 0,70 e confiança < 0,60 sobem 1. Falha do Jev → `profundo`.
 - **Fonte única dos agentes**: `agent-body.md` + `tiers` do `config.json` → `emit-agents.mjs`
   (gate `scripts/check-agents-sync.sh`). Agentes sem `tools` = herdam permissões.
 - Controle: `nivel:<tier> <pedido>` força o tier; `!` (modo bash) e `/comandos` passam sem roteamento.
