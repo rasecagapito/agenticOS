@@ -11,7 +11,7 @@ OUT="agentic-os.skill"
 
 tmp="$(mktemp -d)"
 mkdir -p "$tmp/agentic-os"
-cp "$SRC" "$tmp/agentic-os/SKILL.md"
+tr -d '\r' < "$SRC" > "$tmp/agentic-os/SKILL.md"  # LF sempre (igual ao repo/CI)
 if command -v zip >/dev/null 2>&1; then
   ( cd "$tmp" && zip -qr -X "agentic-os.skill" "agentic-os" )
 else

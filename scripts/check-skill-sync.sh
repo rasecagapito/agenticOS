@@ -11,7 +11,7 @@ OUT="agentic-os.skill"
 
 tmp="$(mktemp -d)"
 unzip -qo "$OUT" -d "$tmp"
-if diff -q "$tmp/agentic-os/SKILL.md" "$SRC" >/dev/null 2>&1; then
+if diff -q <(tr -d '\r' < "$tmp/agentic-os/SKILL.md") <(tr -d '\r' < "$SRC") >/dev/null 2>&1; then
   rm -rf "$tmp"
   echo "OK: $OUT está sincronizado com $SRC"
 else
