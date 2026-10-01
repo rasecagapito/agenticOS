@@ -1,3 +1,26 @@
+# Agentic OS v1.6.0
+
+**O Jev escolhe o subagente.** No Roteador de Modelos, o Jev deixa de só classificar e passa a
+**decidir quem executa** (`rapido` / `padrao` / `profundo`), pesando complexidade e risco juntos.
+
+## Novidades
+
+- **`decision_mode: "jev"` (novo padrão)** — pergunta única ao Jev: "qual executor deve fazer o
+  pedido?", com a descrição de cada subagente em `agent_criteria` (editável no `config.json`).
+- **Rede de segurança mantida** — confiança < 0,60 sobe um nível; Jev indisponível → `profundo`.
+- **Contexto da conversa** (`context_previous: true`) — o Jev recebe o início do pedido anterior da
+  sessão e o subagente usado. Respostas curtas ("sim", "pode seguir") continuam no nível da tarefa.
+- Statusline: `roteador: jev 0.92 → profundo (Opus)` / `roteador: jev rapido 0.55 ↑ padrao (Sonnet)`.
+- **Modo antigo preservado**: `decision_mode: "regras"` (classe + limiares de risco/confiança).
+
+## Atualizar
+
+Projetos com o roteador: atualizar o plugin e rodar `/router-update`. O `config.json` local é
+preservado e ganha as chaves novas — **o modo passa a `jev`**. Para manter o comportamento da v1.5.0,
+defina `"decision_mode": "regras"`.
+
+---
+
 # Agentic OS v1.5.0
 
 **Roteador de Modelos (opt-in, Claude Code).** Cada pedido é classificado pelo **Jev** (TypeSafe)

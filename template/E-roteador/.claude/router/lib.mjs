@@ -46,6 +46,38 @@ export function lastLog(file = LOG_FILE) {
   return null;
 }
 
+// Pedido anterior da mesma sessão + subagente efetivo (considera escalonamento posterior).
+// Dá contexto ao classificador para respostas curtas ("sim", "pode seguir").
+export function previousDecision(sessao, file = LOG_FILE) {
+  if (!sessao) return null;
+  try {
+    const fd = fs.openSync(file, 'r');
+    const size = fs.fstatSync(fd).size;
+    const len = Math.min(size, 32768);
+    const buf = Buffer.alloc(len);
+    fs.readSync(fd, buf, 0, len, size - len);
+    fs.closeSync(fd);
+    let escalado = null;
+    for (const l of buf.toString('utf8').trim().split('\n').reverse()) {
+      let e;
+      try {
+        e = JSON.parse(l);
+      } catch {
+        continue;
+      }
+      if (e.tipo === 'escalonamento' && !escalado) escalado = e.subagente;
+      if (e.tipo === 'decisao' && e.sessao === sessao) {
+        const a = { subagente: escalado || e.subagente };
+        if (e.preview) a.pedido = e.preview;
+        return a;
+      }
+    }
+  } catch {
+    /* sem log */
+  }
+  return null;
+}
+
 // Resumo do projeto: config.project_summary, senão monta a partir do cérebro do próprio projeto.
 export function projectSummary(cfg) {
   const max = cfg.project_summary_max_chars || 4000;

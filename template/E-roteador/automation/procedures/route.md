@@ -14,10 +14,12 @@ Sem bloco (prefixo `!` = modo bash, `/` = comando, ou roteador desligado) → at
 | intermediário | rotina | funcionalidade comum, complexidade moderada |
 | avançado | difícil | causa desconhecida, mudança ampla, arquitetura, maior risco |
 
-Agente e modelo de cada tier vivem em `.claude/router/config.json`. A decisão é do código
-(`decide.mjs`): classe define o tier inicial; risco > limiar ou confiança < limiar sobem um nível
-cada (acumulam, teto = avançado); classificador indisponível → `fallback_tier`. Risco e confiança são
-estimativas orientativas, não probabilidades comprovadas.
+Agente e modelo de cada tier vivem em `.claude/router/config.json`. Dois modos (`decision_mode`):
+- `jev` (padrão): o classificador **escolhe o subagente**; só confiança < limiar sobe um nível.
+  Recebe também o pedido anterior da sessão, para respostas curtas ("sim", "pode seguir").
+- `regras`: o classificador só dá a classe; risco > limiar e confiança < limiar sobem um nível cada.
+Teto = avançado; classificador indisponível → `fallback_tier`. Risco e confiança são estimativas
+orientativas, não probabilidades comprovadas.
 
 ## Passos da recepção
 1. Ler o bloco ROTEADOR. Usar **exatamente** o `subagent_type` indicado.

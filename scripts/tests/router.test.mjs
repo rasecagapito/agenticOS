@@ -20,6 +20,27 @@ test('decide: nível base', () => {
   assert.equal(pick('dificil', 0.9, 0.1), 'profundo');
 });
 
+test('decide modo jev: vale a escolha do Jev', () => {
+  const jev = (escolha, confianca, risco = 0.9) => decide(cfg, { escolha, confianca, risco });
+  assert.equal(jev('rapido', 0.9).subagente, 'rapido'); // risco alto não sobe no modo jev
+  assert.equal(jev('padrao', 0.8).subagente, 'padrao');
+  assert.equal(jev('rapido', 0.55).subagente, 'padrao'); // confiança baixa sobe 1
+  assert.equal(jev('rapido', 0.6).subagente, 'rapido');
+  assert.equal(jev('profundo', 0.1).subagente, 'profundo'); // teto
+  assert.equal(jev('xpto', 0.99).subagente, 'profundo'); // desconhecido → mais forte
+  assert.match(jev('rapido', 0.55).justificativa, /^jev=rapido; conf \.55<\.60 \+1 → padrao$/);
+});
+
+test('buildQuestions: modo jev x regras e contexto anterior', async () => {
+  const { buildQuestions } = await import(pathToFileURL(path.join(ROUTER, 'route.mjs')).href);
+  const q = buildQuestions(cfg, true);
+  assert.deepEqual(Object.keys(q.subagente.criteria), ['rapido', 'padrao', 'profundo']);
+  assert.match(q.subagente.instructions, /anterior/);
+  assert.doesNotMatch(buildQuestions(cfg, false).subagente.instructions, /anterior/);
+  const r = buildQuestions({ ...cfg, decision_mode: 'regras' }, false);
+  assert.ok(r.nivel && !r.subagente);
+});
+
 test('decide: risco > 0.7 sobe um nível (0.7 exato não sobe)', () => {
   assert.equal(pick('simples', 0.9, 0.8), 'padrao');
   assert.equal(pick('simples', 0.9, 0.7), 'rapido');
@@ -129,49 +150,66 @@ test('e2e: instalador + hook + log + statusline', async (t) => {
 
   // mock do Jev
   let lastBody = null;
-  let reply = { nivel: 'dificil', conf: 0.91, risco: 0.34 };
+  let reply = { escolha: 'profundo', nivel: 'dificil', conf: 0.91, risco: 0.34 };
   const srv = await mockJev((req, body, res) => {
     lastBody = body;
     if (req.headers.authorization !== 'Bearer k') {
       res.writeHead(401).end('{}');
       return;
     }
-    res.writeHead(200, { 'Content-Type': 'application/json' }).end(
-      JSON.stringify({
-        model: 'jev-1.13.0',
-        answers: {
-          nivel: { type: 'choice', choice: reply.nivel, probabilities: {}, confidence: reply.conf },
-          risco: { type: 'noul', noul: reply.risco },
-        },
-      }),
-    );
+    const answers = { risco: { type: 'noul', noul: reply.risco } };
+    if (body.questions.subagente) {
+      answers.subagente = { type: 'choice', choice: reply.escolha, probabilities: {}, confidence: reply.conf };
+    } else {
+      answers.nivel = { type: 'choice', choice: reply.nivel, probabilities: {}, confidence: reply.conf };
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ model: 'jev-1.13.0', answers }));
   });
   t.after(() => srv.close());
   const cfgPath = path.join(proj, '.claude', 'router', 'config.json');
   const pc = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
   pc.classifier.endpoint = `http://127.0.0.1:${srv.address().port}/v1/systemone`;
   fs.writeFileSync(cfgPath, JSON.stringify(pc));
+  const statusline = () =>
+    spawnSync(process.execPath, [path.join(proj, '.claude', 'router', 'statusline.mjs')], {
+      input: '{}',
+      encoding: 'utf8',
+      env: { ...process.env, HOME: proj, USERPROFILE: proj },
+    }).stdout;
 
-  // difícil → profundo
+  // modo jev (padrão): Jev escolhe profundo
   let out = JSON.parse(await runHook(proj, 'race condition no agendamento', { TYPESAFE_API_KEY: 'k' }));
   assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="profundo"/);
-  assert.equal(lastBody.questions.nivel.type, 'choice');
+  assert.match(out.hookSpecificOutput.additionalContext, /jev escolheu=profundo/);
+  assert.equal(lastBody.questions.subagente.type, 'choice');
   assert.equal(lastBody.questions.risco.type, 'noul');
   assert.match(lastBody.state.projeto, /Barbearia/);
+  assert.equal(lastBody.state.anterior, undefined); // 1ª mensagem da sessão
   let e = lastEntry(proj);
   assert.equal(e.subagente, 'profundo');
+  assert.equal(e.escolha_jev, 'profundo');
   assert.equal(e.confianca, 0.91);
   assert.ok(e.jev_ms >= 0);
+  assert.equal(statusline(), 'roteador: jev 0.91 → profundo (Opus)');
 
-  // statusline
-  const sl = spawnSync(process.execPath, [path.join(proj, '.claude', 'router', 'statusline.mjs')], {
-    input: '{}',
-    encoding: 'utf8',
-    env: { ...process.env, HOME: proj, USERPROFILE: proj },
-  });
-  assert.equal(sl.stdout, 'roteador: dificil, 0.91, profundo (Opus)');
+  // resposta curta leva o pedido anterior ao Jev
+  await runHook(proj, 'sim, pode seguir', { TYPESAFE_API_KEY: 'k' });
+  assert.deepEqual(lastBody.state.anterior, { subagente: 'profundo', pedido: 'race condition no agendamento' });
+  assert.match(lastBody.questions.subagente.instructions, /anterior/);
 
-  // simples + risco alto → padrao
+  // Jev inseguro (conf 0.5) escolhe rapido → sobe para padrao
+  reply = { escolha: 'rapido', conf: 0.5, risco: 0.1 };
+  out = JSON.parse(await runHook(proj, 'troque o título', { TYPESAFE_API_KEY: 'k' }));
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);
+  assert.equal(statusline(), 'roteador: jev rapido 0.50 ↑ padrao (Sonnet)');
+
+  // modo regras (opcional): simples + risco alto → padrao
+  pc.decision_mode = 'regras';
+  fs.writeFileSync(cfgPath, JSON.stringify(pc));
+  reply = { nivel: 'dificil', conf: 0.91, risco: 0.34 };
+  await runHook(proj, 'race condition no agendamento', { TYPESAFE_API_KEY: 'k' });
+  assert.ok(lastBody.questions.nivel && !lastBody.questions.subagente);
+  assert.equal(statusline(), 'roteador: dificil, 0.91, profundo (Opus)');
   reply = { nivel: 'simples', conf: 0.95, risco: 0.8 };
   out = JSON.parse(await runHook(proj, 'troque a cor do botão', { TYPESAFE_API_KEY: 'k' }));
   assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);

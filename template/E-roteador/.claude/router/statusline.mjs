@@ -14,6 +14,12 @@ export function segment(e) {
   if (e.origem === 'override') return `roteador: manual → ${alvo}`;
   if (e.origem === 'fallback') return `roteador: erro → ${alvo}`;
   const conf = e.confianca == null ? '?' : e.confianca.toFixed(2);
+  if (e.escolha_jev) {
+    // Jev escolheu; "↑" = subiu um nível por confiança baixa
+    return e.escolha_jev === e.subagente
+      ? `roteador: jev ${conf} → ${alvo}`
+      : `roteador: jev ${e.escolha_jev} ${conf} ↑ ${alvo}`;
+  }
   return `roteador: ${e.nivel}, ${conf}, ${alvo}`;
 }
 

@@ -4,7 +4,7 @@
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { decide, isBypass, parseOverride } from './decide.mjs';
-import { appendLog, loadConfig, projectSummary } from './lib.mjs';
+import { appendLog, loadConfig, previousDecision, projectSummary } from './lib.mjs';
 
 const readStdin = () =>
   new Promise((resolve) => {
@@ -14,31 +14,54 @@ const readStdin = () =>
     process.stdin.on('end', () => resolve(d));
   });
 
-export async function classify(cfg, pedido) {
+const RISCO = {
+  type: 'noul',
+  instructions: 'Implementar o `pedido` tem risco de quebrar algo que já funciona no `projeto`?',
+  criteria: {
+    true: 'Toca código compartilhado, dados, autenticação, contratos de API ou fluxos já em uso.',
+    false: 'Alteração isolada ou aditiva, sem efeito em comportamento existente.',
+  },
+};
+
+// Monta as perguntas conforme o modo. "jev": o Jev escolhe o subagente; "regras": o Jev só classifica.
+export function buildQuestions(cfg, temAnterior) {
+  const ctx = temAnterior
+    ? ' Se o `pedido` for só confirmação ou continuação (ex.: "sim", "pode seguir", "opção 2"), ' +
+      'ele se refere à `anterior`: avalie a tarefa em andamento, não só a frase.'
+    : '';
+  if ((cfg.decision_mode || 'jev') === 'jev') {
+    const criteria = {};
+    for (const t of cfg.tiers) {
+      criteria[t.agent] = cfg.agent_criteria?.[t.agent] || `Nível ${t.id} (${t.model_label}).`;
+    }
+    return {
+      subagente: {
+        type: 'choice',
+        instructions:
+          'Qual executor deve fazer o `pedido` no `projeto` descrito? Pese complexidade e risco de ' +
+          'quebrar algo que já funciona; na dúvida, prefira o mais capaz.' + ctx,
+        criteria,
+      },
+      risco: RISCO,
+    };
+  }
+  return {
+    nivel: {
+      type: 'choice',
+      instructions: 'Qual o nível de complexidade para implementar o `pedido` dentro do `projeto` descrito?' + ctx,
+      criteria: cfg.levels,
+    },
+    risco: RISCO,
+  };
+}
+
+export async function classify(cfg, pedido, anterior = null) {
   const c = cfg.classifier;
   const key = process.env[c.api_key_env];
   if (!key) throw new Error(`sem ${c.api_key_env}`);
-  const body = {
-    model: c.model,
-    state: { pedido, projeto: projectSummary(cfg) },
-    questions: {
-      nivel: {
-        type: 'choice',
-        instructions:
-          'Qual o nível de complexidade para implementar o `pedido` dentro do `projeto` descrito?',
-        criteria: cfg.levels,
-      },
-      risco: {
-        type: 'noul',
-        instructions:
-          'Implementar o `pedido` tem risco de quebrar algo que já funciona no `projeto`?',
-        criteria: {
-          true: 'Toca código compartilhado, dados, autenticação, contratos de API ou fluxos já em uso.',
-          false: 'Alteração isolada ou aditiva, sem efeito em comportamento existente.',
-        },
-      },
-    },
-  };
+  const state = { pedido, projeto: projectSummary(cfg) };
+  if (anterior) state.anterior = anterior;
+  const body = { model: c.model, state, questions: buildQuestions(cfg, !!anterior) };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), c.timeout_ms || 5000);
   try {
@@ -50,10 +73,15 @@ export async function classify(cfg, pedido) {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const j = await res.json();
+    const r = j.answers?.risco?.noul ?? null;
+    const s = j.answers?.subagente;
+    if (s) {
+      if (!s.choice) throw new Error('resposta sem subagente');
+      return { escolha: s.choice, confianca: s.confidence ?? null, risco: r };
+    }
     const n = j.answers?.nivel;
-    const r = j.answers?.risco;
     if (!n?.choice) throw new Error('resposta sem nivel');
-    return { nivel: n.choice, confianca: n.confidence ?? null, risco: r?.noul ?? null };
+    return { nivel: n.choice, confianca: n.confidence ?? null, risco: r };
   } catch (e) {
     throw new Error(e.name === 'AbortError' ? `timeout ${c.timeout_ms}ms` : e.message);
   } finally {
@@ -65,7 +93,7 @@ export function contextLine(d, cls) {
   const f = (n) => (n == null ? '?' : n.toFixed(2));
   const head =
     d.origem === 'jev'
-      ? `nível=${cls.nivel} conf=${f(cls.confianca)} risco=${f(cls.risco)}`
+      ? `${cls.escolha != null ? `jev escolheu=${cls.escolha}` : `nível=${cls.nivel}`} conf=${f(cls.confianca)} risco=${f(cls.risco)}`
       : d.origem === 'override'
         ? 'nível escolhido pelo usuário'
         : 'classificador indisponível';
@@ -95,7 +123,8 @@ async function main() {
   const t0 = Date.now();
   if (!ov) {
     try {
-      cls = await classify(cfg, pedido);
+      const anterior = cfg.context_previous === false ? null : previousDecision(input.session_id);
+      cls = await classify(cfg, pedido, anterior);
     } catch (e) {
       erro = e.message;
     }
@@ -110,7 +139,9 @@ async function main() {
     sessao: input.session_id || null,
     preview: n > 0 ? pedido.slice(0, n).replace(/\s+/g, ' ') : undefined,
     sha1: crypto.createHash('sha1').update(pedido).digest('hex').slice(0, 12),
+    modo: ov ? undefined : cfg.decision_mode || 'jev',
     nivel: cls?.nivel ?? null,
+    escolha_jev: cls?.escolha ?? undefined,
     confianca: cls?.confianca ?? null,
     risco: cls?.risco ?? null,
     origem: d.origem,
