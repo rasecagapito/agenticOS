@@ -6,6 +6,13 @@
     "api_key_env": "TYPESAFE_API_KEY",
     "timeout_ms": 5000
   },
+  "decision_mode": "jev",
+  "context_previous": true,
+  "agent_criteria": {
+    "rapido": "Mudança pequena, localizada e sem risco: texto, cor, renomear, ajuste pontual em um arquivo, pergunta simples sobre o código.",
+    "padrao": "Trabalho comum de complexidade moderada: funcionalidade ou tela nova, endpoint, testes, refatoração com causa e escopo conhecidos.",
+    "profundo": "Problema difícil ou arriscado: bug sem causa conhecida, mudança que atravessa várias partes do projeto, arquitetura, concorrência, segurança, dados ou autenticação."
+  },
   "levels": {
     "simples": "Mudança pequena e localizada: texto, cor, renomear algo, ajuste pontual em um arquivo.",
     "rotina": "Funcionalidade comum, tela ou endpoint novo, testes, refatoração moderada com causa e escopo conhecidos.",
