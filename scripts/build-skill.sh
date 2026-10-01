@@ -11,9 +11,14 @@ OUT="agentic-os.skill"
 
 tmp="$(mktemp -d)"
 mkdir -p "$tmp/agentic-os"
-cp "$SRC" "$tmp/agentic-os/SKILL.md"
+tr -d '\r' < "$SRC" > "$tmp/agentic-os/SKILL.md"  # LF sempre (igual ao repo/CI)
+if command -v zip >/dev/null 2>&1; then
+  ( cd "$tmp" && zip -qr -X "agentic-os.skill" "agentic-os" )
+else
+  # fallback (ex.: Git Bash no Windows sem zip)
+  ( cd "$tmp" && python -c "import shutil; shutil.make_archive('agentic-os', 'zip', '.', 'agentic-os')" && mv agentic-os.zip agentic-os.skill )
+fi
 rm -f "$OUT"
-( cd "$tmp" && zip -qr -X "agentic-os.skill" "agentic-os" )
 mv "$tmp/agentic-os.skill" "$OUT"
 rm -rf "$tmp"
 echo "build ok: $OUT (a partir de $SRC)"
