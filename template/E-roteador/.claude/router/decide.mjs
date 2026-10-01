@@ -20,9 +20,13 @@ export function parseOverride(prompt, tiers, prefix = 'nivel:') {
   return { tierIndex: i, prompt: rest };
 }
 
+// Mensagens que o próprio Claude Code injeta como prompt (ex.: aviso de subagente em segundo
+// plano concluído) — nunca são pedidos do usuário, logo nunca são roteadas.
+const SYSTEM_PREFIXES = ['<task-notification>', '<command-name>', '<command-message>', '<local-command-'];
+
 export function isBypass(prompt, prefixes = ['!', '/']) {
   const p = prompt.trimStart();
-  return prefixes.some((x) => p.startsWith(x));
+  return [...SYSTEM_PREFIXES, ...prefixes].some((x) => p.startsWith(x));
 }
 
 // Decide o tier. classification = { nivel, confianca, risco } | null (falha).

@@ -58,6 +58,8 @@ test('override e bypass', () => {
   assert.ok(isBypass('!ls'));
   assert.ok(isBypass('  /status'));
   assert.ok(!isBypass('mude a cor'));
+  assert.ok(isBypass('<task-notification> <task-id>x</task-id>'));
+  assert.ok(isBypass('<command-name>/status</command-name>'));
 });
 
 test('nextTier', () => {

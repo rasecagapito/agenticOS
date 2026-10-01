@@ -504,7 +504,9 @@ principal (Haiku) = **recepção**: só delega e resume. Detalhes: `docs/ROUTER.
   `roteador: dificil, 0.91, profundo (Opus)` encadeada com a global.
 
 **Instalar** (só com confirmação: altera settings, model e CLAUDE.md):
-`node <plugin>/scripts/install-router.mjs <projeto>` (`--dry-run` antes). Explicar ao usuário o que muda
+`node <plugin>/scripts/install-router.mjs <projeto>` (`--dry-run` antes). `<plugin>` = `installPath` de
+maior `version` em `~/.claude/plugins/installed_plugins.json` → `plugins["agentic-os@agentic-os"]`
+(ou um clone do repo). Explicar ao usuário o que muda
 e exigir `TYPESAFE_API_KEY` em variável de ambiente. **Atualizar**: `/router-update` no projeto
 (preserva `config.json` e log). Nunca hardcodar descrição de projeto — o contexto vem do cérebro do projeto.
 
