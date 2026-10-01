@@ -1,0 +1,26 @@
+name: router-check
+
+on:
+  push:
+    paths:
+      - "template/E-roteador/**"
+      - "scripts/install-router.mjs"
+      - "scripts/check-agents-sync.sh"
+      - "scripts/tests/**"
+  pull_request:
+    paths:
+      - "template/E-roteador/**"
+      - "scripts/install-router.mjs"
+      - "scripts/check-agents-sync.sh"
+      - "scripts/tests/**"
+
+jobs:
+  check-router:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Agentes sincronizados + testes do roteador
+        run: bash scripts/check-agents-sync.sh

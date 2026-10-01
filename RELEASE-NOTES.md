@@ -1,3 +1,42 @@
+# Agentic OS v1.5.0
+
+**Roteador de Modelos (opt-in, Claude Code).** Cada pedido é classificado pelo **Jev** (TypeSafe)
+antes de o modelo lê-lo e vai para o subagente do tamanho certo; a sessão principal (Haiku) vira
+recepção que só delega e resume. Compatível com v1.4.0 — nada muda em projetos que não instalarem.
+
+## Novidades
+
+- **`template/E-roteador/`** — hook `UserPromptSubmit` (`route.mjs`) faz 1 chamada ao Jev com 2
+  perguntas (nível `choice` + risco `noul`); **a decisão fica no código** (`decide.mjs`):
+  simples→`rapido` (Haiku), rotina→`padrao` (Sonnet), difícil→`profundo` (Opus); risco > 0,70 e
+  confiança < 0,60 sobem um nível cada (teto: avançado). Falha do Jev → `profundo`.
+- **3 subagentes de uma só fonte** — `agent-body.md` + `tiers` do `config.json` →
+  `emit-agents.mjs`; gate `scripts/check-agents-sync.sh` + workflow `router-check` (D5).
+- **Controle do usuário** — `nivel:basico|intermediario|avancado <pedido>` força o tier;
+  `!` (modo bash) e `/comandos` passam sem roteamento.
+- **Escalonamento com limite** — subagente devolve `status: escalar`; `log-escalation.mjs` devolve o
+  próximo tier ou `LIMITE` (`max_escalations`, padrão 1).
+- **Registro e visibilidade** — `.claude/router/decisions.jsonl` (horário, prévia + hash, classe,
+  confiança, risco, tier, justificativa, tempo do Jev, erro) e statusline
+  `roteador: dificil, 0.91, profundo (Opus)` encadeada com a statusline global.
+- **Instalador idempotente** — `scripts/install-router.mjs <projeto> [--dry-run]`: merge de settings
+  sem apagar hooks/permissões, preserva `config.json` e log locais, bloco no `CLAUDE.md` entre
+  marcadores. Atualização nos projetos: `/router-update`.
+- **Agnóstico de projeto** — o contexto enviado ao Jev vem do cérebro do próprio projeto
+  (AGENTS.md / CLAUDE.md / context/), nunca do código do roteador.
+- Docs: `docs/ROUTER.md`; seção nova no `SKILL.md`; testes em `scripts/tests/router.test.mjs`.
+
+## Atualizar projetos que usam o plugin
+
+```bash
+claude plugin marketplace update agentic-os
+claude plugin update agentic-os@agentic-os
+# só em projetos com o roteador instalado:
+/router-update
+```
+
+---
+
 # Agentic OS v1.4.0
 
 **Hardening do handoff multi-agente + Orquestração com fronteira de aprovação.** O handoff deixa de

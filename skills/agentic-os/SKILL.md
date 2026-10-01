@@ -488,6 +488,30 @@ coordena (propõe/revê); as demais executam apenas **lotes aprovados**.
 
 ---
 
+## Roteador de Modelos (opt-in, Claude Code)
+
+Classifica cada pedido **antes** de o modelo lê-lo e entrega ao subagente do tamanho certo. Sessão
+principal (Haiku) = **recepção**: só delega e resume. Detalhes: `docs/ROUTER.md`. Template: `template/E-roteador/`.
+
+- **Hook `UserPromptSubmit`** (`.claude/router/route.mjs`) pergunta ao **Jev** (TypeSafe) numa chamada:
+  nível (`choice`: simples/rotina/difícil) + risco de quebrar algo (`noul`).
+- **Decisão no código** (`decide.mjs`): simples→`rapido` (Haiku), rotina→`padrao` (Sonnet),
+  difícil→`profundo` (Opus); risco > 0,70 sobe 1; confiança < 0,60 sobe 1; falha do Jev → `profundo`.
+- **Fonte única dos agentes**: `agent-body.md` + `tiers` do `config.json` → `emit-agents.mjs`
+  (gate `scripts/check-agents-sync.sh`). Agentes sem `tools` = herdam permissões.
+- Controle: `nivel:<tier> <pedido>` força o tier; `!` (modo bash) e `/comandos` passam sem roteamento.
+- Log `.claude/router/decisions.jsonl` (prévia + hash, nunca o pedido inteiro) e statusline
+  `roteador: dificil, 0.91, profundo (Opus)` encadeada com a global.
+
+**Instalar** (só com confirmação: altera settings, model e CLAUDE.md):
+`node <plugin>/scripts/install-router.mjs <projeto>` (`--dry-run` antes). `<plugin>` = `installPath` de
+maior `version` em `~/.claude/plugins/installed_plugins.json` → `plugins["agentic-os@agentic-os"]`
+(ou um clone do repo). Explicar ao usuário o que muda
+e exigir `TYPESAFE_API_KEY` em variável de ambiente. **Atualizar**: `/router-update` no projeto
+(preserva `config.json` e log). Nunca hardcodar descrição de projeto — o contexto vem do cérebro do projeto.
+
+---
+
 ## Motor de Estrutura da Aplicação (opt-in)
 
 Enquanto o resto do Agentic OS organiza o **cérebro do agente**, o Motor organiza e audita a

@@ -9,7 +9,7 @@
     {
       "name": "agentic-os",
       "description": "Agentic OS — memória persistente, contexto modular, workers, change workflow, cérebro multi-provedor com orquestração (humano como gate final) e handoff hardened.",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "source": "./",
       "author": {
         "name": "rasecagapito"

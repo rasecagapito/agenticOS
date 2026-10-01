@@ -1,0 +1,28 @@
+{
+  "classifier": {
+    "provider": "typesafe",
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-latest",
+    "api_key_env": "TYPESAFE_API_KEY",
+    "timeout_ms": 5000
+  },
+  "levels": {
+    "simples": "Mudança pequena e localizada: texto, cor, renomear algo, ajuste pontual em um arquivo.",
+    "rotina": "Funcionalidade comum, tela ou endpoint novo, testes, refatoração moderada com causa e escopo conhecidos.",
+    "dificil": "Bug sem causa conhecida, mudança que atravessa várias partes do projeto, arquitetura, concorrência, segurança ou migração de dados."
+  },
+  "tiers": [
+    { "id": "basico", "nivel": "simples", "agent": "rapido", "model": "haiku", "model_label": "Haiku" },
+    { "id": "intermediario", "nivel": "rotina", "agent": "padrao", "model": "sonnet", "model_label": "Sonnet" },
+    { "id": "avancado", "nivel": "dificil", "agent": "profundo", "model": "opus", "model_label": "Opus" }
+  ],
+  "thresholds": { "risk_above": 0.7, "confidence_below": 0.6 },
+  "fallback_tier": "avancado",
+  "max_escalations": 1,
+  "bypass_prefixes": ["!", "/"],
+  "override_prefix": "nivel:",
+  "preview_chars": 80,
+  "project_summary": "",
+  "project_summary_sources": ["AGENTS.md", "CLAUDE.md", "context/produto.md", "context/arquitetura.md", "context/stack.md", "README.md"],
+  "project_summary_max_chars": 4000
+}
