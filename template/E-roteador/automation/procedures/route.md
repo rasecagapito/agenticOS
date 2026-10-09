@@ -18,6 +18,9 @@ Agente e modelo de cada tier vivem em `.claude/router/config.json`. Dois modos (
 - `jev` (padrão): o classificador **escolhe o subagente**; só confiança < limiar sobe um nível.
   Recebe também o pedido anterior da sessão, para respostas curtas ("sim", "pode seguir").
 - `regras`: o classificador só dá a classe; risco > limiar e confiança < limiar sobem um nível cada.
+Opcional (v1.7): `rules` (regex → tier) e `continuacao` (confirmação curta → mesmo tier) decidem sem
+chamar o classificador; `policy: probabilidades` sobe só se P(tiers acima) ≥ limiar; `escalate_on` eleva
+o piso por perguntas extras. A origem aparece no bloco ROTEADOR (`regra:<nome>`, `continuacao`).
 Teto = avançado; classificador indisponível → `fallback_tier`. Risco e confiança são estimativas
 orientativas, não probabilidades comprovadas.
 
