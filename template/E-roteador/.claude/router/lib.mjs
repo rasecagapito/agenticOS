@@ -80,9 +80,9 @@ export function previousDecision(sessao, file = LOG_FILE) {
 }
 
 // Limite do resumo do projeto no state: state_project_summary_max_chars (v1.7) →
-// project_summary_max_chars (legado) → 4000. 0 = não envia `projeto`.
+// project_summary_max_chars (legado; 0 = 4000, como na v1.6) → 4000. 0 na chave nova = não envia `projeto`.
 export function summaryMaxChars(cfg) {
-  const v = cfg.state_project_summary_max_chars ?? cfg.project_summary_max_chars ?? 4000;
+  const v = cfg.state_project_summary_max_chars ?? (cfg.project_summary_max_chars || 4000);
   return typeof v === 'number' && v >= 0 ? v : 4000;
 }
 

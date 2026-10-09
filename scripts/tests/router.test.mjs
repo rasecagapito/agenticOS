@@ -288,6 +288,7 @@ test('v1.7 retrocompat: config v1.6 → mesma decisão e mesmas perguntas', () =
   assert.equal(matchContinuacao(cfg, 'sim', { subagente: 'profundo' }), null);
   const st = buildState({ ...cfg, project_summary: 'resumo' }, 'p');
   assert.deepEqual(st, { pedido: 'p', projeto: 'resumo' });
+  assert.equal(buildState({ ...cfg, project_summary: 'r', project_summary_max_chars: 0 }, 'p').projeto, 'r'); // legado: 0 = 4000
 });
 
 test('v1.7 instructions_choice: neutra no template; string, objeto e array', () => {
