@@ -19,13 +19,17 @@ e as boas práticas da skill oficial TypeSafe.
 - **State estruturado** — `{pedido, anterior, dominio, projeto, situacao}`: `domain_summary`,
   `state_project_summary_max_chars` (0 = não envia o resumo) e `state_command` `{cmd, timeout_ms}` (stdout
   JSON → `situacao`; falha/timeout nunca bloqueia, vai para `state_command_falhou`).
-- Log ganha `politica`, `probabilidades`, `extras`; statusline mostra `regra:<nome>` e `continua`.
+- **`bypass_patterns`** (ligado por padrão, seguro) — envelopes do harness (`<agent-message`,
+  `<task-notification`, `<system-reminder`, `[SYSTEM NOTIFICATION`…) não chamam o Jev: mantêm o tier da
+  tarefa da sessão e logam `origem: envelope`. No piloto eram 9 de 23 decisões (3 no Opus).
+- Log ganha `politica`, `probabilidades`, `extras`; statusline mostra `regra:<nome>`, `continua` e `envelope`.
 - Testes: retrocompatibilidade com config v1.6, política por probabilidades, rules, continuação,
   escalate_on, state_command (ok/timeout/JSON inválido) e critérios objeto.
 
 ## Atualizar
 
-`/router-update` **não muda o comportamento**: o `config.json` local é preservado e as chaves da v1.7 não
+`/router-update` **não muda o comportamento** para pedidos do humano (só `bypass_patterns` vale por padrão, e
+apenas para envelopes do harness): o `config.json` local é preservado e as chaves da v1.7 não
 são acrescentadas (o instalador só lista as disponíveis). Ative-as uma a uma no `config.json` — ver
 `docs/ROUTER.md` → "Configuração v1.7.0". Projetos novos já nascem com os defaults da v1.7.
 

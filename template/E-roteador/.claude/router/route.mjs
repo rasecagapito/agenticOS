@@ -3,7 +3,7 @@
 // Qualquer falha do classificador cai no fallback_tier (padrão: o mais forte). Nunca bloqueia o prompt.
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { decide, isBypass, matchContinuacao, matchRule, parseOverride } from './decide.mjs';
+import { decide, isBypass, isEnvelope, matchContinuacao, matchRule, parseOverride } from './decide.mjs';
 import { appendLog, loadConfig, previousDecision, projectSummary, runStateCommand, summaryMaxChars } from './lib.mjs';
 
 const readStdin = () =>
@@ -152,6 +152,14 @@ export function contextLine(d, cls) {
   );
 }
 
+export function envelopeLine(t) {
+  return (
+    `ROTEADOR: envelope do sistema/subagente (não é pedido do humano; sem Jev) → tarefa em andamento no ` +
+    `subagent_type="${t.agent}" (${t.model_label}). Se for preciso continuar o trabalho, delegue a esse ` +
+    `subagente; se for só um retorno, responda com o resumo.`
+  );
+}
+
 async function main() {
   const cfg = loadConfig();
   if (!cfg) return;
@@ -162,7 +170,34 @@ async function main() {
     return;
   }
   const prompt = String(input.prompt || '');
-  if (!prompt.trim() || isBypass(prompt, cfg.bypass_prefixes)) return;
+  if (!prompt.trim()) return;
+
+  // Envelope do harness (retorno de subagente, notificação): sem Jev; mantém o tier da tarefa da sessão.
+  if (isEnvelope(cfg, prompt)) {
+    const prev = previousDecision(input.session_id);
+    const t = prev?.subagente ? cfg.tiers.find((x) => x.agent === prev.subagente) : null;
+    appendLog({
+      ts: new Date().toISOString(),
+      tipo: 'decisao',
+      sessao: input.session_id || null,
+      sha1: crypto.createHash('sha1').update(prompt).digest('hex').slice(0, 12),
+      origem: 'envelope',
+      tier: t?.id ?? null,
+      subagente: t?.agent ?? null,
+      modelo: t?.model_label ?? null,
+      justificativa: t ? `envelope → mantém ${t.agent}` : 'envelope sem decisão anterior',
+      jev_ms: 0,
+    });
+    if (t) {
+      process.stdout.write(
+        JSON.stringify({
+          hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: envelopeLine(t) },
+        }),
+      );
+    }
+    return;
+  }
+  if (isBypass(prompt, cfg.bypass_prefixes)) return;
 
   const ov = parseOverride(prompt, cfg.tiers, cfg.override_prefix);
   const pedido = ov ? ov.prompt : prompt;

@@ -67,7 +67,7 @@ export function previousDecision(sessao, file = LOG_FILE) {
         continue;
       }
       if (e.tipo === 'escalonamento' && !escalado) escalado = e.subagente;
-      if (e.tipo === 'decisao' && e.sessao === sessao) {
+      if (e.tipo === 'decisao' && e.sessao === sessao && e.origem !== 'envelope') {
         const a = { subagente: escalado || e.subagente };
         if (e.preview) a.pedido = e.preview;
         return a;
