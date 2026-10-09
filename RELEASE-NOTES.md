@@ -1,3 +1,40 @@
+# Agentic OS v1.7.0
+
+**Jev mais barato e previsível, no padrão TypeSafe.** O Roteador de Modelos ganha instrução, política e
+montagem de estado **configuráveis**: pergunta neutra, decisão por `probabilities` no código, regras antes
+do Jev e `state` enxuto e estruturado. Base: análise do piloto (23 decisões, 61% no Opus, nenhuma no Haiku)
+e as boas práticas da skill oficial TypeSafe.
+
+## Novidades (todas opcionais — sem as chaves, comportamento = v1.6.0)
+
+- **`instructions_choice`** (string | objeto | array) — default para projetos novos: "Qual é o **menor**
+  executor que faz bem o `pedido`?", sem "na dúvida, prefira o mais capaz".
+- **`agent_criteria`** aceita, por agente, string **ou** `{definicao, exemplos[], exclusoes[]}` (vai como objeto).
+- **`policy`** — `{"type":"confianca"}` (legado) ou `{"type":"probabilidades","subir_se_prob_acima":{"padrao":0.5,"profundo":0.35}}`:
+  argmax das probabilidades; sobe só se P(tier + acima) ≥ limiar. Dúvida rapido×padrao vai para padrao, não para o Opus.
+- **`rules`** `[{nome, match, tier}]` — regex no pedido **antes** do Jev (sem chamada HTTP; origem `regra:<nome>`).
+- **`continuacao`** `{match, max_chars}` — "sim", "pode seguir", "opção 2" herdam o tier anterior sem chamar o Jev.
+- **`extra_questions`** + **`escalate_on`** — perguntas Noul/Choice/Score do domínio na mesma chamada;
+  Noul acima do limiar eleva o piso (`tier_minimo`). **`risk_question: false`** remove a pergunta `risco`.
+- **State estruturado** — `{pedido, anterior, dominio, projeto, situacao}`: `domain_summary`,
+  `state_project_summary_max_chars` (0 = não envia o resumo) e `state_command` `{cmd, timeout_ms}` (stdout
+  JSON → `situacao`; falha/timeout nunca bloqueia, vai para `state_command_falhou`).
+- **`bypass_patterns`** (ligado por padrão, seguro) — envelopes do harness (`<agent-message`,
+  `<task-notification`, `<system-reminder`, `[SYSTEM NOTIFICATION`…) não chamam o Jev: mantêm o tier da
+  tarefa da sessão e logam `origem: envelope`. No piloto eram 9 de 23 decisões (3 no Opus).
+- Log ganha `politica`, `probabilidades`, `extras`; statusline mostra `regra:<nome>`, `continua` e `envelope`.
+- Testes: retrocompatibilidade com config v1.6, política por probabilidades, rules, continuação,
+  escalate_on, state_command (ok/timeout/JSON inválido) e critérios objeto.
+
+## Atualizar
+
+`/router-update` **não muda o comportamento** para pedidos do humano (só `bypass_patterns` vale por padrão, e
+apenas para envelopes do harness): o `config.json` local é preservado e as chaves da v1.7 não
+são acrescentadas (o instalador só lista as disponíveis). Ative-as uma a uma no `config.json` — ver
+`docs/ROUTER.md` → "Configuração v1.7.0". Projetos novos já nascem com os defaults da v1.7.
+
+---
+
 # Agentic OS v1.6.0
 
 **O Jev escolhe o subagente.** No Roteador de Modelos, o Jev deixa de só classificar e passa a

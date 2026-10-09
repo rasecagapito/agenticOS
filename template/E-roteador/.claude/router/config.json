@@ -8,10 +8,57 @@
   },
   "decision_mode": "jev",
   "context_previous": true,
+  "instructions_choice": "Qual é o menor executor que faz bem o `pedido`? Considere o que o pedido exige (tamanho, ambiguidade, partes do projeto envolvidas e consequência de errar) e compare com as definições, exemplos e exclusões de cada executor.",
+  "policy": {
+    "type": "probabilidades",
+    "subir_se_prob_acima": {
+      "padrao": 0.5,
+      "profundo": 0.35
+    }
+  },
+  "rules": [],
+  "continuacao": {
+    "match": "^(?:(?:sim|s|ok|okay|pode|seguir|continuar|siga|segue|continue|continua|isso|certo|beleza|fechado|manda ver|vai|bora|op[cç][aã]o \\d+|\\d+)[\\s,.!]*)+$",
+    "max_chars": 40
+  },
+  "extra_questions": {},
+  "escalate_on": [],
+  "risk_question": false,
   "agent_criteria": {
-    "rapido": "Mudança pequena, localizada e sem risco: texto, cor, renomear, ajuste pontual em um arquivo, pergunta simples sobre o código.",
-    "padrao": "Trabalho comum de complexidade moderada: funcionalidade ou tela nova, endpoint, testes, refatoração com causa e escopo conhecidos.",
-    "profundo": "Problema difícil ou arriscado: bug sem causa conhecida, mudança que atravessa várias partes do projeto, arquitetura, concorrência, segurança, dados ou autenticação."
+    "rapido": {
+      "definicao": "Mudança pequena, localizada e sem risco, ou pergunta simples sobre o projeto.",
+      "exemplos": [
+        "troque o texto do botão",
+        "renomeie esta variável",
+        "o que faz esta função?"
+      ],
+      "exclusoes": [
+        "qualquer coisa que toque dados, autenticação ou vários arquivos"
+      ]
+    },
+    "padrao": {
+      "definicao": "Trabalho comum de complexidade moderada, com causa e escopo conhecidos.",
+      "exemplos": [
+        "crie a tela de cadastro",
+        "adicione um endpoint e os testes",
+        "refatore este módulo"
+      ],
+      "exclusoes": [
+        "bug sem causa conhecida",
+        "mudança de arquitetura, segurança ou migração de dados"
+      ]
+    },
+    "profundo": {
+      "definicao": "Problema difícil ou arriscado, em que errar custa caro.",
+      "exemplos": [
+        "bug intermitente sem causa conhecida",
+        "mude a autenticação",
+        "migre o banco de dados"
+      ],
+      "exclusoes": [
+        "ajustes pontuais e tarefas de rotina com escopo claro"
+      ]
+    }
   },
   "levels": {
     "simples": "Mudança pequena e localizada: texto, cor, renomear algo, ajuste pontual em um arquivo.",
@@ -19,17 +66,59 @@
     "dificil": "Bug sem causa conhecida, mudança que atravessa várias partes do projeto, arquitetura, concorrência, segurança ou migração de dados."
   },
   "tiers": [
-    { "id": "basico", "nivel": "simples", "agent": "rapido", "model": "haiku", "model_label": "Haiku" },
-    { "id": "intermediario", "nivel": "rotina", "agent": "padrao", "model": "sonnet", "model_label": "Sonnet" },
-    { "id": "avancado", "nivel": "dificil", "agent": "profundo", "model": "opus", "model_label": "Opus" }
+    {
+      "id": "basico",
+      "nivel": "simples",
+      "agent": "rapido",
+      "model": "haiku",
+      "model_label": "Haiku"
+    },
+    {
+      "id": "intermediario",
+      "nivel": "rotina",
+      "agent": "padrao",
+      "model": "sonnet",
+      "model_label": "Sonnet"
+    },
+    {
+      "id": "avancado",
+      "nivel": "dificil",
+      "agent": "profundo",
+      "model": "opus",
+      "model_label": "Opus"
+    }
   ],
-  "thresholds": { "risk_above": 0.7, "confidence_below": 0.6 },
+  "thresholds": {
+    "risk_above": 0.7,
+    "confidence_below": 0.6
+  },
   "fallback_tier": "avancado",
   "max_escalations": 1,
-  "bypass_prefixes": ["!", "/"],
+  "bypass_prefixes": [
+    "!",
+    "/"
+  ],
+  "bypass_patterns": [
+    "^\\s*<agent-message\\b",
+    "^\\s*<task-notification\\b",
+    "^\\s*<system-reminder\\b",
+    "^\\s*<browser_instruction\\b",
+    "^\\s*<user-prompt-submit-hook\\b",
+    "^\\s*\\[SYSTEM NOTIFICATION"
+  ],
   "override_prefix": "nivel:",
   "preview_chars": 80,
   "project_summary": "",
-  "project_summary_sources": ["AGENTS.md", "CLAUDE.md", "context/produto.md", "context/arquitetura.md", "context/stack.md", "README.md"],
-  "project_summary_max_chars": 4000
+  "project_summary_sources": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "context/produto.md",
+    "context/arquitetura.md",
+    "context/stack.md",
+    "README.md"
+  ],
+  "project_summary_max_chars": 4000,
+  "state_project_summary_max_chars": 4000,
+  "domain_summary": "",
+  "state_command": null
 }

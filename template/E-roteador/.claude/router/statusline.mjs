@@ -9,10 +9,14 @@ import { lastLog } from './lib.mjs';
 
 export function segment(e) {
   if (!e) return 'roteador: aguardando';
+  if (e.origem === 'envelope' && !e.subagente) return 'roteador: envelope';
   const alvo = `${e.subagente} (${e.modelo})`;
+  if (e.origem === 'envelope') return `roteador: envelope → ${alvo}`;
   if (e.tipo === 'escalonamento') return `roteador: escalou → ${alvo}`;
   if (e.origem === 'override') return `roteador: manual → ${alvo}`;
   if (e.origem === 'fallback') return `roteador: erro → ${alvo}`;
+  if (e.origem?.startsWith('regra:')) return `roteador: ${e.origem} → ${alvo}`;
+  if (e.origem === 'continuacao') return `roteador: continua → ${alvo}`;
   const conf = e.confianca == null ? '?' : e.confianca.toFixed(2);
   if (e.escolha_jev) {
     // Jev escolheu; "↑" = subiu um nível por confiança baixa

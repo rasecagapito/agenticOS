@@ -1,4 +1,5 @@
 // Utilitários de I/O do roteador (config, log, resumo do projeto).
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,7 +67,7 @@ export function previousDecision(sessao, file = LOG_FILE) {
         continue;
       }
       if (e.tipo === 'escalonamento' && !escalado) escalado = e.subagente;
-      if (e.tipo === 'decisao' && e.sessao === sessao) {
+      if (e.tipo === 'decisao' && e.sessao === sessao && e.origem !== 'envelope') {
         const a = { subagente: escalado || e.subagente };
         if (e.preview) a.pedido = e.preview;
         return a;
@@ -78,9 +79,15 @@ export function previousDecision(sessao, file = LOG_FILE) {
   return null;
 }
 
+// Limite do resumo do projeto no state: state_project_summary_max_chars (v1.7) →
+// project_summary_max_chars (legado; 0 = 4000, como na v1.6) → 4000. 0 na chave nova = não envia `projeto`.
+export function summaryMaxChars(cfg) {
+  const v = cfg.state_project_summary_max_chars ?? (cfg.project_summary_max_chars || 4000);
+  return typeof v === 'number' && v >= 0 ? v : 4000;
+}
+
 // Resumo do projeto: config.project_summary, senão monta a partir do cérebro do próprio projeto.
-export function projectSummary(cfg) {
-  const max = cfg.project_summary_max_chars || 4000;
+export function projectSummary(cfg, max = summaryMaxChars(cfg) || 4000) {
   if (cfg.project_summary) return cfg.project_summary.slice(0, max);
   const parts = [];
   let used = 0;
@@ -101,4 +108,64 @@ export function projectSummary(cfg) {
     }
   }
   return parts.join('\n\n') || 'Projeto sem descrição disponível.';
+}
+
+// state_command: { cmd, timeout_ms } executado na raiz do projeto. stdout deve ser um objeto JSON.
+// Nunca bloqueia: falha, timeout ou JSON inválido → { erro } (o hook segue sem `situacao`).
+export function runStateCommand(sc, cwd = PROJECT_DIR) {
+  return new Promise((resolve) => {
+    if (!sc || typeof sc.cmd !== 'string' || !sc.cmd.trim()) return resolve(null);
+    const ms = sc.timeout_ms ?? 1500;
+    let out = '';
+    let done = false;
+    let child;
+    const finish = (r) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      try {
+        child?.stdout?.destroy();
+        child?.stderr?.destroy();
+      } catch {
+        /* ignore */
+      }
+      resolve(r);
+    };
+    const timer = setTimeout(() => {
+      try {
+        // shell:true → no Windows o comando roda sob cmd.exe; mata a árvore inteira
+        if (process.platform === 'win32' && child?.pid) {
+          spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true }).unref();
+        } else child?.kill();
+      } catch {
+        /* ignore */
+      }
+      child?.unref?.();
+      finish({ erro: `timeout ${ms}ms` });
+    }, ms);
+    try {
+      child = spawn(sc.cmd, { cwd, shell: true, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (e) {
+      return finish({ erro: e.message });
+    }
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (c) => (out += c));
+    child.stderr.on('data', () => {});
+    child.on('error', (e) => finish({ erro: e.message }));
+    child.on('close', (code) => {
+      if (code !== 0) return finish({ erro: `saida ${code}` });
+      finish(parseSituacao(out));
+    });
+  });
+}
+
+// stdout do state_command → { situacao } se for objeto JSON, senão { erro }.
+export function parseSituacao(stdout) {
+  try {
+    const v = JSON.parse(String(stdout).trim());
+    if (v && typeof v === 'object' && !Array.isArray(v)) return { situacao: v };
+    return { erro: 'json nao e objeto' };
+  } catch {
+    return { erro: 'json invalido' };
+  }
 }
