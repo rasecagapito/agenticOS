@@ -98,6 +98,14 @@
     "!",
     "/"
   ],
+  "bypass_patterns": [
+    "^\\s*<agent-message\\b",
+    "^\\s*<task-notification\\b",
+    "^\\s*<system-reminder\\b",
+    "^\\s*<browser_instruction\\b",
+    "^\\s*<user-prompt-submit-hook\\b",
+    "^\\s*\\[SYSTEM NOTIFICATION"
+  ],
   "override_prefix": "nivel:",
   "preview_chars": 80,
   "project_summary": "",

@@ -8,6 +8,7 @@ Classificador padrão: **Jev** (TypeSafe System One). Template: `template/E-rote
 
 ```
 mensagem → hook UserPromptSubmit (route.mjs)
+         → envelope (bypass_patterns: retorno de subagente/notificação, sem Jev)
          → bypass (!, /) → override (nivel:) → rules (regex, sem Jev) → continuação (sem Jev)
          → Jev: 1 chamada (modo jev: "qual subagente?" [+ risco] [+ extra_questions];
            state = { pedido, anterior, dominio, projeto, situacao })
@@ -72,9 +73,10 @@ estruturado e enxuto, critérios estruturados, só perguntas que o código conso
 | `state_project_summary_max_chars` | número | 4000 (0 = não envia `projeto`) | `project_summary_max_chars` ou 4000 |
 | `domain_summary` | string | `""` | — |
 | `state_command` | `{cmd, timeout_ms}` \| null | `null` | — |
+| `bypass_patterns` | array de regex | envelopes do harness (abaixo) | **mesmo default** (seguro; `[]` desliga) |
 
 ### Ordem de decisão
-`!`/`/` (bypass) → `nivel:` (override) → `rules` → `continuacao` → Jev + `policy` → `escalate_on` → teto.
+`bypass_patterns` (envelope) → `!`/`/` (bypass) → `nivel:` (override) → `rules` → `continuacao` → Jev + `policy` → `escalate_on` → teto.
 `rules` e `continuacao` não chamam o Jev (`jev_ms: 0`). Falha do Jev → `fallback_tier`.
 
 ### `policy`
@@ -85,6 +87,15 @@ estruturado e enxuto, critérios estruturados, só perguntas que o código conso
   o log). Ex.: `{rapido:.45, padrao:.15, profundo:.40}` → profundo; `{rapido:.50, padrao:.45, profundo:.05}`
   → padrao (dúvida entre dois níveis baixos não leva ao Opus). Resposta sem `probabilities` → vale a
   escolha do Jev, sem subida. Só no modo `jev`. Chaves do limiar: agente ou id do tier.
+
+### `bypass_patterns` (envelopes do harness)
+Retornos de subagente e notificações também chegam ao hook `UserPromptSubmit`, mas não são pedidos do
+humano (no piloto, 9 de 23 decisões eram envelopes e 3 foram para o Opus). Texto que casa uma das regex
+(flag `i`), avaliadas **antes de tudo**, não chama o Jev: o roteador mantém o tier da última decisão da
+sessão (bloco `ROTEADOR: envelope …`) ou não emite bloco se não houver; o log registra `origem: envelope`
+(sem prévia) e essa linha não vira `anterior` para o próximo pedido. Default (vale mesmo sem a chave):
+`^\s*<agent-message\b`, `<task-notification`, `<system-reminder`, `<browser_instruction`,
+`<user-prompt-submit-hook`, `[SYSTEM NOTIFICATION`. `"bypass_patterns": []` desliga.
 
 ### `rules` e `continuacao`
 ```json

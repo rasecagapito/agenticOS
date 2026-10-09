@@ -503,3 +503,68 @@ test('e2e v1.7: instalação nova — rules, continuação, probabilidades, stat
 
   fs.rmSync(proj, { recursive: true, force: true });
 });
+
+// ---- v1.7: envelopes do harness (bypass_patterns) não chamam o Jev ----
+
+const { isEnvelope, DEFAULT_BYPASS_PATTERNS } = await import(pathToFileURL(path.join(ROUTER, 'decide.mjs')).href);
+
+test('v1.7 bypass_patterns: defaults ligados mesmo sem a chave; [] desliga; regex inválida ignorada', () => {
+  assert.ok(!('bypass_patterns' in cfg)); // config v1.6 → usa o default
+  for (const p of ['<agent-message from="x">ok</agent-message>', '  <task-notification>x', '<system-reminder>y',
+    '[SYSTEM NOTIFICATION] z', '<browser_instruction>w']) {
+    assert.ok(isEnvelope(cfg, p), p);
+  }
+  for (const p of ['corrija o <div> do header', 'sim', 'agent-message no log?']) assert.ok(!isEnvelope(cfg, p), p);
+  assert.deepEqual(tpl.bypass_patterns, DEFAULT_BYPASS_PATTERNS);
+  assert.ok(!isEnvelope({ ...cfg, bypass_patterns: [] }, '<agent-message>x'));
+  assert.ok(isEnvelope({ ...cfg, bypass_patterns: ['([', '^<meu-env'] }, '<meu-env>x'));
+});
+
+test('e2e v1.7 envelope: sem Jev, mantém o tier da sessão, não vira "anterior"', async (t) => {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador env-'));
+  fs.writeFileSync(path.join(proj, 'CLAUDE.md'), '# Projeto Z\n');
+  fs.mkdirSync(path.join(proj, '.claude', 'router'), { recursive: true });
+  fs.copyFileSync(FIXTURE_V16, path.join(proj, '.claude', 'router', 'config.json')); // retrocompat: chave ausente
+  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj], { encoding: 'utf8' });
+  assert.equal(inst.status, 0, inst.stderr);
+  let calls = 0;
+  let lastBody = null;
+  const srv = await mockJev((req, body, res) => {
+    calls++;
+    lastBody = body;
+    const answers = { subagente: { type: 'choice', choice: 'profundo', probabilities: {}, confidence: 0.9 } };
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ answers }));
+  });
+  t.after(() => srv.close());
+  const cfgPath = path.join(proj, '.claude', 'router', 'config.json');
+  const pc = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  pc.classifier.endpoint = `http://127.0.0.1:${srv.address().port}/v1/systemone`;
+  fs.writeFileSync(cfgPath, JSON.stringify(pc));
+  const env = { TYPESAFE_API_KEY: 'k' };
+
+  // envelope sem decisão anterior: nenhum bloco, log origem envelope, sem Jev
+  assert.equal(await runHook(proj, '<agent-message from="padrao">feito</agent-message>', env), '');
+  let e = lastEntry(proj);
+  assert.equal(e.origem, 'envelope');
+  assert.equal(e.subagente, null);
+  assert.equal(e.preview, undefined); // conteúdo do envelope não vai para o log
+  assert.equal(calls, 0);
+
+  // pedido do humano → Jev escolhe profundo
+  await runHook(proj, 'migre o banco', env);
+  assert.equal(calls, 1);
+
+  // envelope depois: mantém profundo, sem Jev
+  const out = JSON.parse(await runHook(proj, '[SYSTEM NOTIFICATION] subagente concluiu', env));
+  assert.match(out.hookSpecificOutput.additionalContext, /envelope.*subagent_type="profundo"/);
+  assert.equal(calls, 1);
+  e = lastEntry(proj);
+  assert.equal(e.origem, 'envelope');
+  assert.equal(e.subagente, 'profundo');
+  assert.equal(e.jev_ms, 0);
+
+  // próximo pedido: "anterior" é o pedido do humano, não o envelope
+  await runHook(proj, 'agora troque a cor', env);
+  assert.deepEqual(lastBody.state.anterior, { subagente: 'profundo', pedido: 'migre o banco' });
+  fs.rmSync(proj, { recursive: true, force: true });
+});

@@ -39,6 +39,23 @@ export function isBypass(prompt, prefixes = ['!', '/']) {
   return [...SYSTEM_PREFIXES, ...prefixes].some((x) => p.startsWith(x));
 }
 
+// Envelopes do harness (retorno de subagente, notificações, lembretes do sistema): não são pedidos do
+// humano. Default ligado (seguro: só casa texto que começa com esses envelopes). `bypass_patterns: []` desliga.
+export const DEFAULT_BYPASS_PATTERNS = [
+  '^\\s*<agent-message\\b',
+  '^\\s*<task-notification\\b',
+  '^\\s*<system-reminder\\b',
+  '^\\s*<browser_instruction\\b',
+  '^\\s*<user-prompt-submit-hook\\b',
+  '^\\s*\\[SYSTEM NOTIFICATION',
+];
+
+// true se o prompt casar algum bypass_patterns (regex, flag i). Avaliado antes de tudo.
+export function isEnvelope(cfg, prompt) {
+  const list = Array.isArray(cfg.bypass_patterns) ? cfg.bypass_patterns : DEFAULT_BYPASS_PATTERNS;
+  return list.some((src) => safeRegex(src)?.test(prompt));
+}
+
 const safeRegex = (src) => {
   if (typeof src !== 'string' || !src) return null;
   try {
