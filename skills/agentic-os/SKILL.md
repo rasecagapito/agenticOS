@@ -498,6 +498,10 @@ principal (Haiku) = **recepção**: só delega e resume. Detalhes: `docs/ROUTER.
   pelos `agent_criteria`; confiança < 0,60 sobe 1 nível; recebe o pedido anterior da sessão
   (respostas curtas como "sim" não caem no Haiku). **Modo `regras`**: Jev dá a classe
   (simples/rotina/difícil) e o código decide; risco > 0,70 e confiança < 0,60 sobem 1. Falha do Jev → `profundo`.
+- **v1.7 (opcional, retrocompatível)**: `instructions_choice` neutra ("menor executor"), `agent_criteria` como
+  objeto `{definicao, exemplos, exclusoes}`, `policy` por `probabilidades`, `rules` (regex → tier, sem Jev),
+  `continuacao`, `extra_questions` + `escalate_on`, `risk_question`, state estruturado (`domain_summary`,
+  `state_project_summary_max_chars`, `state_command` → `situacao`). Sem as chaves = v1.6.0; o update não as ativa.
 - **Fonte única dos agentes**: `agent-body.md` + `tiers` do `config.json` → `emit-agents.mjs`
   (gate `scripts/check-agents-sync.sh`). Agentes sem `tools` = herdam permissões.
 - Controle: `nivel:<tier> <pedido>` força o tier; `!` (modo bash) e `/comandos` passam sem roteamento.
