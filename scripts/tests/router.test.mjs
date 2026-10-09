@@ -11,7 +11,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const ROUTER = path.join(REPO, 'template', 'E-roteador', '.claude', 'router');
 const { decide, isBypass, parseOverride, nextTier } = await import(pathToFileURL(path.join(ROUTER, 'decide.mjs')).href);
-const cfg = JSON.parse(fs.readFileSync(path.join(ROUTER, 'config.json'), 'utf8'));
+// cfg = config da v1.6.0 (retrocompatibilidade); tpl = template atual (v1.7, projetos novos).
+const FIXTURE_V16 = path.join(REPO, 'scripts', 'tests', 'fixtures', 'config-v1.6.json');
+const cfg = JSON.parse(fs.readFileSync(FIXTURE_V16, 'utf8'));
+const tpl = JSON.parse(fs.readFileSync(path.join(ROUTER, 'config.json'), 'utf8'));
 const pick = (nivel, confianca, risco) => decide(cfg, { nivel, confianca, risco }).subagente;
 
 test('decide: nível base', () => {
@@ -121,7 +124,9 @@ const lastEntry = (proj) => {
 test('e2e: instalador + hook + log + statusline', async (t) => {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador proj-'));
   fs.writeFileSync(path.join(proj, 'CLAUDE.md'), '# Projeto X\nBarbearia com agendamento online.\n');
-  fs.mkdirSync(path.join(proj, '.claude'));
+  fs.mkdirSync(path.join(proj, '.claude', 'router'), { recursive: true });
+  // projeto já tinha o roteador v1.6.0: o update não pode mudar o comportamento
+  fs.copyFileSync(FIXTURE_V16, path.join(proj, '.claude', 'router', 'config.json'));
   fs.writeFileSync(
     path.join(proj, '.claude', 'settings.json'),
     JSON.stringify({ permissions: { allow: ['Read(*)'] }, hooks: { Stop: [{ hooks: [{ type: 'command', command: 'echo x' }] }] } }),
@@ -141,6 +146,12 @@ test('e2e: instalador + hook + log + statusline', async (t) => {
   const brain = fs.readFileSync(path.join(proj, 'CLAUDE.md'), 'utf8');
   assert.match(brain, /Barbearia/);
   assert.equal(brain.split('agentic-os:router:start').length, 2);
+
+  const upCfg = JSON.parse(fs.readFileSync(path.join(proj, '.claude', 'router', 'config.json'), 'utf8'));
+  for (const k of ['instructions_choice', 'policy', 'rules', 'continuacao', 'risk_question', 'state_command']) {
+    assert.ok(!(k in upCfg), `update não deve ativar ${k}`);
+  }
+  assert.match(inst.stdout, /opcionais da v1\.7/);
 
   // idempotente: 2ª execução não duplica hook nem bloco
   spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj]);
@@ -185,6 +196,10 @@ test('e2e: instalador + hook + log + statusline', async (t) => {
   assert.equal(lastBody.questions.risco.type, 'noul');
   assert.match(lastBody.state.projeto, /Barbearia/);
   assert.equal(lastBody.state.anterior, undefined); // 1ª mensagem da sessão
+  assert.deepEqual(Object.keys(lastBody.state), ['pedido', 'projeto']); // state da v1.6.0
+  const { LEGACY_INSTRUCTIONS } = await import(pathToFileURL(path.join(ROUTER, 'route.mjs')).href);
+  assert.equal(lastBody.questions.subagente.instructions, LEGACY_INSTRUCTIONS); // texto da v1.6.0
+  assert.deepEqual(Object.keys(lastBody.questions), ['subagente', 'risco']);
   let e = lastEntry(proj);
   assert.equal(e.subagente, 'profundo');
   assert.equal(e.escolha_jev, 'profundo');
@@ -242,6 +257,248 @@ test('e2e: instalador + hook + log + statusline', async (t) => {
     }).stdout.trim();
   assert.equal(esc('rapido'), 'padrao');
   assert.equal(esc('padrao'), 'LIMITE'); // max_escalations = 1
+
+  fs.rmSync(proj, { recursive: true, force: true });
+});
+
+// ---- v1.7: instrução neutra, critérios objeto, policy por probabilidades, rules, continuação,
+// ---- extra_questions/escalate_on, state estruturado e state_command ----
+
+const { buildQuestions, buildState, LEGACY_INSTRUCTIONS } = await import(pathToFileURL(path.join(ROUTER, 'route.mjs')).href);
+const { matchRule, matchContinuacao } = await import(pathToFileURL(path.join(ROUTER, 'decide.mjs')).href);
+const { runStateCommand, parseSituacao } = await import(pathToFileURL(path.join(ROUTER, 'lib.mjs')).href);
+
+test('v1.7 retrocompat: config v1.6 → mesma decisão e mesmas perguntas', () => {
+  const casos = [
+    [{ escolha: 'rapido', confianca: 0.55, risco: 0.9 }, 'padrao', 'jev=rapido; conf .55<.60 +1 → padrao'],
+    [{ escolha: 'padrao', confianca: 0.8, risco: 0.1 }, 'padrao', 'jev=padrao → padrao'],
+    [{ escolha: 'profundo', confianca: 0.1, risco: 0.1 }, 'profundo', 'jev=profundo; conf .10<.60 +1; teto → profundo'],
+    // probabilidades na resposta não mudam nada sem `policy`
+    [{ escolha: 'rapido', confianca: 0.9, probabilidades: { rapido: 0.5, padrao: 0.1, profundo: 0.4 } }, 'rapido', 'jev=rapido → rapido'],
+  ];
+  for (const [cls, sub, just] of casos) {
+    const d = decide(cfg, cls);
+    assert.equal(d.subagente, sub);
+    assert.equal(d.justificativa, just);
+  }
+  const q = buildQuestions(cfg, false);
+  assert.equal(q.subagente.instructions, LEGACY_INSTRUCTIONS);
+  assert.ok(q.risco);
+  assert.equal(matchRule(cfg, 'qualquer'), null);
+  assert.equal(matchContinuacao(cfg, 'sim', { subagente: 'profundo' }), null);
+  const st = buildState({ ...cfg, project_summary: 'resumo' }, 'p');
+  assert.deepEqual(st, { pedido: 'p', projeto: 'resumo' });
+});
+
+test('v1.7 instructions_choice: neutra no template; string, objeto e array', () => {
+  assert.match(tpl.instructions_choice, /menor/);
+  assert.doesNotMatch(tpl.instructions_choice, /na dúvida/);
+  assert.equal(buildQuestions(tpl, false).subagente.instructions, tpl.instructions_choice);
+  assert.match(buildQuestions(tpl, true).subagente.instructions, /`anterior`/);
+  const obj = { pergunta: 'menor executor?' };
+  assert.deepEqual(buildQuestions({ ...tpl, instructions_choice: obj }, false).subagente.instructions, obj);
+  const comCtx = buildQuestions({ ...tpl, instructions_choice: obj }, true).subagente.instructions;
+  assert.ok(Array.isArray(comCtx) && comCtx[0] === obj && /anterior/.test(comCtx[1]));
+  const arr = buildQuestions({ ...tpl, instructions_choice: ['a', 'b'] }, true).subagente.instructions;
+  assert.equal(arr.length, 3);
+});
+
+test('v1.7 agent_criteria: objeto {definicao, exemplos, exclusoes} vai como objeto; string continua', () => {
+  const q = buildQuestions(tpl, false);
+  assert.equal(typeof q.subagente.criteria.rapido, 'object');
+  assert.ok(q.subagente.criteria.profundo.definicao && Array.isArray(q.subagente.criteria.profundo.exemplos));
+  const mix = { ...tpl, agent_criteria: { rapido: 'texto', padrao: { definicao: 'x', exemplos: [], exclusoes: [] } } };
+  const c = buildQuestions(mix, false).subagente.criteria;
+  assert.equal(c.rapido, 'texto');
+  assert.deepEqual(c.padrao, { definicao: 'x', exemplos: [], exclusoes: [] });
+  assert.match(c.profundo, /Nível avancado/);
+});
+
+test('v1.7 policy probabilidades', () => {
+  const pol = (p, extra = {}) => decide({ ...tpl, ...extra }, { escolha: 'x', confianca: 0.2, probabilidades: p });
+  // argmax baixo, mas probabilidade alta no topo → sobe ao topo
+  let d = pol({ rapido: 0.45, padrao: 0.15, profundo: 0.4 });
+  assert.equal(d.subagente, 'profundo');
+  assert.match(d.justificativa, /argmax=rapido \.45; P\(>=profundo\) \.40>=\.35 ↑ → profundo/);
+  // dúvida rapido × padrao → padrao (não vai ao Opus)
+  d = pol({ rapido: 0.5, padrao: 0.45, profundo: 0.05 });
+  assert.equal(d.subagente, 'padrao');
+  // confiança baixa não sobe nada
+  assert.equal(pol({ rapido: 0.9, padrao: 0.05, profundo: 0.05 }).subagente, 'rapido');
+  // argmax padrao, profundo abaixo do limiar → fica
+  assert.equal(pol({ rapido: 0.2, padrao: 0.5, profundo: 0.3 }).subagente, 'padrao');
+  // argmax profundo
+  assert.equal(pol({ rapido: 0.1, padrao: 0.2, profundo: 0.7 }).subagente, 'profundo');
+  // sem probabilidades → vale a escolha, sem subida
+  d = decide(tpl, { escolha: 'rapido', confianca: 0.1 });
+  assert.equal(d.subagente, 'rapido');
+  assert.match(d.justificativa, /sem probabilidades/);
+  // limiar por id do tier também vale
+  const byId = { policy: { type: 'probabilidades', subir_se_prob_acima: { avancado: 0.3 } } };
+  assert.equal(pol({ rapido: 0.6, padrao: 0.1, profundo: 0.3 }, byId).subagente, 'profundo');
+});
+
+test('v1.7 rules: primeira que casa decide; regex inválida e tier inexistente são puladas', () => {
+  const c = {
+    ...tpl,
+    rules: [
+      { nome: 'quebrada', match: '([', tier: 'basico' },
+      { nome: 'fantasma', match: 'prd', tier: 'xpto' },
+      { nome: 'prd', match: '\\b(prd|produ[cç][aã]o|rollback)\\b', tier: 'avancado' },
+      { nome: 'status', match: '^(status|listar?)\\b', tier: 'rapido' },
+    ],
+  };
+  assert.deepEqual(matchRule(c, 'Faça o rollback em PRD'), { tierIndex: 2, nome: 'prd' });
+  assert.deepEqual(matchRule(c, 'status do cliente'), { tierIndex: 0, nome: 'status' });
+  assert.equal(matchRule(c, 'crie a tela'), null);
+  const d = decide(c, null, { regra: matchRule(c, 'rollback') });
+  assert.equal(d.origem, 'regra:prd');
+  assert.equal(d.subagente, 'profundo');
+});
+
+test('v1.7 continuacao: confirmação curta herda o tier anterior', () => {
+  const ant = { subagente: 'profundo', pedido: 'migre o banco' };
+  assert.deepEqual(matchContinuacao(tpl, 'sim, pode seguir', ant), { tierIndex: 2 });
+  assert.deepEqual(matchContinuacao(tpl, 'opção 2', { subagente: 'rapido' }), { tierIndex: 0 });
+  assert.equal(matchContinuacao(tpl, 'sim, mas antes troque a cor do botão', ant), null); // não casa
+  assert.equal(matchContinuacao(tpl, 'sim', null), null); // sem decisão anterior
+  assert.equal(matchContinuacao({ ...tpl, continuacao: { match: '.*', max_chars: 5 } }, 'pode seguir', ant), null);
+  const d = decide(tpl, null, { continuacao: { tierIndex: 2 } });
+  assert.equal(d.origem, 'continuacao');
+  assert.equal(d.subagente, 'profundo');
+});
+
+test('v1.7 extra_questions + escalate_on; risk_question false', () => {
+  const c = {
+    ...tpl,
+    extra_questions: {
+      grava: { type: 'noul', instructions: 'O `pedido` grava dados em produção?' },
+      risco: { type: 'noul', instructions: 'reservado' },
+    },
+    escalate_on: [{ question: 'grava', noul_acima: 0.6, tier_minimo: 'avancado' }],
+  };
+  const q = buildQuestions(c, false);
+  assert.deepEqual(Object.keys(q), ['subagente', 'grava']); // risco reservado/removido
+  assert.ok(buildQuestions({ ...tpl, risk_question: true }, false).risco);
+  const base = { escolha: 'rapido', confianca: 0.9, probabilidades: { rapido: 0.9, padrao: 0.05, profundo: 0.05 } };
+  let d = decide(c, { ...base, extras: { grava: { type: 'noul', noul: 0.8 } } });
+  assert.equal(d.subagente, 'profundo');
+  assert.match(d.justificativa, /grava \.80>\.60 → min profundo/);
+  assert.equal(decide(c, { ...base, extras: { grava: { noul: 0.6 } } }).subagente, 'rapido'); // 0.6 exato não
+  // só eleva o piso: nunca desce
+  d = decide({ ...c, escalate_on: [{ question: 'grava', noul_acima: 0.1, tier_minimo: 'rapido' }] }, {
+    ...base,
+    probabilidades: { rapido: 0, padrao: 0, profundo: 1 },
+    extras: { grava: { noul: 0.9 } },
+  });
+  assert.equal(d.subagente, 'profundo');
+  // também no modo regras
+  assert.equal(decide(c, { nivel: 'simples', confianca: 0.9, risco: 0, extras: { grava: { noul: 0.9 } } }).subagente, 'profundo');
+});
+
+test('v1.7 state estruturado: pedido, anterior, dominio, projeto, situacao', () => {
+  const c = { ...tpl, project_summary: 'x'.repeat(5000), domain_summary: 'Cargas de dados no ERP.' };
+  const st = buildState(c, 'p', { subagente: 'padrao' }, { etapa: 'teste' });
+  assert.deepEqual(Object.keys(st), ['pedido', 'anterior', 'dominio', 'projeto', 'situacao']);
+  assert.equal(st.projeto.length, 4000);
+  assert.equal(buildState({ ...c, state_project_summary_max_chars: 100 }, 'p').projeto.length, 100);
+  assert.ok(!('projeto' in buildState({ ...c, state_project_summary_max_chars: 0 }, 'p'))); // 0 = não envia
+  assert.ok(!('dominio' in buildState({ ...c, domain_summary: '' }, 'p')));
+});
+
+test('v1.7 state_command: ok, timeout, JSON inválido, não-objeto, saída != 0', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador sc-'));
+  const script = (nome, code) => {
+    const f = path.join(dir, nome);
+    fs.writeFileSync(f, code);
+    return { cmd: `"${process.execPath}" "${f}"`, timeout_ms: 1500 };
+  };
+  assert.deepEqual(await runStateCommand(script('ok.mjs', 'console.log(JSON.stringify({ etapa: "teste", n: 1 }))'), dir), {
+    situacao: { etapa: 'teste', n: 1 },
+  });
+  const t0 = Date.now();
+  const lento = { ...script('lento.mjs', 'setTimeout(() => console.log("{}"), 5000)'), timeout_ms: 300 };
+  assert.deepEqual(await runStateCommand(lento, dir), { erro: 'timeout 300ms' });
+  assert.ok(Date.now() - t0 < 2000, 'timeout não pode bloquear');
+  assert.deepEqual(await runStateCommand(script('ruim.mjs', 'console.log("nao json")'), dir), { erro: 'json invalido' });
+  assert.deepEqual(await runStateCommand(script('arr.mjs', 'console.log("[1,2]")'), dir), { erro: 'json nao e objeto' });
+  assert.deepEqual(await runStateCommand(script('falha.mjs', 'process.exit(3)'), dir), { erro: 'saida 3' });
+  assert.equal(await runStateCommand(null), null);
+  assert.deepEqual(parseSituacao('null'), { erro: 'json nao e objeto' });
+  fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+});
+
+test('e2e v1.7: instalação nova — rules, continuação, probabilidades, state_command e log', async (t) => {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador v17-'));
+  fs.writeFileSync(path.join(proj, 'CLAUDE.md'), '# Projeto Y\nCargas.\n');
+  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj], { encoding: 'utf8' });
+  assert.equal(inst.status, 0, inst.stderr);
+  const cfgPath = path.join(proj, '.claude', 'router', 'config.json');
+  const pc = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  assert.equal(pc.policy.type, 'probabilidades'); // projeto novo recebe os defaults da v1.7
+
+  let lastBody = null;
+  let calls = 0;
+  let probs = { rapido: 0.45, padrao: 0.15, profundo: 0.4 };
+  const srv = await mockJev((req, body, res) => {
+    lastBody = body;
+    calls++;
+    const answers = {
+      subagente: { type: 'choice', choice: 'rapido', probabilities: probs, confidence: 0.3 },
+      grava: { type: 'noul', noul: 0.2 },
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ model: 'jev', answers }));
+  });
+  t.after(() => srv.close());
+  fs.writeFileSync(path.join(proj, 'sit.mjs'), 'console.log(JSON.stringify({ etapa: "carga", ambiente: "teste" }))');
+  pc.classifier.endpoint = `http://127.0.0.1:${srv.address().port}/v1/systemone`;
+  pc.domain_summary = 'Cargas de dados no ERP.';
+  pc.state_project_summary_max_chars = 0;
+  pc.state_command = { cmd: `"${process.execPath}" sit.mjs`, timeout_ms: 1500 };
+  pc.rules = [{ nome: 'prd', match: '\\bprd\\b', tier: 'avancado' }];
+  pc.extra_questions = { grava: { type: 'noul', instructions: 'O `pedido` grava dados em produção?' } };
+  pc.escalate_on = [{ question: 'grava', noul_acima: 0.6, tier_minimo: 'avancado' }];
+  fs.writeFileSync(cfgPath, JSON.stringify(pc));
+  const env = { TYPESAFE_API_KEY: 'k' };
+
+  // Jev: argmax rapido, mas P(profundo) .40 ≥ .35 → profundo; state estruturado com situacao
+  let out = JSON.parse(await runHook(proj, 'ajuste a carga de itens', env));
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="profundo"/);
+  assert.deepEqual(Object.keys(lastBody.state), ['pedido', 'dominio', 'situacao']);
+  assert.deepEqual(lastBody.state.situacao, { etapa: 'carga', ambiente: 'teste' });
+  assert.deepEqual(Object.keys(lastBody.questions), ['subagente', 'grava']);
+  assert.equal(typeof lastBody.questions.subagente.criteria.rapido, 'object');
+  let e = lastEntry(proj);
+  assert.equal(e.politica, 'probabilidades');
+  assert.deepEqual(e.probabilidades, probs);
+  assert.equal(e.confianca, 0.3);
+  assert.deepEqual(e.extras, { grava: 0.2 });
+  assert.equal(e.state_command_falhou, undefined);
+
+  // continuação: não chama o Jev, mesmo tier
+  const n0 = calls;
+  out = JSON.parse(await runHook(proj, 'sim, pode seguir', env));
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="profundo"/);
+  assert.equal(calls, n0);
+  assert.equal(lastEntry(proj).origem, 'continuacao');
+
+  // regra: não chama o Jev
+  out = JSON.parse(await runHook(proj, 'rode a carga em PRD', env));
+  assert.match(out.hookSpecificOutput.additionalContext, /regra:prd/);
+  assert.equal(calls, n0);
+  e = lastEntry(proj);
+  assert.equal(e.origem, 'regra:prd');
+  assert.equal(e.jev_ms, 0);
+
+  // dúvida rapido × padrao → padrao; state_command quebrado não bloqueia e vai para o log
+  probs = { rapido: 0.5, padrao: 0.45, profundo: 0.05 };
+  pc.state_command = { cmd: `"${process.execPath}" -e "process.exit(2)"`, timeout_ms: 1500 };
+  fs.writeFileSync(cfgPath, JSON.stringify(pc));
+  out = JSON.parse(await runHook(proj, 'liste as cargas pendentes e explique', env));
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);
+  e = lastEntry(proj);
+  assert.equal(e.state_command_falhou, 'saida 2');
+  assert.ok(!('situacao' in lastBody.state));
 
   fs.rmSync(proj, { recursive: true, force: true });
 });

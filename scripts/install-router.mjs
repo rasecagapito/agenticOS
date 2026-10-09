@@ -57,9 +57,26 @@ write(path.join('.claude', 'router', 'VERSION'), VERSION + '\n');
 const tplCfg = readJson(path.join(SRC, '.claude', 'router', 'config.json'), {});
 const cfgRel = path.join('.claude', 'router', 'config.json');
 const localCfg = readJson(path.join(DEST, cfgRel), null);
-const merged = localCfg ? { ...tplCfg, ...localCfg } : tplCfg;
-const added = localCfg ? Object.keys(tplCfg).filter((k) => !(k in localCfg)) : [];
+// Chaves da v1.7 que mudam o comportamento: só entram em instalações novas. Num config existente
+// ficam de fora (ausentes = comportamento da v1.6.0); o usuário ativa quando quiser (docs/ROUTER.md).
+const OPT_IN = [
+  'instructions_choice',
+  'policy',
+  'rules',
+  'continuacao',
+  'extra_questions',
+  'escalate_on',
+  'risk_question',
+  'state_project_summary_max_chars',
+  'domain_summary',
+  'state_command',
+];
+const tplBase = localCfg ? Object.fromEntries(Object.entries(tplCfg).filter(([k]) => !OPT_IN.includes(k))) : tplCfg;
+const merged = localCfg ? { ...tplBase, ...localCfg } : tplCfg;
+const added = localCfg ? Object.keys(tplBase).filter((k) => !(k in localCfg)) : [];
 if (added.length) note(`config.json: chaves novas ${added.join(', ')}`);
+const optional = localCfg ? OPT_IN.filter((k) => k in tplCfg && !(k in localCfg)) : [];
+if (optional.length) note(`config.json: opcionais da v1.7 não ativadas (ver docs/ROUTER.md): ${optional.join(', ')}`);
 write(cfgRel, JSON.stringify(merged, null, 2) + '\n');
 
 // 3. Agentes gerados do config do projeto (fonte única agent-body.md)
