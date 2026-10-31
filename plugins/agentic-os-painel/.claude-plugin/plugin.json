@@ -1,0 +1,9 @@
+{
+  "name": "agentic-os-painel",
+  "version": "1.0.0",
+  "description": "Painel do Agentic OS no Claude Code: economia do roteador Jev (gasto real vs. tudo no Opus) e botões /status, /wrapup e /handoff",
+  "author": { "name": "rasecagapito" },
+  "homepage": "https://github.com/rasecagapito/agenticOS",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

@@ -9,8 +9,17 @@
     {
       "name": "agentic-os",
       "description": "Agentic OS — memória persistente, contexto modular, workers, change workflow, cérebro multi-provedor com orquestração (humano como gate final) e handoff hardened.",
-      "version": "1.7.3",
+      "version": "1.8.0",
       "source": "./",
+      "author": {
+        "name": "rasecagapito"
+      }
+    },
+    {
+      "name": "agentic-os-painel",
+      "description": "Painel opcional no Claude Code: economia do roteador Jev (gasto real vs. tudo no Opus), decisões do dia e botões /status, /wrapup e /handoff.",
+      "version": "1.0.0",
+      "source": "./plugins/agentic-os-painel",
       "author": {
         "name": "rasecagapito"
       }

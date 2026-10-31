@@ -50,6 +50,7 @@ Depois da instalação, pedir para montar ou adaptar um projeto ao padrão Agent
 - `template/D-multi-provedor/` — cérebro compartilhado entre várias IAs (Claude, Codex, Gemini…)
 - `template/E-roteador/` — roteador de modelos opt-in (Jev classifica → subagente Haiku/Sonnet/Opus); instalar com `scripts/install-router.mjs`. ⚠️ Exige a **sua** chave do Jev ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)): **sem ela, todos os pedidos vão para o Opus**
 - `docs/ROUTER.md` — **[Roteador de Modelos](docs/ROUTER.md)**: fluxo, regra de decisão, instalação e atualização
+- `plugins/agentic-os-painel/` — **[Painel](plugins/agentic-os-painel/README.md)** (plugin opcional): economia do Jev, decisões do dia e botões `/status` `/wrapup` `/handoff` ao lado do chat. Instalar: `claude plugin install agentic-os-painel@agentic-os`
 - `docs/USAGE.md` — **[Guia de Uso Completo](docs/USAGE.md)**: instalação, todos os comandos com exemplos e capítulo de handoff/orquestração
 - `docs/guia-completo.html` — **[Guia Completo](docs/guia-completo.html)**: como o plugin funciona, todas as funcionalidades (incl. roteador com Jev), instalar e atualizar — didático, abrir no navegador
 - `docs/guia-visual.html` — **[Manual Visual](docs/guia-visual.html)**: guia interativo (abrir no navegador) — didático, com fluxos e diagramas
