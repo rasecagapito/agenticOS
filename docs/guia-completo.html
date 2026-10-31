@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agentic OS — Guia Completo</title>
-<meta name="description" content="Como funciona o plugin Agentic OS v1.8.3: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
+<meta name="description" content="Como funciona o plugin Agentic OS v1.8.4: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
 <style>
 :root{
   --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f0eee8; --text:#1d1c1a; --muted:#5f5b53;
@@ -107,7 +107,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
 <div class="layout">
 <nav class="toc" aria-label="Sumário">
   <div class="brand">Agentic OS</div>
-  <div class="ver">Guia completo · v1.8.3</div>
+  <div class="ver">Guia completo · v1.8.4</div>
   <div class="links">
     <div class="grp">Entender</div>
     <a href="#oque">1. O que é</a>
@@ -136,7 +136,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
   <p class="lead">Um jeito de organizar os arquivos do seu projeto para que a IA (Claude, Codex, Gemini…) lembre o que já foi feito, siga regras, trabalhe com especialistas e use o modelo certo para cada tarefa.</p>
   <div class="pills">
     <span class="pill">Plugin para Claude Code e Codex</span>
-    <span class="pill">Versão 1.8.3</span>
+    <span class="pill">Versão 1.8.4</span>
     <span class="pill">Funciona em qualquer projeto</span>
     <span class="pill">Tudo opcional e por camadas</span>
   </div>
@@ -409,7 +409,7 @@ export TYPESAFE_API_KEY=sua-chave        # macOS / Linux</code></pre>
       Na instalação, o instalador <b>testa a chave</b> e diz se está OK, recusada ou faltando.</li>
     <li><b>Pré-visualizar</b> o que vai mudar (não altera nada):
       <pre><code>node "&lt;plugin&gt;/scripts/install-router.mjs" "C:/caminho/do/projeto" --dry-run</code></pre>
-      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.8.3</code> (ou um clone do repositório).</li>
+      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.8.4</code> (ou um clone do repositório).</li>
     <li><b>Instalar:</b> o mesmo comando sem <code>--dry-run</code>.</li>
     <li><b>Reiniciar</b> o Claude Code no projeto.</li>
   </ol>
@@ -440,6 +440,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   <h3>Histórico recente</h3>
   <div class="tablewrap"><table>
     <tr><th>Versão</th><th>Principal novidade</th></tr>
+    <tr><td>1.8.4</td><td>Correção: o roteador não roda mais duas vezes em máquinas com gancho global (ex.: Agente de Cargas).</td></tr>
     <tr><td>1.8.3</td><td>Correção: a versão do plugin agentic-os passa a acompanhar a release (projetos mostravam 1.8.0).</td></tr>
     <tr><td>1.8.2</td><td>Painel 1.1.0: consumo da sessão (US$ do /cost e % do contexto) sempre visível, mesmo sem roteador.</td></tr>
     <tr><td>1.8.0</td><td>Painel opcional no Claude Code (<code>agentic-os-painel</code>): economia do Jev, decisões do dia e botões /status, /wrapup e /handoff.</td></tr>
@@ -493,7 +494,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   </table></div>
 </section>
 
-<footer>Agentic OS v1.8.3 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
+<footer>Agentic OS v1.8.4 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
 </main>
 </div>
 <script>

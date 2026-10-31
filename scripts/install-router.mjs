@@ -5,8 +5,10 @@
 //  - Preserva config.json local (só acrescenta chaves novas) e decisions.jsonl.
 //  - Faz merge de .claude/settings.json (model + hook) e .claude/settings.local.json (statusLine),
 //    sem apagar hooks/permissões existentes. Upsert do bloco do roteador no CLAUDE.md.
+//  - Se um gancho global do usuário já roda o route.mjs do projeto, não duplica (e remove o do projeto).
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -117,20 +119,41 @@ if (settings.model !== recepcao) {
   note(`settings.json: model ${settings.model ?? '(padrão)'} → ${recepcao} (sessão principal = recepção)`);
   settings.model = recepcao;
 }
-settings.hooks ??= {};
-settings.hooks.UserPromptSubmit ??= [];
-const hasHook = JSON.stringify(settings.hooks.UserPromptSubmit).includes('router/route.mjs');
-if (!hasHook) {
-  settings.hooks.UserPromptSubmit.push({
-    hooks: [
-      {
-        type: 'command',
-        command: 'node',
-        args: ['${CLAUDE_PROJECT_DIR}/.claude/router/route.mjs'],
-        timeout: 10,
-      },
-    ],
+const ehRota = (h) => JSON.stringify(h).replace(/\\\\/g, '/').includes('router/route.mjs');
+// Gancho de usuário que já roda o route.mjs de qualquer projeto (ex.: lançador do Agente de Cargas).
+// Com ele, o gancho do projeto faria cada mensagem rodar o roteador 2x (log e chamadas ao Jev em dobro).
+const globalHook = ['settings.json', 'settings.local.json']
+  .flatMap((f) => readJson(path.join(os.homedir(), '.claude', f), {}).hooks?.UserPromptSubmit ?? [])
+  .flatMap((g) => g.hooks ?? [])
+  .find((h) => {
+    const t = JSON.stringify(h).replace(/\\\\/g, '/');
+    return t.includes('jev-com-env.mjs') || (t.includes('CLAUDE_PROJECT_DIR') && t.includes('router/route.mjs'));
   });
+const ups = settings.hooks?.UserPromptSubmit ?? [];
+if (globalHook) {
+  if (ups.some((g) => (g.hooks ?? []).some(ehRota))) {
+    settings.hooks.UserPromptSubmit = ups
+      .map((g) => ({ ...g, hooks: (g.hooks ?? []).filter((h) => !ehRota(h)) }))
+      .filter((g) => g.hooks.length);
+    if (!settings.hooks.UserPromptSubmit.length) delete settings.hooks.UserPromptSubmit;
+    if (!Object.keys(settings.hooks).length) delete settings.hooks;
+    note('settings.json: gancho do projeto removido (duplicava o gancho global do usuário)');
+  } else note('settings.json: gancho não adicionado (o gancho global do usuário já roda o roteador)');
+} else if (!ups.some((g) => (g.hooks ?? []).some(ehRota))) {
+  settings.hooks ??= {};
+  settings.hooks.UserPromptSubmit = [
+    ...ups,
+    {
+      hooks: [
+        {
+          type: 'command',
+          command: 'node',
+          args: ['${CLAUDE_PROJECT_DIR}/.claude/router/route.mjs'],
+          timeout: 10,
+        },
+      ],
+    },
+  ];
 }
 write(setRel, JSON.stringify(settings, null, 2) + '\n');
 
