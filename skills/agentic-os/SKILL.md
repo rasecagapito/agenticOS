@@ -528,6 +528,10 @@ https://console.typesafe.ai/keys; nunca gravar chave em arquivo do projeto nem p
 testa a chave; sem chave/recusada, o hook avisa 1x por sessão e usa `fallback_sem_chave` ou `fallback_tier`. **Atualizar**: `/router-update` no projeto
 (preserva `config.json` e log). Nunca hardcodar descrição de projeto — o contexto vem do cérebro do projeto.
 
+**Painel (plugin opcional `agentic-os-painel`)**: painel ao lado do chat com a economia do roteador (gasto real ×
+tudo no Opus, a partir do `usage` de cada subagente), as decisões do dia e botões `/status`, `/wrapup`, `/handoff`.
+Instalar: `claude plugin install agentic-os-painel@agentic-os`; reabrir: `/painel`. Fonte: `plugins/agentic-os-painel/`.
+
 ---
 
 ## Motor de Estrutura da Aplicação (opt-in)
