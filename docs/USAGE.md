@@ -401,7 +401,15 @@ No topo do cérebro canônico, qualquer IA executa:
 
 **Opt-in:** a Orquestração está ativa quando o handoff tem a secção `## Orquestração`. Sem ela,
 vale o **modo livre** (comportamento anterior: cada sessão retoma pelo cursor, sem fronteira).
-O template D já inclui a secção; a skill adiciona-a em projetos novos/adaptados quando pedido.
+
+**Como ativar (na prática):**
+1. **Projeto novo** — monte com o template D (ou peça o modo multi-provedor à skill): o handoff já nasce com a secção. Para modo livre, remova-a.
+2. **Projeto existente** — peça à skill: *"adapta este projeto ao Agentic OS com a camada multi-provedor e orquestração"*; ela cria `memory/handoff.md` com a secção sem tocar no que já existe.
+3. **Manual** — num projeto já multi-provedor, copie o bloco `## Orquestração` (formato acima) para o seu handoff. Desativar = apagar a secção.
+
+**Ritual de primeiro uso:** preencha `Coordenação` → coordenação roda `/propose` e propõe o 1º lote
+(3–5 tarefas) → humano aprova e o handoff regista "Aprovado por humano em: …" + limite + âncora →
+executor assume; dali em diante o ciclo corre até cada novo gate.
 
 ### 7.5 Handoff entre provedores diferentes
 
