@@ -51,6 +51,7 @@ Depois da instalação, pedir para montar ou adaptar um projeto ao padrão Agent
 - `template/E-roteador/` — roteador de modelos opt-in (Jev classifica → subagente Haiku/Sonnet/Opus); instalar com `scripts/install-router.mjs`
 - `docs/ROUTER.md` — **[Roteador de Modelos](docs/ROUTER.md)**: fluxo, regra de decisão, instalação e atualização
 - `docs/USAGE.md` — **[Guia de Uso Completo](docs/USAGE.md)**: instalação, todos os comandos com exemplos e capítulo de handoff/orquestração
+- `docs/guia-completo.html` — **[Guia Completo](docs/guia-completo.html)**: como o plugin funciona, todas as funcionalidades (incl. roteador com Jev), instalar e atualizar — didático, abrir no navegador
 - `docs/guia-visual.html` — **[Manual Visual](docs/guia-visual.html)**: guia interativo (abrir no navegador) — didático, com fluxos e diagramas
 - `docs/CHANGE-WORKFLOW.md` — **[Change Workflow](docs/CHANGE-WORKFLOW.md)**: ciclo de mudança estruturada
 - `docs/MULTI-PROVIDER.md` — **[Multi-Provedor](docs/MULTI-PROVIDER.md)**: cérebro compartilhado + handoff entre IAs
