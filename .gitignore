@@ -16,3 +16,10 @@ node_modules/
 
 # Local isolated worktrees
 .worktrees/
+
+# Arquivos locais (nao distribuir com o plugin)
+opencode.json
+start-opencode.ps1
+docs/OPENCODE-QWEN-TOKEN-PLAN.md
+docs/jev/
+.superpowers/
