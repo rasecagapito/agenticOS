@@ -1,3 +1,22 @@
+# Agentic OS v1.7.1
+
+**Ajuste de calibração do Roteador** a partir do primeiro teste com o Jev real (11 pedidos de um
+projeto Next.js de barbearia, ~300–490 ms por chamada).
+
+- `agent_criteria.rapido` passa a cobrir **perguntas só de leitura** (explicar, localizar, resumir),
+  mesmo quando o assunto é autenticação, dados ou segurança. Antes, "o que faz o middleware.ts?"
+  ia para o `profundo` (Opus); agora vai para o `rapido` (Haiku).
+- Exclusões explícitas: `rapido` não faz **alteração** em dados/autenticação nem investigação de bug;
+  `profundo` não recebe perguntas só de leitura.
+- Resultado no teste real: 11/11 no subagente esperado (leitura → rapido; tela/campo novo → padrao;
+  concorrência, migração de auth e correção de login → profundo; "sim, pode seguir" → continuação).
+
+**Atualizar:** projetos existentes **não** recebem o critério novo automaticamente, porque o
+`/router-update` preserva o `agent_criteria` local. Para aplicar, copie o bloco `agent_criteria.rapido`
+e `profundo.exclusoes` do template para o `.claude/router/config.json` do projeto.
+
+---
+
 # Agentic OS v1.7.0
 
 **Jev mais barato e previsível, no padrão TypeSafe.** O Roteador de Modelos ganha instrução, política e
