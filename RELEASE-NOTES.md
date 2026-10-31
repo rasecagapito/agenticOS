@@ -1,3 +1,22 @@
+# Agentic OS v1.7.2
+
+**Cada pessoa usa a própria chave do Jev, e fica sabendo quando ela falta.** O plugin nunca trouxe
+chave; agora quem instala é guiado a configurar a sua e não paga Opus em silêncio por esquecer.
+
+- **Aviso na conversa** — chave ausente ou recusada (HTTP 401/403): uma vez por sessão aparece
+  "⚠️ Roteador de modelos: … não definida / recusada — os pedidos estão indo para profundo (Opus)",
+  com o link https://console.typesafe.ai/keys e o comando `setx`/`export`. Falha passageira
+  (timeout, 429/529, 5xx) não gera aviso. O log marca `aviso_chave`.
+- **Instalador testa a chave** com uma chamada mínima ao Jev: `OK`, `RECUSADA` ou "não definida",
+  com o passo a passo e o link. `--no-key-check` desliga o teste.
+- **`fallback_sem_chave`** (opcional, ex.: `"intermediario"`) — destino só para problema de chave;
+  falha passageira continua no `fallback_tier`. Sem a chave definida = comportamento anterior (Opus).
+- Docs: seção "Chave do Jev" no `ROUTER.md`, guia completo e `SKILL.md` com o link de onde obter a chave.
+
+**Atualizar:** `/router-update` traz o aviso e o teste; nada muda para quem já tem chave válida.
+
+---
+
 # Agentic OS v1.7.1
 
 **Ajuste de calibração do Roteador** a partir do primeiro teste com o Jev real (11 pedidos de um

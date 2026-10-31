@@ -151,9 +151,50 @@ if (!gi.includes('.claude/router/decisions.jsonl')) {
 
 console.log(`Roteador de modelos v${VERSION} ${DRY ? '(dry-run) ' : ''}→ ${DEST}`);
 console.log(log.length ? log.map((l) => '  - ' + l).join('\n') : '  - nada a mudar (já atualizado)');
+// Chave do Jev: cada pessoa usa a sua (variável de ambiente; nunca em arquivo do projeto).
+const KEY_URL = 'https://console.typesafe.ai/keys';
 const keyEnv = merged.classifier?.api_key_env || 'TYPESAFE_API_KEY';
+const semChaveId = merged.fallback_sem_chave || merged.fallback_tier;
+const semChaveTier = merged.tiers?.find((t) => t.id === semChaveId || t.agent === semChaveId);
+const semChave = semChaveTier ? `${semChaveTier.agent} (${semChaveTier.model_label})` : semChaveId;
+const comoDefinir = () => {
+  console.log(`  1. Obtenha sua chave em ${KEY_URL}`);
+  console.log(`  2. Windows: setx ${keyEnv} "<sua-chave>"   |   macOS/Linux: export ${keyEnv}=<sua-chave>`);
+  console.log('  3. Reabra o terminal e o editor (variáveis novas só valem em processos novos).');
+};
 if (!process.env[keyEnv]) {
-  console.log(`\nAtenção: ${keyEnv} não definida. Sem ela todo pedido cai no fallback (${merged.fallback_tier}).`);
-  console.log(`  Windows: setx ${keyEnv} "<sua-chave>"   |   macOS/Linux: export ${keyEnv}=<sua-chave>`);
+  console.log(`\nAtenção: ${keyEnv} não definida. Sem ela todo pedido vai para ${semChave} e o Claude avisa uma vez por sessão.`);
+  comoDefinir();
+} else if (!DRY && !args.includes('--no-key-check')) {
+  // Chamada mínima ao classificador para validar a chave (custo desprezível; desligue com --no-key-check).
+  const r = await checkKey(merged.classifier, process.env[keyEnv]);
+  if (r === 'ok') console.log(`\nChave do Jev (${keyEnv}): OK.`);
+  else if (r === 'recusada') {
+    console.log(`\nAtenção: a chave em ${keyEnv} foi RECUSADA pelo Jev. Pedidos irão para ${semChave} até corrigir.`);
+    comoDefinir();
+  } else console.log(`\nNão foi possível testar a chave agora (${r}). O roteador tenta de novo a cada pedido.`);
 }
 console.log('Reinicie o Claude Code no projeto para carregar hook, agentes e statusline.');
+
+async function checkKey(c, key) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), c?.timeout_ms || 5000);
+  try {
+    const res = await fetch(c.endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: c.model,
+        state: 'teste de chave do instalador',
+        questions: { ok: { type: 'noul', instructions: 'Este texto é um teste?' } },
+      }),
+      signal: ctrl.signal,
+    });
+    if (res.status === 401 || res.status === 403) return 'recusada';
+    return res.ok ? 'ok' : `HTTP ${res.status}`;
+  } catch (e) {
+    return e.name === 'AbortError' ? 'timeout' : 'sem conexão';
+  } finally {
+    clearTimeout(timer);
+  }
+}

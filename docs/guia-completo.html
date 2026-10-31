@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agentic OS — Guia Completo</title>
-<meta name="description" content="Como funciona o plugin Agentic OS v1.7.1: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
+<meta name="description" content="Como funciona o plugin Agentic OS v1.7.2: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
 <style>
 :root{
   --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f0eee8; --text:#1d1c1a; --muted:#5f5b53;
@@ -107,7 +107,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
 <div class="layout">
 <nav class="toc" aria-label="Sumário">
   <div class="brand">Agentic OS</div>
-  <div class="ver">Guia completo · v1.7.1</div>
+  <div class="ver">Guia completo · v1.7.2</div>
   <div class="links">
     <div class="grp">Entender</div>
     <a href="#oque">1. O que é</a>
@@ -135,7 +135,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
   <p class="lead">Um jeito de organizar os arquivos do seu projeto para que a IA (Claude, Codex, Gemini…) lembre o que já foi feito, siga regras, trabalhe com especialistas e use o modelo certo para cada tarefa.</p>
   <div class="pills">
     <span class="pill">Plugin para Claude Code e Codex</span>
-    <span class="pill">Versão 1.7.1</span>
+    <span class="pill">Versão 1.7.2</span>
     <span class="pill">Funciona em qualquer projeto</span>
     <span class="pill">Tudo opcional e por camadas</span>
   </div>
@@ -368,12 +368,13 @@ claude plugin install agentic-os@agentic-os</code></pre>
 
   <h3>Passo 3 (opcional): ligar o roteador de modelos</h3>
   <ol class="steps">
-    <li><b>Chave do Jev</b> (painel da TypeSafe), só em variável de ambiente, nunca em arquivo versionado:
+    <li><b>Sua chave do Jev:</b> o plugin não traz chave nenhuma, e cada pessoa usa a própria. Crie a sua em <a href="https://console.typesafe.ai/keys">console.typesafe.ai/keys</a> e guarde só em variável de ambiente, nunca em arquivo versionado:
       <pre><code>setx TYPESAFE_API_KEY "sua-chave"        # Windows (reabra terminal e VS Code)
-export TYPESAFE_API_KEY=sua-chave        # macOS / Linux</code></pre></li>
+export TYPESAFE_API_KEY=sua-chave        # macOS / Linux</code></pre>
+      Na instalação, o instalador <b>testa a chave</b> e diz se está OK, recusada ou faltando.</li>
     <li><b>Pré-visualizar</b> o que vai mudar (não altera nada):
       <pre><code>node "&lt;plugin&gt;/scripts/install-router.mjs" "C:/caminho/do/projeto" --dry-run</code></pre>
-      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.7.1</code> (ou um clone do repositório).</li>
+      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.7.2</code> (ou um clone do repositório).</li>
     <li><b>Instalar:</b> o mesmo comando sem <code>--dry-run</code>.</li>
     <li><b>Reiniciar</b> o Claude Code no projeto.</li>
   </ol>
@@ -404,6 +405,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   <h3>Histórico recente</h3>
   <div class="tablewrap"><table>
     <tr><th>Versão</th><th>Principal novidade</th></tr>
+    <tr><td>1.7.2</td><td>Cada pessoa usa a própria chave do Jev: o instalador testa a chave e a conversa avisa (1x por sessão) se ela faltar ou for recusada; <code>fallback_sem_chave</code> opcional.</td></tr>
     <tr><td>1.7.1</td><td>Perguntas só de leitura vão para o <code>rapido</code>, calibrado com o Jev real (11/11).</td></tr>
     <tr><td>1.7.0</td><td>Jev no padrão TypeSafe: "menor executor que faz bem", política por probabilidades, regras, continuação, filtro de avisos internos.</td></tr>
     <tr><td>1.6.0</td><td>O Jev passa a escolher o subagente; contexto da mensagem anterior.</td></tr>
@@ -418,8 +420,10 @@ claude plugin update agentic-os@agentic-os</code></pre>
   <h2>12. Problemas comuns</h2>
   <details><summary>O <code>/agentic-os</code> não mostra as novidades</summary>
     <p>Verifique se existe a pasta <code>~/.claude/skills/agentic-os</code>. Uma cópia antiga ali tem prioridade sobre o plugin e nunca é atualizada. Mova-a para fora (ex.: <code>~/.claude/skills/.trash/</code>) e reinicie.</p></details>
+  <details><summary>Apareceu "⚠️ Roteador de modelos: … não definida / recusada"</summary>
+    <p>O roteador está sem chave válida do Jev, então os pedidos vão para o nível de segurança (por padrão o Opus). O aviso aparece <b>uma vez por sessão</b>. Crie ou copie sua chave em <a href="https://console.typesafe.ai/keys">console.typesafe.ai/keys</a>, rode o <code>setx</code> e <b>reabra</b> o VS Code e o terminal. Para não pagar Opus enquanto não configura, defina <code>"fallback_sem_chave": "intermediario"</code> no <code>config.json</code>.</p></details>
   <details><summary>A barra mostra <code>roteador: erro → profundo</code></summary>
-    <p>O Jev não respondeu. Quase sempre é falta da <code>TYPESAFE_API_KEY</code> no ambiente: rode o <code>setx</code> e <b>reabra</b> o VS Code e o terminal. O roteador lê só a variável de ambiente, não o arquivo <code>.env</code>. Se sua chave tem outro nome, ajuste <code>classifier.api_key_env</code> no <code>config.json</code>.</p></details>
+    <p>O Jev não respondeu. Se for chave, você terá visto o aviso acima. Sem aviso, é falha passageira (rede, serviço ocupado) e o próximo pedido tenta de novo. O roteador lê só a variável de ambiente, não o arquivo <code>.env</code>. Se sua chave tem outro nome, ajuste <code>classifier.api_key_env</code> no <code>config.json</code>.</p></details>
   <details><summary>Tudo está indo para o Opus</summary>
     <p>Confira o motivo em <code>decisions.jsonl</code>. Se for <code>fallback</code>, é a chave. Se for o Jev escolhendo, ajuste os exemplos e exclusões em <code>agent_criteria</code> ou crie <code>rules</code> para casos fixos.</p></details>
   <details><summary>Respondi "sim" e foi para o Haiku</summary>
@@ -450,7 +454,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   </table></div>
 </section>
 
-<footer>Agentic OS v1.7.1 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
+<footer>Agentic OS v1.7.2 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
 </main>
 </div>
 <script>
