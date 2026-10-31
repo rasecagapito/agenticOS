@@ -1,3 +1,19 @@
+# Agentic OS v1.8.4
+
+**Correção: roteador rodando duas vezes por mensagem.** Em máquinas com um gancho global de usuário que já
+executa o `route.mjs` do projeto (caso do Agente de Cargas B1, `jev-com-env.mjs`), o gancho do instalador
+somava uma segunda execução: cada decisão ia duas vezes para o registro e o painel, e o Jev seria chamado em dobro.
+
+- `scripts/install-router.mjs` procura esse gancho em `~/.claude/settings.json` e `settings.local.json`. Se
+  existir, não adiciona o do projeto e, se ele já estiver lá, remove (preservando ganchos alheios).
+- Sem gancho global, nada muda: o projeto recebe o próprio gancho, como antes.
+- Testes isolados dos settings reais do usuário (`~/.claude`).
+
+Atualizar: `claude plugin marketplace update agentic-os`, `claude plugin update agentic-os@agentic-os` e
+`/router-update` nos projetos com roteador.
+
+---
+
 # Agentic OS v1.8.3
 
 **Correção de versionamento.** As releases v1.8.1 e v1.8.2 mudaram só o painel, e o manifesto do plugin

@@ -12,6 +12,11 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const ROUTER = path.join(REPO, 'template', 'E-roteador', '.claude', 'router');
 const { decide, isBypass, parseOverride, nextTier } = await import(pathToFileURL(path.join(ROUTER, 'decide.mjs')).href);
 // cfg = config da v1.6.0 (retrocompatibilidade); tpl = template atual (v1.7, projetos novos).
+// Isola os testes dos settings reais do usuário (~/.claude), que mudam o comportamento do instalador.
+const TEST_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador-home-'));
+process.env.HOME = TEST_HOME;
+process.env.USERPROFILE = TEST_HOME;
+
 const FIXTURE_V16 = path.join(REPO, 'scripts', 'tests', 'fixtures', 'config-v1.6.json');
 const cfg = JSON.parse(fs.readFileSync(FIXTURE_V16, 'utf8'));
 const tpl = JSON.parse(fs.readFileSync(path.join(ROUTER, 'config.json'), 'utf8'));
@@ -599,4 +604,52 @@ test('e2e v1.7 envelope: sem Jev, mantém o tier da sessão, não vira "anterior
   await runHook(proj, 'agora troque a cor', env);
   assert.deepEqual(lastBody.state.anterior, { subagente: 'profundo', pedido: 'migre o banco' });
   fs.rmSync(proj, { recursive: true, force: true });
+});
+
+test('instalador: gancho global do usuário não duplica o roteador', () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador-global-'));
+  const home = path.join(base, 'home');
+  const proj = path.join(base, 'proj');
+  fs.mkdirSync(path.join(proj, '.claude'), { recursive: true });
+  fs.mkdirSync(home);
+  const settingsPath = path.join(proj, '.claude', 'settings.json');
+  const instalar = (h) =>
+    spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj, '--no-key-check'], {
+      encoding: 'utf8',
+      env: { ...process.env, HOME: h, USERPROFILE: h },
+    });
+  const ups = () => JSON.parse(fs.readFileSync(settingsPath, 'utf8')).hooks?.UserPromptSubmit;
+
+  // Sem gancho global: instala o do projeto, ao lado de um gancho alheio.
+  const outro = { hooks: [{ type: 'command', command: 'echo outro' }] };
+  fs.writeFileSync(settingsPath, JSON.stringify({ hooks: { UserPromptSubmit: [outro] } }));
+  assert.equal(instalar(home).status, 0);
+  assert.equal(ups().length, 2);
+
+  // Com gancho global: remove só o do roteador e preserva o alheio.
+  fs.mkdirSync(path.join(home, '.claude'));
+  const glob = 'node "${AGENTECARGAB1_HOME}/hooks/jev-com-env.mjs" "${CLAUDE_PROJECT_DIR}/.claude/router/route.mjs"';
+  fs.writeFileSync(
+    path.join(home, '.claude', 'settings.json'),
+    JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [{ type: 'command', command: glob }] }] } }),
+  );
+  const r = instalar(home);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /gancho do projeto removido/);
+  assert.deepEqual(ups(), [outro]);
+
+  // Idempotente: não readiciona e avisa.
+  assert.match(instalar(home).stdout, /gancho não adicionado/);
+  assert.deepEqual(ups(), [outro]);
+
+  // Projeto só com o gancho do roteador: a chave hooks some em vez de ficar vazia.
+  fs.writeFileSync(
+    settingsPath,
+    JSON.stringify({
+      hooks: { UserPromptSubmit: [{ hooks: [{ type: 'command', command: 'node', args: ['${CLAUDE_PROJECT_DIR}/.claude/router/route.mjs'] }] }] },
+    }),
+  );
+  instalar(home);
+  assert.equal(JSON.parse(fs.readFileSync(settingsPath, 'utf8')).hooks, undefined);
+  fs.rmSync(base, { recursive: true, force: true });
 });
