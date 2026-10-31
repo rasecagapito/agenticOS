@@ -4,6 +4,11 @@ Classifica cada pedido **antes** de o modelo lê-lo e entrega o trabalho ao suba
 A sessão principal roda num modelo leve e funciona como **recepção**: não executa, só delega e resume.
 Classificador padrão: **Jev** (TypeSafe System One). Template: `template/E-roteador/`.
 
+> ⚠️ **Antes de instalar:** o roteador usa a chave **sua** do Jev (https://console.typesafe.ai/keys).
+> **Sem a chave, ou com chave recusada, todos os pedidos vão para o Opus** (o mais caro) até ela ser
+> configurada. Para usar o Sonnet nesse meio-tempo: `"fallback_sem_chave": "intermediario"`. Ver
+> [Chave do Jev](#chave-do-jev-cada-pessoa-usa-a-sua).
+
 ## Fluxo
 
 ```

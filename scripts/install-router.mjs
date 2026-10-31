@@ -44,6 +44,24 @@ if (!fs.existsSync(DEST) || !fs.statSync(DEST).isDirectory()) {
   process.exit(1);
 }
 
+// 0. Aviso antes de tudo: sem a chave do Jev, a decisão vai para o fallback (padrão: Opus).
+{
+  const pre = readJson(path.join(DEST, '.claude', 'router', 'config.json'), null) ||
+    readJson(path.join(SRC, '.claude', 'router', 'config.json'), {});
+  const env = pre.classifier?.api_key_env || 'TYPESAFE_API_KEY';
+  if (!process.env[env]) {
+    const id = pre.fallback_sem_chave || pre.fallback_tier;
+    const t = pre.tiers?.find((x) => x.id === id || x.agent === id);
+    const destino = t ? `${t.agent} (${t.model_label})` : id || 'profundo (Opus)';
+    console.log('==================================================================');
+    console.log(` ATENÇÃO: ${env} não está definida.`);
+    console.log(` Sem a chave do Jev, TODOS os pedidos vão para ${destino}${t?.model === 'opus' ? ', o modelo mais caro' : ''},`);
+    console.log(' até você configurar a sua chave (https://console.typesafe.ai/keys).');
+    console.log(' Para usar Sonnet enquanto isso: "fallback_sem_chave": "intermediario" no config.json.');
+    console.log('==================================================================\n');
+  }
+}
+
 // 1. Código do plugin (sempre sobrescreve)
 for (const f of fs.readdirSync(path.join(SRC, '.claude', 'router'))) {
   if (f === 'config.json' || f === 'decisions.jsonl') continue;

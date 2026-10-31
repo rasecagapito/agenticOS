@@ -1,3 +1,19 @@
+# Agentic OS v1.7.3
+
+**Aviso logo no início: sem a chave do Jev, tudo vai para o Opus.** O usuário passa a saber disso
+**antes** de configurar, e não só depois que o custo aparece.
+
+- **Skill**: a Fase de descoberta ganha a pergunta 5 ("Quer o Roteador de Modelos?"), que vem com o
+  aviso obrigatório "sem a chave, todos os pedidos vão para o Opus" e três opções: configurar a chave
+  agora, instalar com `fallback_sem_chave: "intermediario"` (Sonnet) ou não instalar. O aviso também
+  aparece na confirmação do Modo A e na seção do roteador.
+- **Instalador**: sem a chave no ambiente, a **primeira coisa** impressa, antes de alterar qualquer
+  arquivo e também no `--dry-run`, é um quadro de ATENÇÃO dizendo para onde os pedidos vão, com o link
+  da chave e a alternativa do Sonnet.
+- **Docs**: aviso em destaque no topo do `ROUTER.md`, no passo de instalação do guia completo e no README.
+
+---
+
 # Agentic OS v1.7.2
 
 **Cada pessoa usa a própria chave do Jev, e fica sabendo quando ela falta.** O plugin nunca trouxe
