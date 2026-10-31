@@ -1,3 +1,17 @@
+# Agentic OS v1.8.2 (painel 1.1.0)
+
+**Consumo da sessão sempre visível no painel.** Antes, sem o roteador instalado, o painel mostrava só os
+botões. Agora a primeira seção, **Consumo desta sessão**, aparece em qualquer projeto:
+
+- **US$ gastos**: o mesmo total do `/cost` (`$.session.usage().cost.usd`).
+- **Contexto usado**: % da janela de contexto em uso.
+- Atualiza sozinho pelo evento `session.measure`, sem polling. A economia por subagente continua
+  aparecendo quando o roteador está ativo.
+
+Atualizar: `claude plugin marketplace update agentic-os` e `claude plugin update agentic-os-painel@agentic-os`.
+
+---
+
 # Agentic OS v1.8.1 (painel 1.0.1)
 
 **Correção do painel:** ao iniciar uma sessão no VS Code ou no Desktop, a tela pode ainda não estar
