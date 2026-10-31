@@ -202,7 +202,8 @@ claude plugin update agentic-os@agentic-os
 
 O instalador é idempotente: sobrescreve o código do roteador, **preserva** `config.json` (só acrescenta
 chaves novas) e o log, faz merge dos settings sem apagar hooks/permissões e mantém uma statusLine
-própria do projeto, se já houver. Para mudar modelos/tiers: editar `config.json` e rodar
+própria do projeto, se já houver. Se um gancho global do usuário já roda o `route.mjs` do projeto (ex.: `jev-com-env.mjs` do Agente de Cargas),
+o instalador não adiciona o gancho do projeto e remove o existente, para o roteador não rodar duas vezes. Para mudar modelos/tiers: editar `config.json` e rodar
 `node .claude/router/emit-agents.mjs`.
 
 ## Contexto do projeto enviado ao Jev
