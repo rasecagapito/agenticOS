@@ -73,6 +73,26 @@ test('contabiliza o subagente, mostra economia, decisões e só os botões que e
   expect(rodados).toContain('wrapup')
 })
 
+test('sem tela no início não tenta abrir; abre quando a tela se conecta', async ($, on) => {
+  const abertos: string[] = []
+  let telas: Array<'terminal' | 'desktop' | 'vscode' | 'mobile'> = []
+  on('command.register', () => ({ value: { command: 'painel' } }))
+  on('session.surfaces', () => ({ value: telas }))
+  on('ui.open', (_, e) => {
+    abertos.push(e.id)
+    return { value: { isPlaced: true } }
+  })
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('session.attach', (_, e) => ({ clientId: e.clientId }))
+
+  await $.session.start({ cwd: '/', surface: 'vscode', isInteractive: true })
+  expect(abertos).toEqual([])
+
+  telas = ['vscode']
+  await $.session.attach({ clientId: 'c1', surface: 'vscode' })
+  expect(abertos).toEqual(['agentic-os-painel'])
+})
+
 test('sem comandos próprios: botões chamam a skill do plugin com /status e /wrapup', async ($, on) => {
   const rodados: Array<{ command: string; args: string }> = []
   on('fs.read', () => {
