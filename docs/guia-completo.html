@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic OS — Guia Completo</title>
+<meta name="description" content="Como funciona o plugin Agentic OS v1.7.1: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
+<style>
+:root{
+  --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f0eee8; --text:#1d1c1a; --muted:#5f5b53;
+  --line:#e2ded4; --accent:#b4532a; --accent-soft:#f6e5dc; --ok:#2f7d4f; --ok-soft:#e1f1e7;
+  --warn:#9a6a00; --warn-soft:#fbf0d4; --info:#2b5f8a; --info-soft:#e2edf6;
+  --haiku:#2f7d4f; --sonnet:#2b5f8a; --opus:#7a3fa0;
+  --code-bg:#1f1e1b; --code-text:#f2efe8;
+  --radius:12px; --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151412; --surface:#1d1c19; --surface-2:#252420; --text:#ece8df; --muted:#a7a197;
+    --line:#34322d; --accent:#e08a5f; --accent-soft:#3a2a21; --ok:#6cc08f; --ok-soft:#1f3328;
+    --warn:#e0b44f; --warn-soft:#3a3120; --info:#7fb3dd; --info-soft:#1f2c38;
+    --haiku:#6cc08f; --sonnet:#7fb3dd; --opus:#c595e3; --code-bg:#0f0e0d; --code-text:#ece8df;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151412; --surface:#1d1c19; --surface-2:#252420; --text:#ece8df; --muted:#a7a197;
+  --line:#34322d; --accent:#e08a5f; --accent-soft:#3a2a21; --ok:#6cc08f; --ok-soft:#1f3328;
+  --warn:#e0b44f; --warn-soft:#3a3120; --info:#7fb3dd; --info-soft:#1f2c38;
+  --haiku:#6cc08f; --sonnet:#7fb3dd; --opus:#c595e3; --code-bg:#0f0e0d; --code-text:#ece8df;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+code{font:0.88em ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--surface-2);padding:.1em .35em;border-radius:5px}
+pre{background:var(--code-bg);color:var(--code-text);padding:14px 16px;border-radius:10px;overflow-x:auto;font:13.5px/1.55 ui-monospace,Consolas,monospace;margin:12px 0}
+pre code{background:none;padding:0;color:inherit}
+.layout{display:grid;grid-template-columns:260px 1fr;max-width:1240px;margin:0 auto}
+nav.toc{position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 18px;border-right:1px solid var(--line)}
+nav.toc .brand{font-weight:700;font-size:18px;margin-bottom:2px}
+nav.toc .ver{color:var(--muted);font-size:13px;margin-bottom:18px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:7px;font-size:14.5px}
+nav.toc a:hover{background:var(--surface-2);color:var(--text)}
+nav.toc .grp{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 10px 4px;opacity:.8}
+main{padding:36px 44px 80px;min-width:0}
+header.hero{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:34px 34px 28px;box-shadow:var(--shadow);margin-bottom:28px}
+header.hero h1{margin:0 0 8px;font-size:34px;line-height:1.2}
+header.hero p.lead{font-size:18px;color:var(--muted);margin:0 0 18px;max-width:760px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+section{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:28px 30px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:16px}
+section h2{margin:0 0 6px;font-size:25px}
+section .kicker{color:var(--accent);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+section h3{font-size:18.5px;margin:26px 0 8px}
+p{margin:10px 0}
+.box{border-radius:10px;padding:14px 16px;margin:16px 0;border:1px solid var(--line)}
+.box.analogia{background:var(--accent-soft);border-color:transparent}
+.box.ok{background:var(--ok-soft);border-color:transparent}
+.box.warn{background:var(--warn-soft);border-color:transparent}
+.box.info{background:var(--info-soft);border-color:transparent}
+.box b.t{display:block;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:15px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:14px 0}
+.card{background:var(--surface-2);border-radius:10px;padding:14px 15px}
+.card .ico{font-size:22px}
+.card h4{margin:6px 0 4px;font-size:16px}
+.card p{margin:0;color:var(--muted);font-size:14.5px}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:16px 0}
+.flow .step{flex:1 1 140px;background:var(--surface-2);border-radius:10px;padding:12px;font-size:14.5px;position:relative}
+.flow .step b{display:block;font-size:13px;color:var(--accent);margin-bottom:3px}
+.flow .arrow{align-self:center;color:var(--muted);font-size:20px}
+ol.steps{counter-reset:s;list-style:none;padding:0}
+ol.steps>li{counter-increment:s;position:relative;padding:4px 0 10px 44px}
+ol.steps>li::before{content:counter(s);position:absolute;left:0;top:2px;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.tag{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:6px;color:#fff}
+.tag.h{background:var(--haiku)} .tag.s{background:var(--sonnet)} .tag.o{background:var(--opus)}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.tier{border-radius:12px;padding:16px;border:2px solid var(--line);background:var(--surface-2)}
+.tier.h{border-color:var(--haiku)} .tier.s{border-color:var(--sonnet)} .tier.o{border-color:var(--opus)}
+.tier h4{margin:0 0 4px}
+.tier small{color:var(--muted)}
+.tier ul{margin:8px 0 0;padding-left:18px;font-size:14.5px}
+details{background:var(--surface-2);border-radius:10px;padding:10px 14px;margin:10px 0}
+details summary{cursor:pointer;font-weight:600}
+.themebtn{margin-top:18px;background:var(--surface-2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;width:100%}
+footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
+@media (max-width: 900px){
+  .layout{grid-template-columns:1fr}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:16px}
+  nav.toc .links{display:flex;flex-wrap:wrap;gap:4px}
+  nav.toc .grp{display:none}
+  main{padding:18px 16px 60px}
+  header.hero{padding:22px 18px}
+  header.hero h1{font-size:26px}
+  section{padding:20px 16px}
+  .tiers{grid-template-columns:1fr}
+  .flow .arrow{display:none}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="Sumário">
+  <div class="brand">Agentic OS</div>
+  <div class="ver">Guia completo · v1.7.1</div>
+  <div class="links">
+    <div class="grp">Entender</div>
+    <a href="#oque">1. O que é</a>
+    <a href="#camadas">2. As 5 camadas</a>
+    <a href="#dia">3. O dia a dia</a>
+    <a href="#mudancas">4. Mudanças planejadas</a>
+    <div class="grp">Funcionalidades</div>
+    <a href="#conform">5. Auditoria A/B</a>
+    <a href="#multi">6. Várias IAs</a>
+    <a href="#estrutura">7. Motor de Estrutura</a>
+    <a href="#roteador">8. Roteador de modelos</a>
+    <a href="#templates">9. Templates</a>
+    <div class="grp">Usar</div>
+    <a href="#instalar">10. Instalar</a>
+    <a href="#atualizar">11. Atualizar</a>
+    <a href="#problemas">12. Problemas comuns</a>
+    <a href="#glossario">13. Glossário</a>
+  </div>
+  <button class="themebtn" id="themebtn" type="button">Alternar tema claro/escuro</button>
+</nav>
+
+<main>
+<header class="hero">
+  <h1>Agentic OS — Guia Completo</h1>
+  <p class="lead">Um jeito de organizar os arquivos do seu projeto para que a IA (Claude, Codex, Gemini…) lembre o que já foi feito, siga regras, trabalhe com especialistas e use o modelo certo para cada tarefa.</p>
+  <div class="pills">
+    <span class="pill">Plugin para Claude Code e Codex</span>
+    <span class="pill">Versão 1.7.1</span>
+    <span class="pill">Funciona em qualquer projeto</span>
+    <span class="pill">Tudo opcional e por camadas</span>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="oque">
+  <div class="kicker">Entender</div>
+  <h2>1. O que é e por que existe</h2>
+  <div class="box analogia"><b class="t">🧠 A analogia</b>
+    Usar uma IA num projeto é como contratar um <b>funcionário brilhante que perde a memória toda noite</b>. Todo dia você explica de novo o que é a empresa, o que já foi feito, o que deu errado e o que fazer agora. Você perde tempo, ele erra por falta de histórico e cada explicação custa dinheiro (tokens).
+  </div>
+  <p>O <b>Agentic OS não é um programa</b>. É um <b>método de organização de pastas e arquivos</b> que monta o "escritório" desse funcionário: crachá com as regras, arquivo de conhecimento, diário de bordo, caderno de lições, equipe de especialistas e regras de segurança. A IA abre o projeto, lê esses arquivos e <b>continua de onde parou</b>.</p>
+  <div class="grid">
+    <div class="card"><div class="ico">⏱️</div><h4>Sem "partida a frio"</h4><p>A IA não começa do zero a cada sessão.</p></div>
+    <div class="card"><div class="ico">💰</div><h4>Menos tokens</h4><p>Lê só o que precisa, na hora certa.</p></div>
+    <div class="card"><div class="ico">📓</div><h4>Memória que cresce</h4><p>Cada sessão deixa registro e aprendizados.</p></div>
+    <div class="card"><div class="ico">🛡️</div><h4>Regras claras</h4><p>O que exige sua aprovação fica escrito.</p></div>
+  </div>
+  <p>O plugin traz a <b>skill</b> <code>agentic-os</code> (as instruções que a IA segue para montar ou auditar essa organização), <b>templates</b> prontos, <b>comandos</b> (<code>/status</code>, <code>/wrapup</code>…) e camadas opcionais: várias IAs no mesmo projeto, organização do código e o <b>roteador de modelos</b>.</p>
+</section>
+
+<!-- 2 -->
+<section id="camadas">
+  <div class="kicker">Entender</div>
+  <h2>2. As 5 camadas (o escritório)</h2>
+  <p>Toda instalação do Agentic OS tem estas cinco peças. Cada uma é uma pasta ou arquivo comum no seu projeto.</p>
+  <div class="tablewrap"><table>
+    <tr><th>No escritório</th><th>No projeto</th><th>Para que serve</th></tr>
+    <tr><td>🪪 Crachá e manual</td><td><code>CLAUDE.md</code> ou <code>AGENTS.md</code></td><td>Quem a IA é, regras de trabalho, onde está cada coisa. É lido <b>automaticamente</b> em toda sessão, então é curto (até ~150–200 linhas).</td></tr>
+    <tr><td>🗂️ Arquivo por assunto</td><td><code>context/</code></td><td>Conhecimento do projeto: produto, arquitetura, stack. Projetos grandes podem ter uma subpasta por módulo (<code>context/auth/</code>, <code>context/billing/</code>).</td></tr>
+    <tr><td>📔 Diário de bordo</td><td><code>memory/history/</code></td><td>Um registro por sessão: o que foi feito, decisões e pendências.</td></tr>
+    <tr><td>📝 Caderno de lições</td><td><code>memory/learnings/</code></td><td>Erros que já aconteceram e como foram resolvidos. A IA consulta antes de investigar um bug.</td></tr>
+    <tr><td>👥 Equipe de especialistas</td><td><code>workers/</code></td><td>"Programador", "revisor", "arquiteto"… Cada um com papel, função, contexto que carrega e formato da resposta.</td></tr>
+    <tr><td>🚦 Regras de segurança</td><td><code>automation/</code></td><td><code>guardrails.md</code> (o que pede sua aprovação: apagar, publicar, APIs pagas) e <code>evaluation.json</code> (critérios de qualidade antes de entregar).</td></tr>
+  </table></div>
+  <div class="box info"><b class="t">Peças de apoio</b>
+    <code>.claude/commands/</code> (os comandos), <code>changes/</code> (mudanças planejadas), <code>AGENTIC-OS.md</code> (resumo rápido do sistema) e um <b>gancho de encerramento</b> que, ao fechar o Claude Code, deixa um lembrete em <code>memory/history/</code> para você rodar <code>/wrapup</code>.
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="dia">
+  <div class="kicker">Entender</div>
+  <h2>3. O dia a dia</h2>
+  <div class="flow">
+    <div class="step"><b>1 · Chegar</b>"vamos começar": a IA lê o diário e diz onde parou.</div><div class="arrow">→</div>
+    <div class="step"><b>2 · Situação</b><code>/status</code>: resumo e as 3 pendências principais.</div><div class="arrow">→</div>
+    <div class="step"><b>3 · Trabalhar</b>Pedido pequeno: fale normalmente. Grande: <code>/propose</code>.</div><div class="arrow">→</div>
+    <div class="step"><b>4 · Fechar</b><code>/wrapup</code>: grava diário e lições.</div>
+  </div>
+  <div class="box warn"><b class="t">⚠️ O passo mais importante: <code>/wrapup</code></b>É ele que dá memória ao sistema. Sem ele, a próxima sessão não sabe o que aconteceu hoje.</div>
+  <h3>Comandos</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Comando</th><th>O que faz</th></tr>
+    <tr><td><code>/status</code></td><td>Branch atual, última sessão, estado das funcionalidades, top 3 pendências.</td></tr>
+    <tr><td><code>/propose &lt;nome&gt;</code></td><td>Cria uma mudança planejada em <code>changes/&lt;nome&gt;/</code> (proposta + lista de tarefas). Sem nome, lista as mudanças ativas.</td></tr>
+    <tr><td><code>/worker &lt;nome&gt;</code></td><td>Ativa um especialista e executa as tarefas da mudança ativa. Sem nome, lista os especialistas.</td></tr>
+    <tr><td><code>/wrapup</code></td><td>Fecha a sessão: diário, lições, arquiva a mudança concluída e atualiza o <code>context/</code>.</td></tr>
+    <tr><td><code>/conform</code></td><td>Audita se o projeto segue o padrão (e corrige com sua aprovação).</td></tr>
+    <tr><td><code>/handoff</code></td><td>Lê ou grava a "passagem de turno" entre IAs (projetos multi-provedor).</td></tr>
+    <tr><td><code>/structure</code></td><td>Monta ou audita a organização das pastas do código.</td></tr>
+    <tr><td><code>/router-update</code></td><td>Atualiza o roteador de modelos no projeto (só onde ele está instalado).</td></tr>
+  </table></div>
+  <p>No Codex e no Gemini, os mesmos comandos funcionam pedindo em linguagem natural ("faz o wrapup"): a lógica de cada um está escrita em <code>automation/procedures/</code>, igual para todas as IAs.</p>
+</section>
+
+<!-- 4 -->
+<section id="mudancas">
+  <div class="kicker">Entender</div>
+  <h2>4. Mudanças planejadas (<code>/propose</code> → <code>/worker</code> → <code>/wrapup</code>)</h2>
+  <div class="box analogia"><b class="t">🏗️ A analogia</b>Antes de reformar uma casa, o mestre de obras mostra a planta e a lista de etapas. Você aprova, e só então a obra começa.</div>
+  <ol class="steps">
+    <li><b><code>/propose adicionar-pagamento-pix</code></b>: a IA cria <code>changes/adicionar-pagamento-pix/</code> com <code>proposal.md</code> (o quê e por quê), <code>tasks.md</code> (passos com caixinhas <code>[ ]</code>) e, se for complexo, <code>design.md</code>.</li>
+    <li><b>Você lê e aprova</b>: ajusta o que quiser antes de começar.</li>
+    <li><b><code>/worker developer</code></b>: o especialista executa as tarefas, marcando <code>[x]</code> conforme termina.</li>
+    <li><b><code>/wrapup</code></b>: a mudança vai para <code>changes/archive/</code> e o que mudou entra no <code>context/</code>.</li>
+  </ol>
+  <p><b>Reorganizar um projeto existente</b> (mover pastas, juntar documentos) só acontece dentro de uma mudança aprovada (<code>/propose reorganize-&lt;alvo&gt;</code>), com regras rígidas: nada é apagado (vai para <code>_quarantine/</code>), referências são checadas e cada movimento fica registrado para desfazer.</p>
+</section>
+
+<!-- 5 -->
+<section id="conform">
+  <div class="kicker">Funcionalidades</div>
+  <h2>5. Montar e auditar: o loop A/B</h2>
+  <p>Ao pedir <code>/agentic-os</code> ("analisa este projeto" ou "monta um projeto novo") ou <code>/conform</code>, o plugin trabalha com dois papéis e você no meio:</p>
+  <div class="flow">
+    <div class="step"><b>Agente A · Auditor</b>Só lê. Compara com o padrão e marca cada item: CONFORME, FALTA ou DRIFT (fora do padrão).</div><div class="arrow">→</div>
+    <div class="step"><b>Você · Aprovação</b>Aprova tudo ou item por item.</div><div class="arrow">→</div>
+    <div class="step"><b>Agente B · Executor</b>Faz só o que foi aprovado, nada além.</div><div class="arrow">→</div>
+    <div class="step"><b>Agente A · Confere</b>Verifica no disco. Passou → fim. Não passou → corrige de novo (máx. 3 voltas).</div>
+  </div>
+  <div class="grid">
+    <div class="card"><h4>Projeto existente (Modo A)</h4><p><b>Regra de ouro: só cria.</b> Nunca move, renomeia ou apaga o que já existe. Conteúdo espalhado vira referência (<code>@arquivo</code>), sem duplicar.</p></div>
+    <div class="card"><h4>Projeto novo (Modo B)</h4><p>Pergunta tipo de projeto, stack, público e objetivo, e preenche os arquivos com conteúdo real, não com modelo vazio.</p></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="multi">
+  <div class="kicker">Funcionalidades · opcional</div>
+  <h2>6. Várias IAs no mesmo projeto</h2>
+  <div class="box analogia"><b class="t">🔁 A analogia</b>Um hospital com troca de plantão: quem sai deixa um bilhete curto para quem entra. Ninguém recomeça o atendimento do zero.</div>
+  <ul>
+    <li><b>Um cérebro só:</b> <code>AGENTS.md</code> é o arquivo principal. <code>CLAUDE.md</code> e <code>GEMINI.md</code> só apontam para ele (<code>@AGENTS.md</code>), então ninguém lê versões diferentes.</li>
+    <li><b>Passagem de turno:</b> <code>memory/handoff.md</code> tem no máximo 20 linhas, com qual IA trabalhou, quando, a mudança ativa e o próximo passo. O "onde parei" é sempre a primeira caixinha <code>[ ]</code> do <code>tasks.md</code>, nunca copiado à mão.</li>
+    <li><b>Âncora no git:</b> ao fechar cada tarefa grava-se o <code>commit</code>, então "o que aconteceu" vem do histórico real.</li>
+    <li><b>Orquestração (opcional):</b> <b>você é o chefe final</b>. Uma IA coordena e propõe lotes de 3 a 5 tarefas; as outras só executam até o <b>Limite aprovado</b>, que só avança com sua aprovação registrada.</li>
+  </ul>
+</section>
+
+<!-- 7 -->
+<section id="estrutura">
+  <div class="kicker">Funcionalidades · opcional</div>
+  <h2>7. Motor de Estrutura (organização do código)</h2>
+  <p>As camadas anteriores organizam o <b>cérebro da IA</b>; o Motor organiza as <b>pastas do código</b> da sua aplicação, de forma verificável. Comando: <code>/structure</code>.</p>
+  <ul>
+    <li><b>Perfis:</b> <code>next-app</code> (Next.js App Router, com componentes, ações e acesso a dados junto de cada rota) e <code>generico</code> (organização por funcionalidade).</li>
+    <li><b>Uma regra para todas as IAs:</b> as regras são escritas uma vez e convertidas para o formato do Cursor, Copilot, Codex e Gemini, com checagem automática para nunca divergirem.</li>
+    <li><b>Projeto existente começa no "Tier 0":</b> só instala as regras; o código não é tocado e o que for novo já nasce organizado. Migrar um módulo é opcional, via <code>/propose migrate-&lt;módulo&gt;</code>, e só vale se build e testes passarem.</li>
+  </ul>
+</section>
+
+<!-- 8 -->
+<section id="roteador">
+  <div class="kicker">Funcionalidades · opcional · Claude Code</div>
+  <h2>8. Roteador de modelos (com Jev)</h2>
+  <div class="box analogia"><b class="t">🏥 A analogia: uma clínica com recepção</b>
+    Você chega com um problema. A <b>triagem</b> (o Jev) avalia em menos de meio segundo. A <b>recepcionista</b> (Haiku, a IA mais barata) não atende ninguém: só encaminha. Coisa simples vai para o clínico rápido; trabalho comum, para o profissional padrão; caso difícil, para o especialista. Você recebe só o resumo do atendimento.
+  </div>
+  <div class="tiers">
+    <div class="tier h"><h4><span class="tag h">rapido</span> Haiku</h4><small>Barato e rápido</small>
+      <ul><li>Trocar texto, cor, renomear</li><li>Perguntas só de leitura: "o que faz este arquivo?", "como funciona o login?"</li></ul></div>
+    <div class="tier s"><h4><span class="tag s">padrao</span> Sonnet</h4><small>Equilibrado</small>
+      <ul><li>Tela nova, endpoint, testes</li><li>Campo novo num cadastro</li><li>Refatoração com escopo claro</li></ul></div>
+    <div class="tier o"><h4><span class="tag o">profundo</span> Opus</h4><small>O mais capaz</small>
+      <ul><li>Bug sem causa conhecida</li><li>Mexer em autenticação, dados, segurança</li><li>Mudança que atravessa o projeto</li></ul></div>
+  </div>
+
+  <h3>O que acontece quando você manda uma mensagem</h3>
+  <div class="flow">
+    <div class="step"><b>1</b>Você digita.</div><div class="arrow">→</div>
+    <div class="step"><b>2 · Gancho</b>Antes de a IA ler, um script (<code>route.mjs</code>) entra em ação.</div><div class="arrow">→</div>
+    <div class="step"><b>3 · Decisão</b>Regras rápidas ou o Jev escolhem o executor.</div><div class="arrow">→</div>
+    <div class="step"><b>4 · Recepção</b>O Haiku entrega ao subagente indicado.</div><div class="arrow">→</div>
+    <div class="step"><b>5 · Resumo</b>Feito, verificações e pendências.</div>
+  </div>
+
+  <h3>Ordem da decisão</h3>
+  <ol class="steps">
+    <li><b>Passa direto (sem roteamento):</b> <code>/comandos</code>, <code>!comando</code> (modo terminal do Claude Code) e avisos internos do próprio Claude Code (retorno de subagente, notificações).</li>
+    <li><b>Você escolheu:</b> <code>nivel:avancado conserte o login</code> (ou <code>basico</code>, <code>intermediario</code>) força o nível sem chamar o Jev.</li>
+    <li><b>Regras fixas</b> (<code>rules</code>): padrões de texto que você define vão direto a um nível, sem chamar o Jev.</li>
+    <li><b>Continuação:</b> "sim", "pode seguir", "opção 2" repetem o nível da tarefa anterior, sem chamar o Jev.</li>
+    <li><b>Jev:</b> recebe seu pedido, o pedido anterior e um resumo do projeto, e diz <b>qual executor</b> é o menor que faz bem o trabalho, com a probabilidade de cada um.</li>
+    <li><b>Rede de segurança:</b> se houver chance relevante de precisar de mais força (padrão ≥ 50% somando os níveis acima, profundo ≥ 35%), sobe de nível. Se o Jev falhar (sem chave, fora do ar, demora acima de 5 s), vai para o <b>profundo</b>.</li>
+  </ol>
+
+  <h3>O que é o Jev</h3>
+  <p>Uma IA da TypeSafe feita para <b>respostas curtas e objetivas</b>, e não para conversar: devolve uma escolha e a probabilidade, por exemplo <code>padrao 0.98</code>. Roda em ~0,3–0,5 s por pedido. Ele não lê seus arquivos nem programa; só ajuda a escolher. A decisão final é sempre aplicada pelo código, de forma previsível.</p>
+
+  <h3>Resultado real (teste com um projeto de barbearia)</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Pedido</th><th>Foi para</th></tr>
+    <tr><td>Troque o texto do botão "Agendar"</td><td><span class="tag h">rapido</span> 100%</td></tr>
+    <tr><td>Como funciona o login do painel? · Explique o pagamento com Stripe</td><td><span class="tag h">rapido</span> 99%</td></tr>
+    <tr><td>Crie a tela de histórico de agendamentos</td><td><span class="tag s">padrao</span> 99%</td></tr>
+    <tr><td>Adicione o campo telefone no cadastro</td><td><span class="tag s">padrao</span> 80%</td></tr>
+    <tr><td>Dois clientes marcam o mesmo horário, descubra por quê</td><td><span class="tag o">profundo</span> 77%</td></tr>
+    <tr><td>Migre a autenticação de NextAuth para Clerk</td><td><span class="tag o">profundo</span> 100%</td></tr>
+    <tr><td>"sim, pode seguir" (após a tarefa anterior)</td><td><span class="tag o">profundo</span> continuação</td></tr>
+  </table></div>
+
+  <h3>Como acompanhar</h3>
+  <ul>
+    <li><b>Barra de status</b> (rodapé do Claude Code): <code>roteador: jev 0.98 → padrao (Sonnet)</code>. Outras formas: <code>manual →</code> (você forçou), <code>continua →</code>, <code>regra:&lt;nome&gt; →</code>, <code>erro → profundo</code>.</li>
+    <li><b>Registro:</b> <code>.claude/router/decisions.jsonl</code>, uma linha por pedido com horário, início da mensagem (80 caracteres, nunca o texto inteiro), escolha, probabilidades, motivo e tempo do Jev.</li>
+  </ul>
+
+  <h3>Ajustes (<code>.claude/router/config.json</code>)</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Chave</th><th>Para quê</th></tr>
+    <tr><td><code>agent_criteria</code></td><td>Descrição, exemplos e exclusões de cada executor: é o que o Jev lê para escolher. É o principal ajuste fino.</td></tr>
+    <tr><td><code>policy</code></td><td>Quando subir de nível (<code>probabilidades</code>, padrão em projetos novos, ou <code>confianca</code>).</td></tr>
+    <tr><td><code>rules</code></td><td>Atalhos por padrão de texto, ex.: tudo que fala de "migration" vai para o profundo.</td></tr>
+    <tr><td><code>continuacao</code></td><td>Quais respostas curtas herdam o nível anterior.</td></tr>
+    <tr><td><code>tiers</code></td><td>Qual modelo cada executor usa. Depois de mudar, rode <code>node .claude/router/emit-agents.mjs</code>.</td></tr>
+    <tr><td><code>fallback_tier</code> · <code>max_escalations</code></td><td>Para onde ir se o Jev falhar · quantas vezes um executor pode passar a tarefa para o nível acima.</td></tr>
+    <tr><td><code>decision_mode</code></td><td><code>jev</code> (o Jev escolhe) ou <code>regras</code> (o Jev só classifica e o código decide pelos limites de risco e confiança).</td></tr>
+  </table></div>
+  <div class="box warn"><b class="t">Limitações honestas</b>
+    A recepção (Haiku) é orientada a sempre delegar, mas isso não é garantido 100%: vale olhar o registro nos primeiros dias. Cada mensagem soma ~0,5 s e alguns centavos do Jev. Seu pedido e um resumo do projeto vão para os servidores da TypeSafe, então não coloque senhas no <code>CLAUDE.md</code> nem nas mensagens.
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="templates">
+  <div class="kicker">Funcionalidades</div>
+  <h2>9. Templates prontos</h2>
+  <div class="tablewrap"><table>
+    <tr><th>Template</th><th>Para</th></tr>
+    <tr><td><code>A-generico</code></td><td>Conteúdo, marketing, projetos não técnicos.</td></tr>
+    <tr><td><code>B-saas-n8n</code></td><td>SaaS com automações n8n (WhatsApp, Telegram…).</td></tr>
+    <tr><td><code>C-claude-integrado</code></td><td>SaaS usando Claude Code com Superpowers.</td></tr>
+    <tr><td><code>D-multi-provedor</code></td><td>Várias IAs no mesmo cérebro, com passagem de turno e orquestração.</td></tr>
+    <tr><td><code>E-roteador</code></td><td>Camada do roteador de modelos (instalada pelo instalador próprio, sobre qualquer projeto).</td></tr>
+  </table></div>
+  <p>Especialistas sugeridos por tipo de projeto: SaaS (<i>developer, workflow-designer, arquiteto, qa</i>), conteúdo (<i>roteirista, pesquisador, analista</i>), consultoria (<i>consultor, gestor, documentador</i>). Use só os que fazem sentido.</p>
+</section>
+
+<!-- 10 -->
+<section id="instalar">
+  <div class="kicker">Usar</div>
+  <h2>10. Instalar</h2>
+  <h3>Passo 1: instalar o plugin (uma vez por computador)</h3>
+  <p><b>Claude Code</b>, no terminal:</p>
+  <pre><code>claude plugin marketplace add rasecagapito/agenticOS
+claude plugin install agentic-os@agentic-os</code></pre>
+  <p>Ou dentro do Claude Code: <code>/plugin marketplace add rasecagapito/agenticOS</code> e <code>/plugin install agentic-os@agentic-os</code>. Reinicie o Claude Code depois.</p>
+  <p><b>Codex:</b> <code>codex plugin marketplace add rasecagapito/agenticOS</code>, depois abra <b>Plugins</b>, instale <b>Agentic OS</b> e inicie uma nova tarefa.</p>
+  <p><b>Gemini e outras IAs:</b> não precisam de plugin. Usam os arquivos que o Agentic OS cria no projeto (<code>AGENTS.md</code>, <code>GEMINI.md</code>, <code>automation/procedures/</code>).</p>
+
+  <h3>Passo 2: montar o Agentic OS num projeto</h3>
+  <ol class="steps">
+    <li>Abra o Claude Code na pasta do projeto.</li>
+    <li>Digite <code>/agentic-os</code> e peça <b>"analisa este projeto"</b> (se já existe) ou <b>"monta um projeto novo"</b>.</li>
+    <li>Leia a tabela do que falta e aprove. Nada seu é apagado nem movido.</li>
+    <li>Para várias IAs, peça também "ativa o multi-provedor".</li>
+  </ol>
+
+  <h3>Passo 3 (opcional): ligar o roteador de modelos</h3>
+  <ol class="steps">
+    <li><b>Chave do Jev</b> (painel da TypeSafe), só em variável de ambiente, nunca em arquivo versionado:
+      <pre><code>setx TYPESAFE_API_KEY "sua-chave"        # Windows (reabra terminal e VS Code)
+export TYPESAFE_API_KEY=sua-chave        # macOS / Linux</code></pre></li>
+    <li><b>Pré-visualizar</b> o que vai mudar (não altera nada):
+      <pre><code>node "&lt;plugin&gt;/scripts/install-router.mjs" "C:/caminho/do/projeto" --dry-run</code></pre>
+      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.7.1</code> (ou um clone do repositório).</li>
+    <li><b>Instalar:</b> o mesmo comando sem <code>--dry-run</code>.</li>
+    <li><b>Reiniciar</b> o Claude Code no projeto.</li>
+  </ol>
+  <div class="box info"><b class="t">O que o instalador muda no projeto</b>
+    Cria <code>.claude/router/</code> e os subagentes <code>rapido</code>, <code>padrao</code> e <code>profundo</code>; liga o gancho; <b>troca o modelo principal do projeto para Haiku</b> (a recepção); configura a barra de status (somando à sua, se já tiver uma); acrescenta 2 linhas ao <code>CLAUDE.md</code>; ignora o registro no git. Não apaga hooks, permissões nem arquivos existentes. Pode rodar de novo sem duplicar nada.
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="atualizar">
+  <div class="kicker">Usar</div>
+  <h2>11. Atualizar</h2>
+  <h3>O plugin (em cada computador)</h3>
+  <pre><code>claude plugin marketplace update agentic-os
+claude plugin update agentic-os@agentic-os</code></pre>
+  <p>O plugin vem direto da <code>main</code> do GitHub: quando sai versão nova, esses dois comandos já trazem. Reinicie o Claude Code.</p>
+  <div class="box warn"><b class="t">Projetos com instalação própria</b>Se um projeto instalou o plugin só para ele (escopo de projeto), rode o <code>claude plugin update agentic-os@agentic-os</code> <b>dentro da pasta desse projeto</b>.</div>
+
+  <h3>O roteador (em cada projeto que o usa)</h3>
+  <p>Depois de atualizar o plugin, dentro do projeto:</p>
+  <pre><code>/router-update</code></pre>
+  <ul>
+    <li>Atualiza scripts, procedimento e subagentes para a versão nova.</li>
+    <li><b>Preserva</b> seu <code>config.json</code> e o registro de decisões.</li>
+    <li>Novas opções não são ligadas sozinhas, para não mudar o comportamento sem você saber. O instalador lista as disponíveis e você ativa no <code>config.json</code>.</li>
+    <li>Melhorias nos critérios (<code>agent_criteria</code>) também não são copiadas, porque seriam as suas. Para usar os critérios novos, copie o bloco do template (<code>template/E-roteador/.claude/router/config.json</code>).</li>
+  </ul>
+  <h3>Histórico recente</h3>
+  <div class="tablewrap"><table>
+    <tr><th>Versão</th><th>Principal novidade</th></tr>
+    <tr><td>1.7.1</td><td>Perguntas só de leitura vão para o <code>rapido</code>, calibrado com o Jev real (11/11).</td></tr>
+    <tr><td>1.7.0</td><td>Jev no padrão TypeSafe: "menor executor que faz bem", política por probabilidades, regras, continuação, filtro de avisos internos.</td></tr>
+    <tr><td>1.6.0</td><td>O Jev passa a escolher o subagente; contexto da mensagem anterior.</td></tr>
+    <tr><td>1.5.0</td><td>Roteador de modelos (Jev + Haiku/Sonnet/Opus).</td></tr>
+    <tr><td>1.4.0</td><td>Passagem de turno reforçada e orquestração com você como chefe final.</td></tr>
+  </table></div>
+</section>
+
+<!-- 12 -->
+<section id="problemas">
+  <div class="kicker">Usar</div>
+  <h2>12. Problemas comuns</h2>
+  <details><summary>O <code>/agentic-os</code> não mostra as novidades</summary>
+    <p>Verifique se existe a pasta <code>~/.claude/skills/agentic-os</code>. Uma cópia antiga ali tem prioridade sobre o plugin e nunca é atualizada. Mova-a para fora (ex.: <code>~/.claude/skills/.trash/</code>) e reinicie.</p></details>
+  <details><summary>A barra mostra <code>roteador: erro → profundo</code></summary>
+    <p>O Jev não respondeu. Quase sempre é falta da <code>TYPESAFE_API_KEY</code> no ambiente: rode o <code>setx</code> e <b>reabra</b> o VS Code e o terminal. O roteador lê só a variável de ambiente, não o arquivo <code>.env</code>. Se sua chave tem outro nome, ajuste <code>classifier.api_key_env</code> no <code>config.json</code>.</p></details>
+  <details><summary>Tudo está indo para o Opus</summary>
+    <p>Confira o motivo em <code>decisions.jsonl</code>. Se for <code>fallback</code>, é a chave. Se for o Jev escolhendo, ajuste os exemplos e exclusões em <code>agent_criteria</code> ou crie <code>rules</code> para casos fixos.</p></details>
+  <details><summary>Respondi "sim" e foi para o Haiku</summary>
+    <p>Verifique se <code>continuacao</code> está configurada. Ou force: <code>nivel:avancado sim, pode seguir</code>.</p></details>
+  <details><summary>A recepção respondeu sozinha em vez de delegar</summary>
+    <p>Confira se o bloco do roteador está no <code>CLAUDE.md</code> (rode <code>/router-update</code>) e se os subagentes existem em <code>.claude/agents/</code>. Se persistir, peça explicitamente "delegue ao subagente indicado".</p></details>
+  <details><summary>Quero desligar o roteador num projeto</summary>
+    <p>Apague ou renomeie <code>.claude/router/config.json</code>: sem ele o gancho não faz nada. Para voltar ao modelo anterior, remova <code>"model": "haiku"</code> do <code>.claude/settings.json</code>.</p></details>
+  <details><summary>Comecei a mensagem com <code>!</code> e nada aconteceu</summary>
+    <p>No Claude Code, <code>!</code> no início é o modo terminal: roda um comando do sistema e não fala com a IA.</p></details>
+</section>
+
+<!-- 13 -->
+<section id="glossario">
+  <div class="kicker">Usar</div>
+  <h2>13. Glossário</h2>
+  <div class="tablewrap"><table>
+    <tr><th>Termo</th><th>Significado</th></tr>
+    <tr><td>Skill</td><td>Conjunto de instruções que a IA carrega para fazer um tipo de tarefa.</td></tr>
+    <tr><td>Plugin</td><td>Pacote instalável que traz skills, comandos e templates para o Claude Code ou Codex.</td></tr>
+    <tr><td>Token</td><td>Unidade de texto que a IA lê e escreve; é o que se paga.</td></tr>
+    <tr><td>Subagente</td><td>IA auxiliar que recebe uma tarefa da sessão principal e devolve o resultado.</td></tr>
+    <tr><td>Gancho (hook)</td><td>Script que o Claude Code roda automaticamente num momento (ao enviar mensagem, ao fechar…).</td></tr>
+    <tr><td>Drift</td><td>Quando algo saiu do padrão ou ficou duplicado e desatualizado.</td></tr>
+    <tr><td>Handoff</td><td>Passagem de turno entre IAs.</td></tr>
+    <tr><td>Haiku · Sonnet · Opus</td><td>Modelos do Claude, do mais barato e rápido ao mais capaz.</td></tr>
+    <tr><td>Jev</td><td>Modelo da TypeSafe que dá respostas objetivas com probabilidade; usado pelo roteador para escolher o executor.</td></tr>
+  </table></div>
+</section>
+
+<footer>Agentic OS v1.7.1 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
+</main>
+</div>
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById('themebtn');
+  try{var s=localStorage.getItem('aos-theme'); if(s) root.setAttribute('data-theme',s);}catch(e){}
+  btn.addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    if(!cur){cur=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+    var next=cur==='dark'?'light':'dark';
+    root.setAttribute('data-theme',next);
+    try{localStorage.setItem('aos-theme',next);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
