@@ -1,3 +1,16 @@
+# Agentic OS v1.8.3
+
+**Correção de versionamento.** As releases v1.8.1 e v1.8.2 mudaram só o painel, e o manifesto do plugin
+`agentic-os` continuou em `1.8.0`. Como `claude plugin update` compara a versão do manifesto, e não a tag do
+GitHub, os projetos diziam "já está na última versão" e mostravam 1.8.0. Agora a tag da release e os
+manifestos (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`)
+batem: **agentic-os 1.8.3**, painel 1.1.0. Sem mudança de funcionalidade em relação à v1.8.2.
+
+Atualizar: `claude plugin marketplace update agentic-os` e `claude plugin update agentic-os@agentic-os`
+(com `--scope project` nos projetos que têm instalação própria).
+
+---
+
 # Agentic OS v1.8.2 (painel 1.1.0)
 
 **Consumo da sessão sempre visível no painel.** Antes, sem o roteador instalado, o painel mostrava só os
