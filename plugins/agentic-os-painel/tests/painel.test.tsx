@@ -73,6 +73,35 @@ test('contabiliza o subagente, mostra economia, decisões e só os botões que e
   expect(rodados).toContain('wrapup')
 })
 
+test('consumo da sessão aparece mesmo sem roteador e acompanha o session.measure', async ($, on) => {
+  on('fs.read', () => {
+    throw new Error('ENOENT')
+  })
+  on('fs.exists', () => ({ value: false }))
+  on('command.list', () => ({ value: [cmd('agentic-os:agentic-os')] }))
+  on('session.usage', () => ({
+    value: { startedAt: 0, context: { window: 200000, percent: 42 }, rateLimits: [], cost: { usd: 1.23 } },
+  }))
+  on('session.measure', () => ({ changed: ['cost'] }))
+
+  let ui = await $.ui.mount({ ...PANE, surface: 'vscode' })
+  expect((await ui.find({ type: 'Text', text: /gastos/ }))?.text).toMatch(/US\$ 1\.23/)
+  expect((await ui.find({ type: 'Text', text: /Contexto usado/ }))?.text).toMatch(/42%/)
+  expect((await ui.find({ type: 'Text', text: /não instalado/ }))?.text).toBeDefined()
+  await ui.unmount()
+
+  await $.session.measure({
+    context: { window: 200000, percent: 57 },
+    rateLimits: [],
+    cost: { usd: 2.5 },
+    changed: ['cost', 'context'],
+  })
+  ui = await $.ui.mount({ ...PANE, surface: 'vscode' })
+  expect((await ui.find({ type: 'Text', text: /gastos/ }))?.text).toMatch(/US\$ 2\.50/)
+  expect((await ui.find({ type: 'Text', text: /Contexto usado/ }))?.text).toMatch(/57%/)
+  await ui.unmount()
+})
+
 test('sem tela no início não tenta abrir; abre quando a tela se conecta', async ($, on) => {
   const abertos: string[] = []
   let telas: Array<'terminal' | 'desktop' | 'vscode' | 'mobile'> = []

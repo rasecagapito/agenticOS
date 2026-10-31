@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Run } from '../types'
+import type { Consumo, Run } from '../types'
 
 const PANE = 'agentic-os-painel'
 const TITLE = 'Agentic OS'
@@ -10,6 +10,9 @@ const CONFIG = '.claude/router/config.json'
 
 // Muda o tag quando os campos de Run mudarem: valores de versões antigas são descartados.
 const runs = atom({ plugin: 'agentic-os-painel', key: 'runs' } as const, [] as Run[], { shape: 'runs-1' })
+const consumo = atom({ plugin: 'agentic-os-painel', key: 'consumo' } as const, { usd: null, ctx: null } as Consumo, {
+  shape: 'consumo-1',
+})
 
 // Preços US$ por milhão de tokens (fonte: tabela oficial Anthropic, 2026-10). Escrita de cache = 1,25× entrada.
 // Edite aqui quando os preços mudarem. A ordem importa: o primeiro padrão que casar vale.
@@ -163,9 +166,22 @@ export const register: Register = on => {
     return ran
   }).catch(($, e, next) => next(e)) // falha do painel nunca bloqueia o subagente
 
+  // Consumo da sessão (o mesmo total do /cost) e uso do contexto, empurrados pelo engine a cada mudança.
+  on('session.measure', async ($, e, next) => {
+    const r = await next(e)
+    await update($, consumo, () => ({ usd: e.cost?.usd ?? null, ctx: e.context?.percent ?? null }))
+    return r
+  }).catch(($, e, next) => next(e))
+
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const lista = await read($, runs)
+    let gasto = await read($, consumo)
+    if (gasto.usd == null) {
+      // Antes do primeiro session.measure: lê direto (mesmo número do /cost).
+      const u = await $.session.usage().catch(() => null)
+      gasto = { usd: u?.cost?.usd ?? null, ctx: u?.context?.percent ?? null }
+    }
 
     let log = ''
     try {
@@ -194,7 +210,13 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="column">
-        {!temRoteador && <Text dimColor>Roteador de modelos não instalado neste projeto.</Text>}
+        <Text bold>Consumo desta sessão</Text>
+        <Text>{gasto.usd == null ? 'Custo ainda indisponível' : `${usd(gasto.usd)} gastos (igual ao /cost)`}</Text>
+        {gasto.ctx != null && <Text dimColor>Contexto usado: {Math.round(gasto.ctx)}%</Text>}
+        <Text> </Text>
+        {!temRoteador && (
+          <Text dimColor>Roteador de modelos não instalado: a economia por subagente aparece quando ele estiver ativo.</Text>
+        )}
         {temRoteador && (
           <Box flexDirection="column">
             <Text bold>Economia nesta sessão</Text>

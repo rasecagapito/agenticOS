@@ -7,8 +7,11 @@ export type Run = {
   opus: number
 }
 
+/** Consumo da sessão como o /cost o soma (US$) e o uso do contexto (%), atualizado pelo session.measure. */
+export type Consumo = { usd: number | null; ctx: number | null }
+
 declare module 'claude-code' {
   interface PluginState {
-    'agentic-os-painel': { runs: Shaped<Run[]> }
+    'agentic-os-painel': { runs: Shaped<Run[]>; consumo: Shaped<Consumo> }
   }
 }

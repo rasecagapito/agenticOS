@@ -5,6 +5,10 @@ com ≥ 110–144 colunas).
 
 ```
 ┌─ Agentic OS ───────────────────────┐
+│ Consumo desta sessão               │
+│ US$ 2.50 gastos (igual ao /cost)   │
+│ Contexto usado: 57%                │
+│                                    │
 │ Economia nesta sessão              │
 │ US$ 4.50 economizados (75%)        │
 │ Gasto real: US$ 1.50               │
@@ -33,7 +37,9 @@ Requer um Claude Code com suporte a mods (hooks de função, 2.1.3xx ou mais nov
 
 ## O que mostra
 
-- **Economia nesta sessão**: cada subagente informa ao terminar os tokens e o modelo que usou. O painel
+- **Consumo desta sessão** (sempre, com ou sem roteador): quanto a sessão já custou em US$, o mesmo total do
+  `/cost`, e quanto do contexto está em uso. Atualiza sozinho a cada resposta.
+- **Economia nesta sessão** (com o roteador): cada subagente informa ao terminar os tokens e o modelo que usou. O painel
   multiplica pelo preço do modelo (gasto real) e pelo preço do Opus 5.5 ("se tudo fosse Opus"). A diferença,
   menos o custo estimado do Jev, é a economia.
 - **Decisões de hoje**: quantos pedidos foram para cada subagente, lidas de `.claude/router/decisions.jsonl`

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agentic OS — Guia Completo</title>
-<meta name="description" content="Como funciona o plugin Agentic OS v1.8.0: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
+<meta name="description" content="Como funciona o plugin Agentic OS v1.8.2: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
 <style>
 :root{
   --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f0eee8; --text:#1d1c1a; --muted:#5f5b53;
@@ -107,7 +107,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
 <div class="layout">
 <nav class="toc" aria-label="Sumário">
   <div class="brand">Agentic OS</div>
-  <div class="ver">Guia completo · v1.8.0</div>
+  <div class="ver">Guia completo · v1.8.2</div>
   <div class="links">
     <div class="grp">Entender</div>
     <a href="#oque">1. O que é</a>
@@ -136,7 +136,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
   <p class="lead">Um jeito de organizar os arquivos do seu projeto para que a IA (Claude, Codex, Gemini…) lembre o que já foi feito, siga regras, trabalhe com especialistas e use o modelo certo para cada tarefa.</p>
   <div class="pills">
     <span class="pill">Plugin para Claude Code e Codex</span>
-    <span class="pill">Versão 1.8.0</span>
+    <span class="pill">Versão 1.8.2</span>
     <span class="pill">Funciona em qualquer projeto</span>
     <span class="pill">Tudo opcional e por camadas</span>
   </div>
@@ -340,6 +340,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
     Assim como o painel mostra o consumo enquanto você dirige, este painel fica ao lado do chat e mostra quanto o roteador está economizando, para onde foram os pedidos do dia e três botões para os comandos que você mais usa.
   </div>
   <pre><code>┌─ Agentic OS ───────────────────────┐
+│ Consumo: US$ 2.50 · contexto 57%   │
 │ US$ 4.50 economizados (75%)        │
 │ Gasto real: US$ 1.50               │
 │ Se tudo fosse Opus: US$ 6.00       │
@@ -351,7 +352,8 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
 │ [/status] [/wrapup] [/handoff]     │
 └────────────────────────────────────┘</code></pre>
   <ul>
-    <li><b>Economia:</b> cada subagente informa, ao terminar, os tokens e o modelo usados. O painel calcula o gasto real e quanto custaria se tudo tivesse ido para o Opus. A diferença, menos o custo do Jev, é a economia.</li>
+    <li><b>Consumo desta sessão:</b> sempre visível, com ou sem roteador: quanto a sessão já custou em US$ (o mesmo número do <code>/cost</code>) e quanto do contexto está em uso. Atualiza sozinho.</li>
+    <li><b>Economia:</b> (com o roteador) cada subagente informa, ao terminar, os tokens e o modelo usados. O painel calcula o gasto real e quanto custaria se tudo tivesse ido para o Opus. A diferença, menos o custo do Jev, é a economia.</li>
     <li><b>Decisões de hoje:</b> lidas do registro do roteador. Sem o roteador instalado, o painel mostra só os botões.</li>
     <li><b>Botões:</b> rodam <code>/status</code>, <code>/wrapup</code> e <code>/handoff</code> como se você tivesse digitado. O <code>/handoff</code> só aparece em projetos com várias IAs.</li>
   </ul>
@@ -438,6 +440,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   <h3>Histórico recente</h3>
   <div class="tablewrap"><table>
     <tr><th>Versão</th><th>Principal novidade</th></tr>
+    <tr><td>1.8.2</td><td>Painel 1.1.0: consumo da sessão (US$ do /cost e % do contexto) sempre visível, mesmo sem roteador.</td></tr>
     <tr><td>1.8.0</td><td>Painel opcional no Claude Code (<code>agentic-os-painel</code>): economia do Jev, decisões do dia e botões /status, /wrapup e /handoff.</td></tr>
     <tr><td>1.7.3</td><td>Aviso logo no início da configuração: sem a chave do Jev, todos os pedidos vão para o Opus.</td></tr>
     <tr><td>1.7.2</td><td>Cada pessoa usa a própria chave do Jev: o instalador testa a chave e a conversa avisa (1x por sessão) se ela faltar ou for recusada; <code>fallback_sem_chave</code> opcional.</td></tr>
@@ -489,7 +492,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   </table></div>
 </section>
 
-<footer>Agentic OS v1.8.0 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
+<footer>Agentic OS v1.8.2 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
 </main>
 </div>
 <script>
