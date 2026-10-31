@@ -104,7 +104,7 @@ function mockJev(handler) {
   });
 }
 
-function runHook(proj, prompt, env = {}) {
+function runHook(proj, prompt, env = {}, sessao = 't') {
   return new Promise((resolve) => {
     const p = spawn(process.execPath, [path.join(proj, '.claude', 'router', 'route.mjs')], {
       env: { ...process.env, ...env },
@@ -112,7 +112,7 @@ function runHook(proj, prompt, env = {}) {
     let out = '';
     p.stdout.on('data', (c) => (out += c));
     p.on('close', () => resolve(out));
-    p.stdin.end(JSON.stringify({ prompt, session_id: 't', cwd: proj }));
+    p.stdin.end(JSON.stringify({ prompt, session_id: sessao, cwd: proj }));
   });
 }
 
@@ -132,8 +132,13 @@ test('e2e: instalador + hook + log + statusline', async (t) => {
     JSON.stringify({ permissions: { allow: ['Read(*)'] }, hooks: { Stop: [{ hooks: [{ type: 'command', command: 'echo x' }] }] } }),
   );
 
-  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj], { encoding: 'utf8' });
+  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj, '--no-key-check'], { encoding: 'utf8' });
   assert.equal(inst.status, 0, inst.stderr);
+  if (!process.env.TYPESAFE_API_KEY) {
+    // sem chave: instalador explica onde obter e como definir
+    assert.match(inst.stdout, /TYPESAFE_API_KEY não definida/);
+    assert.match(inst.stdout, /console\.typesafe\.ai\/keys/);
+  }
 
   // settings: preserva o existente, adiciona model + hook
   const s = JSON.parse(fs.readFileSync(path.join(proj, '.claude', 'settings.json'), 'utf8'));
@@ -154,7 +159,7 @@ test('e2e: instalador + hook + log + statusline', async (t) => {
   assert.match(inst.stdout, /opcionais da v1\.7/);
 
   // idempotente: 2ª execução não duplica hook nem bloco
-  spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj]);
+  spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj, '--no-key-check']);
   const s2 = JSON.parse(fs.readFileSync(path.join(proj, '.claude', 'settings.json'), 'utf8'));
   assert.equal(s2.hooks.UserPromptSubmit.length, 1);
   assert.equal(fs.readFileSync(path.join(proj, 'CLAUDE.md'), 'utf8').split('agentic-os:router:start').length, 2);
@@ -164,6 +169,10 @@ test('e2e: instalador + hook + log + statusline', async (t) => {
   let reply = { escolha: 'profundo', nivel: 'dificil', conf: 0.91, risco: 0.34 };
   const srv = await mockJev((req, body, res) => {
     lastBody = body;
+    if (req.headers.authorization === 'Bearer k500') {
+      res.writeHead(500).end('{}');
+      return;
+    }
     if (req.headers.authorization !== 'Bearer k') {
       res.writeHead(401).end('{}');
       return;
@@ -229,14 +238,37 @@ test('e2e: instalador + hook + log + statusline', async (t) => {
   out = JSON.parse(await runHook(proj, 'troque a cor do botão', { TYPESAFE_API_KEY: 'k' }));
   assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);
 
-  // chave inválida → 401 → profundo
-  out = JSON.parse(await runHook(proj, 'troque a cor do botão', { TYPESAFE_API_KEY: 'errada' }));
+  // chave inválida → 401 → profundo + aviso ao humano (1x por sessão)
+  out = JSON.parse(await runHook(proj, 'troque a cor do botão', { TYPESAFE_API_KEY: 'errada' }, 'chave1'));
   assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="profundo"/);
   assert.equal(lastEntry(proj).erro, 'HTTP 401');
+  assert.match(out.systemMessage, /recusada/);
+  assert.match(out.systemMessage, /console\.typesafe\.ai\/keys/);
+  assert.equal(lastEntry(proj).aviso_chave, true);
+  out = JSON.parse(await runHook(proj, 'mude o rodapé', { TYPESAFE_API_KEY: 'errada' }, 'chave1'));
+  assert.equal(out.systemMessage, undefined); // mesma sessão: não repete
 
-  // sem chave → profundo
-  out = JSON.parse(await runHook(proj, 'troque a cor', { TYPESAFE_API_KEY: '' }));
+  // sem chave → profundo + aviso "não definida" (sessão nova avisa de novo)
+  out = JSON.parse(await runHook(proj, 'troque a cor', { TYPESAFE_API_KEY: '' }, 'chave2'));
   assert.equal(lastEntry(proj).origem, 'fallback');
+  assert.match(out.systemMessage, /TYPESAFE_API_KEY não definida/);
+  assert.match(out.systemMessage, /profundo \(Opus\)/);
+
+  // falha passageira (HTTP 500) → profundo, sem aviso de chave
+  out = JSON.parse(await runHook(proj, 'troque a cor', { TYPESAFE_API_KEY: 'k500' }, 'chave3'));
+  assert.equal(lastEntry(proj).erro, 'HTTP 500');
+  assert.equal(out.systemMessage, undefined);
+
+  // fallback_sem_chave: problema de chave → padrao; falha passageira continua no fallback_tier
+  pc.fallback_sem_chave = 'intermediario';
+  fs.writeFileSync(cfgPath, JSON.stringify(pc));
+  out = JSON.parse(await runHook(proj, 'troque a cor', { TYPESAFE_API_KEY: '' }, 'chave4'));
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);
+  assert.match(out.systemMessage, /padrao \(Sonnet\)/);
+  out = JSON.parse(await runHook(proj, 'troque a cor', { TYPESAFE_API_KEY: 'k500' }, 'chave4'));
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="profundo"/);
+  delete pc.fallback_sem_chave;
+  fs.writeFileSync(cfgPath, JSON.stringify(pc));
 
   // bypass: sem saída e sem log novo
   const n = fs.readFileSync(path.join(proj, '.claude', 'router', 'decisions.jsonl'), 'utf8').split('\n').length;
@@ -432,7 +464,7 @@ test('v1.7 state_command: ok, timeout, JSON inválido, não-objeto, saída != 0'
 test('e2e v1.7: instalação nova — rules, continuação, probabilidades, state_command e log', async (t) => {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador v17-'));
   fs.writeFileSync(path.join(proj, 'CLAUDE.md'), '# Projeto Y\nCargas.\n');
-  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj], { encoding: 'utf8' });
+  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj, '--no-key-check'], { encoding: 'utf8' });
   assert.equal(inst.status, 0, inst.stderr);
   const cfgPath = path.join(proj, '.claude', 'router', 'config.json');
   const pc = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
@@ -525,7 +557,7 @@ test('e2e v1.7 envelope: sem Jev, mantém o tier da sessão, não vira "anterior
   fs.writeFileSync(path.join(proj, 'CLAUDE.md'), '# Projeto Z\n');
   fs.mkdirSync(path.join(proj, '.claude', 'router'), { recursive: true });
   fs.copyFileSync(FIXTURE_V16, path.join(proj, '.claude', 'router', 'config.json')); // retrocompat: chave ausente
-  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj], { encoding: 'utf8' });
+  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj, '--no-key-check'], { encoding: 'utf8' });
   assert.equal(inst.status, 0, inst.stderr);
   let calls = 0;
   let lastBody = null;

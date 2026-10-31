@@ -79,6 +79,30 @@ export function previousDecision(sessao, file = LOG_FILE) {
   return null;
 }
 
+// true se esta sessão já recebeu o aviso de chave do Jev (evita repetir a cada mensagem).
+export function keyWarnedThisSession(sessao, file = LOG_FILE) {
+  if (!sessao) return false;
+  try {
+    const fd = fs.openSync(file, 'r');
+    const size = fs.fstatSync(fd).size;
+    const len = Math.min(size, 65536);
+    const buf = Buffer.alloc(len);
+    fs.readSync(fd, buf, 0, len, size - len);
+    fs.closeSync(fd);
+    for (const l of buf.toString('utf8').split('\n')) {
+      if (!l.includes('"aviso_chave":true')) continue;
+      try {
+        if (JSON.parse(l).sessao === sessao) return true;
+      } catch {
+        /* linha cortada */
+      }
+    }
+  } catch {
+    /* sem log */
+  }
+  return false;
+}
+
 // Limite do resumo do projeto no state: state_project_summary_max_chars (v1.7) →
 // project_summary_max_chars (legado; 0 = 4000, como na v1.6) → 4000. 0 na chave nova = não envia `projeto`.
 export function summaryMaxChars(cfg) {

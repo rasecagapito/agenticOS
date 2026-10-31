@@ -160,10 +160,29 @@ quando houver. Statusline: `roteador: regra:prd → profundo (Opus)`, `roteador:
 | `.claude/settings.json` | `model: haiku` + hook (formato exec, `timeout: 10`) |
 | `.claude/settings.local.json` | `statusLine` com caminho absoluto (por máquina) |
 
+## Chave do Jev (cada pessoa usa a sua)
+
+O plugin **não traz chave nenhuma**. Quem instala usa a própria chave, lida só da variável de ambiente
+`TYPESAFE_API_KEY` (nome recomendado pela TypeSafe; troque em `classifier.api_key_env`). O roteador não
+lê `.env`.
+
+1. Obter a chave em **https://console.typesafe.ai/keys**.
+2. Definir: `setx TYPESAFE_API_KEY "<chave>"` (Windows) ou `export TYPESAFE_API_KEY=<chave>` (macOS/Linux).
+3. Reabrir terminal e editor.
+
+| Situação | O que acontece (v1.7.2) |
+|---|---|
+| Instalação | O instalador testa a chave com uma chamada mínima: **OK**, **RECUSADA** ou "não definida", com o link acima (`--no-key-check` desliga o teste). |
+| Chave ausente ou recusada (401/403) | Pedidos vão para `fallback_sem_chave` (se definido) ou `fallback_tier`. **Uma vez por sessão** aparece um aviso na conversa dizendo o motivo, para onde os pedidos estão indo e como resolver. O log marca `aviso_chave`. |
+| Falha passageira (timeout, 429/529, 5xx) | Vai para `fallback_tier`, sem aviso; o erro fica no log. |
+
+`fallback_sem_chave` (opcional, ex.: `"intermediario"`) evita que quem ainda não configurou a chave
+pague Opus em tudo; sem a chave definida, vale o `fallback_tier` (padrão: avançado).
+
 ## Instalar / atualizar
 
 ```bash
-# chave do Jev (só em variável de ambiente; nunca em arquivo)
+# chave do Jev (só em variável de ambiente; nunca em arquivo) — https://console.typesafe.ai/keys
 setx TYPESAFE_API_KEY "<chave>"            # Windows
 export TYPESAFE_API_KEY=<chave>            # macOS/Linux
 
