@@ -91,6 +91,8 @@ abaixo é o **gate humano**; a criação é o **Agente B**; e no fim **A re-audi
 [`docs/CONFORMANCE-SPEC.md`](../../docs/CONFORMANCE-SPEC.md) até `PASS` (máx. 3 ciclos).
 
 Confirmar com usuário antes de executar: "Vou criar X arquivos novos. Nenhum arquivo existente será tocado. Posso avançar?"
+Se o roteador de modelos estiver no plano, a mesma confirmação traz o aviso da Fase de descoberta (pergunta 5):
+sem chave do Jev, todos os pedidos vão para o Opus.
 
 Critério de sucesso (EXISTENTE): itens necessários aplicados, **zero** arquivos pré-existentes
 movidos/apagados/renomeados sem aprovação, integridade intacta, poder do plugin presente. Remover um
@@ -186,6 +188,10 @@ Perguntar ao usuário (uma de cada vez se necessário):
 2. Qual o stack tecnológico principal?
 3. Quem são os usuários/audiência?
 4. Qual o objetivo principal do agente neste projeto?
+5. Quer o **Roteador de Modelos** (opt-in, Claude Code)? Antes da resposta, avisar com estas palavras:
+   "O roteador depende de uma chave **sua** do Jev (https://console.typesafe.ai/keys). **Sem a chave, todos
+   os pedidos vão para o Opus**, o modelo mais caro. Você já tem a chave?" Sem chave → oferecer: configurar
+   agora, instalar com `fallback_sem_chave: "intermediario"` (Sonnet) ou não instalar o roteador.
 
 Usar as respostas para popular os arquivos com conteúdo real — não placeholders genéricos.
 
@@ -492,6 +498,11 @@ coordena (propõe/revê); as demais executam apenas **lotes aprovados**.
 
 Classifica cada pedido **antes** de o modelo lê-lo e entrega ao subagente do tamanho certo. Sessão
 principal (Haiku) = **recepção**: só delega e resume. Detalhes: `docs/ROUTER.md`. Template: `template/E-roteador/`.
+
+> **Aviso obrigatório antes de oferecer ou instalar:** o roteador usa a chave **do próprio usuário** do Jev.
+> **Sem chave (ou chave recusada), toda decisão vai para o Opus** (`fallback_tier`), o modelo mais caro, até a
+> chave ser configurada. Perguntar se o usuário tem a chave antes de instalar; sem ela, oferecer
+> `fallback_sem_chave: "intermediario"` (Sonnet) ou adiar o roteador.
 
 - **Hook `UserPromptSubmit`** (`.claude/router/route.mjs`) pergunta ao **Jev** (TypeSafe) numa chamada.
 - **Modo `jev` (padrão)**: o Jev **escolhe** `rapido` (Haiku) / `padrao` (Sonnet) / `profundo` (Opus)

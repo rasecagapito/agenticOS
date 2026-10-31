@@ -48,7 +48,7 @@ Depois da instalação, pedir para montar ou adaptar um projeto ao padrão Agent
 - `template/B-saas-n8n/` — template para SaaS + automações n8n
 - `template/C-claude-integrado/` — template SaaS integrado com Claude Code Superpowers
 - `template/D-multi-provedor/` — cérebro compartilhado entre várias IAs (Claude, Codex, Gemini…)
-- `template/E-roteador/` — roteador de modelos opt-in (Jev classifica → subagente Haiku/Sonnet/Opus); instalar com `scripts/install-router.mjs`
+- `template/E-roteador/` — roteador de modelos opt-in (Jev classifica → subagente Haiku/Sonnet/Opus); instalar com `scripts/install-router.mjs`. ⚠️ Exige a **sua** chave do Jev ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)): **sem ela, todos os pedidos vão para o Opus**
 - `docs/ROUTER.md` — **[Roteador de Modelos](docs/ROUTER.md)**: fluxo, regra de decisão, instalação e atualização
 - `docs/USAGE.md` — **[Guia de Uso Completo](docs/USAGE.md)**: instalação, todos os comandos com exemplos e capítulo de handoff/orquestração
 - `docs/guia-completo.html` — **[Guia Completo](docs/guia-completo.html)**: como o plugin funciona, todas as funcionalidades (incl. roteador com Jev), instalar e atualizar — didático, abrir no navegador
