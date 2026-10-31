@@ -26,14 +26,17 @@
   "risk_question": false,
   "agent_criteria": {
     "rapido": {
-      "definicao": "Mudança pequena, localizada e sem risco, ou pergunta simples sobre o projeto.",
+      "definicao": "Mudança pequena, localizada e sem risco, ou pergunta só de leitura (explicar, localizar, resumir) que não altera nada no projeto, mesmo que o assunto seja autenticação, dados ou segurança.",
       "exemplos": [
         "troque o texto do botão",
         "renomeie esta variável",
-        "o que faz esta função?"
+        "o que faz esta função?",
+        "o que faz o arquivo middleware.ts?",
+        "onde fica a configuração de autenticação?"
       ],
       "exclusoes": [
-        "qualquer coisa que toque dados, autenticação ou vários arquivos"
+        "qualquer ALTERAÇÃO que toque dados, autenticação ou vários arquivos",
+        "investigar a causa de um bug"
       ]
     },
     "padrao": {
@@ -56,7 +59,8 @@
         "migre o banco de dados"
       ],
       "exclusoes": [
-        "ajustes pontuais e tarefas de rotina com escopo claro"
+        "ajustes pontuais e tarefas de rotina com escopo claro",
+        "perguntas só de leitura ou explicação, sem alterar código"
       ]
     }
   },
