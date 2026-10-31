@@ -512,7 +512,9 @@ principal (Haiku) = **recepção**: só delega e resume. Detalhes: `docs/ROUTER.
 `node <plugin>/scripts/install-router.mjs <projeto>` (`--dry-run` antes). `<plugin>` = `installPath` de
 maior `version` em `~/.claude/plugins/installed_plugins.json` → `plugins["agentic-os@agentic-os"]`
 (ou um clone do repo). Explicar ao usuário o que muda
-e exigir `TYPESAFE_API_KEY` em variável de ambiente. **Atualizar**: `/router-update` no projeto
+e exigir a **chave do próprio usuário** em `TYPESAFE_API_KEY` (variável de ambiente; obter em
+https://console.typesafe.ai/keys; nunca gravar chave em arquivo do projeto nem pedir no chat). O instalador
+testa a chave; sem chave/recusada, o hook avisa 1x por sessão e usa `fallback_sem_chave` ou `fallback_tier`. **Atualizar**: `/router-update` no projeto
 (preserva `config.json` e log). Nunca hardcodar descrição de projeto — o contexto vem do cérebro do projeto.
 
 ---

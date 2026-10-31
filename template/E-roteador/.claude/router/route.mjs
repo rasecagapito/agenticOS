@@ -4,7 +4,7 @@
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { decide, isBypass, isEnvelope, matchContinuacao, matchRule, parseOverride } from './decide.mjs';
-import { appendLog, loadConfig, previousDecision, projectSummary, runStateCommand, summaryMaxChars } from './lib.mjs';
+import { appendLog, keyWarnedThisSession, loadConfig, previousDecision, projectSummary, runStateCommand, summaryMaxChars } from './lib.mjs';
 
 const readStdin = () =>
   new Promise((resolve) => {
@@ -226,7 +226,11 @@ async function main() {
     }
   }
   const jev_ms = semJev ? 0 : Date.now() - t0;
-  const d = decide(cfg, cls, { override: ov ? ov.tierIndex : null, regra, continuacao: cont, erro });
+  // Problema de chave (ausente/recusada) ≠ falha passageira: pode ter destino próprio e avisa o humano.
+  const chave = keyProblem(erro);
+  const cfgDecisao = chave && cfg.fallback_sem_chave ? { ...cfg, fallback_tier: cfg.fallback_sem_chave } : cfg;
+  const d = decide(cfgDecisao, cls, { override: ov ? ov.tierIndex : null, regra, continuacao: cont, erro });
+  const avisar = !!chave && !keyWarnedThisSession(input.session_id);
 
   const n = cfg.preview_chars ?? 80;
   const extras = cls?.extras
@@ -254,12 +258,32 @@ async function main() {
     justificativa: d.justificativa,
     jev_ms,
     erro: erro || undefined,
+    aviso_chave: avisar || undefined,
   });
 
-  process.stdout.write(
-    JSON.stringify({
-      hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: contextLine(d, cls) },
-    }),
+  const out = { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: contextLine(d, cls) } };
+  if (avisar) out.systemMessage = keyWarning(cfg, chave, d);
+  process.stdout.write(JSON.stringify(out));
+}
+
+export const KEY_URL = 'https://console.typesafe.ai/keys';
+
+// 'ausente' | 'recusada' | null, a partir da mensagem de erro do classify().
+export function keyProblem(erro) {
+  if (!erro) return null;
+  if (/^sem /.test(erro)) return 'ausente';
+  if (/^HTTP (401|403)\b/.test(erro)) return 'recusada';
+  return null;
+}
+
+// Aviso mostrado ao humano (uma vez por sessão) quando falta a chave do Jev ou ela é recusada.
+export function keyWarning(cfg, chave, d) {
+  const env = cfg.classifier?.api_key_env || 'TYPESAFE_API_KEY';
+  const motivo = chave === 'ausente' ? `${env} não definida` : `chave do Jev recusada (${env})`;
+  return (
+    `⚠️ Roteador de modelos: ${motivo} — os pedidos estão indo para ${d.subagente} (${d.modelo}). ` +
+    `Obtenha sua chave em ${KEY_URL} e rode: setx ${env} "<sua-chave>" (Windows) ou ` +
+    `export ${env}=<sua-chave> (macOS/Linux); depois reabra o terminal e o editor.`
   );
 }
 
