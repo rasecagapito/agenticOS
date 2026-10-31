@@ -1,3 +1,23 @@
+# Agentic OS v1.8.0
+
+**Painel na tela (plugin opcional `agentic-os-painel` 1.0.0).** Um painel fixo ao lado do chat do
+Claude Code mostra quanto o roteador está economizando e dá atalhos para os comandos do dia a dia.
+
+- **Economia nesta sessão** — cada subagente informa ao terminar `usage` + modelo; o painel calcula o gasto
+  real e o "se tudo fosse Opus" (Opus 5.5) e mostra a diferença em US$ e %, menos o custo estimado do Jev.
+- **Decisões de hoje** — contagem por subagente e a última decisão, lidas de `.claude/router/decisions.jsonl`
+  (envelopes do harness não contam).
+- **Botões `/status`, `/wrapup`, `/handoff`** — usam o comando próprio do projeto ou, se não houver, a skill do
+  plugin (`/agentic-os:agentic-os /status`); `/handoff` só em projetos multi-provedor.
+- Seguro: falha do painel nunca bloqueia o subagente (`.catch` no hook). Funciona no VS Code, Desktop e
+  terminal largo. Testes: `claude plugin test plugins/agentic-os-painel` (4/4).
+- Marketplace passa a listar dois plugins: `agentic-os` (núcleo) e `agentic-os-painel` (opcional).
+
+**Instalar o painel:** `claude plugin install agentic-os-painel@agentic-os` e reiniciar o Claude Code (`/painel` reabre).
+Estimativa de custo com preços de tabela (`PRICES` no plugin); custo da recepção (Haiku) não incluído.
+
+---
+
 # Agentic OS v1.7.3
 
 **Aviso logo no início: sem a chave do Jev, tudo vai para o Opus.** O usuário passa a saber disso
