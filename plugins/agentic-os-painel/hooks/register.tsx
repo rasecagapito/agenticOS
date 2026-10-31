@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { Register } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 
 import type { Run } from '../types'
 
@@ -119,11 +119,24 @@ export function atalhos(nomes: string[], temHandoff: boolean): Atalho[] {
   return out
 }
 
+// Abre o painel só quando há uma tela conectada: no início da sessão o VS Code/Desktop pode ainda não
+// ter se ligado (ui.open falharia com no-surface). Nesse caso, abre no session.attach.
+async function abrirSeHouverTela($: EngineInterface) {
+  const telas = await $.session.surfaces().catch(() => [])
+  if (telas.length > 0) await $.ui.open({ id: PANE, title: TITLE }).catch(() => undefined)
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'painel', description: 'Abrir o painel do Agentic OS (economia do Jev + atalhos)' })
-    void $.ui.open({ id: PANE, title: TITLE })
+    await abrirSeHouverTela($)
     return next(e)
+  })
+
+  on('session.attach', async ($, e, next) => {
+    const r = await next(e)
+    await $.ui.open({ id: PANE, title: TITLE }).catch(() => undefined)
+    return r
   })
 
   on('command.run', { command: 'painel' }, async $ => {

@@ -1,3 +1,13 @@
+# Agentic OS v1.8.1 (painel 1.0.1)
+
+**Correção do painel:** ao iniciar uma sessão no VS Code ou no Desktop, a tela pode ainda não estar
+conectada, e o painel registrava `ui.open: no-surface` no chat. Agora ele só abre quando há tela
+conectada e, se ainda não houver, abre no evento `session.attach`. O núcleo `agentic-os` não mudou (1.8.0).
+
+Atualizar: `claude plugin marketplace update agentic-os` e `claude plugin update agentic-os-painel@agentic-os`.
+
+---
+
 # Agentic OS v1.8.0
 
 **Painel na tela (plugin opcional `agentic-os-painel` 1.0.0).** Um painel fixo ao lado do chat do
