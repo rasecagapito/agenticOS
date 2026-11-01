@@ -50,6 +50,17 @@ export const DEFAULT_BYPASS_PATTERNS = [
   '^\\s*\\[SYSTEM NOTIFICATION',
 ];
 
+// O harness pode pôr blocos de sistema ANTES do texto do humano na mesma mensagem (ex.: instruções do
+// Chrome, lembretes). Remove os blocos fechados do início; o que sobrar é o pedido. Bloco sem fechamento
+// fica como está (continua caindo em isEnvelope). Resultado vazio = a mensagem era só sistema.
+const LEADING_BLOCK = /^\s*<(browser_instruction|system-reminder|user-prompt-submit-hook)\b[^>]*>[\s\S]*?<\/\1>/i;
+
+export function extractPedido(prompt) {
+  let p = prompt;
+  for (let m = LEADING_BLOCK.exec(p); m; m = LEADING_BLOCK.exec(p)) p = p.slice(m[0].length);
+  return p.trimStart();
+}
+
 // true se o prompt casar algum bypass_patterns (regex, flag i). Avaliado antes de tudo.
 export function isEnvelope(cfg, prompt) {
   const list = Array.isArray(cfg.bypass_patterns) ? cfg.bypass_patterns : DEFAULT_BYPASS_PATTERNS;
