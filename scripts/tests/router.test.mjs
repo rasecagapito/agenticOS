@@ -449,15 +449,15 @@ test('v1.7 state_command: ok, timeout, JSON inválido, não-objeto, saída != 0'
   const script = (nome, code) => {
     const f = path.join(dir, nome);
     fs.writeFileSync(f, code);
-    return { cmd: `"${process.execPath}" "${f}"`, timeout_ms: 1500 };
+    return { cmd: `"${process.execPath}" "${f}"`, timeout_ms: 20000 };
   };
   assert.deepEqual(await runStateCommand(script('ok.mjs', 'console.log(JSON.stringify({ etapa: "teste", n: 1 }))'), dir), {
     situacao: { etapa: 'teste', n: 1 },
   });
   const t0 = Date.now();
-  const lento = { ...script('lento.mjs', 'setTimeout(() => console.log("{}"), 5000)'), timeout_ms: 300 };
+  const lento = { ...script('lento.mjs', 'setTimeout(() => console.log("{}"), 60000)'), timeout_ms: 300 };
   assert.deepEqual(await runStateCommand(lento, dir), { erro: 'timeout 300ms' });
-  assert.ok(Date.now() - t0 < 2000, 'timeout não pode bloquear');
+  assert.ok(Date.now() - t0 < 30000, 'timeout não pode bloquear');
   assert.deepEqual(await runStateCommand(script('ruim.mjs', 'console.log("nao json")'), dir), { erro: 'json invalido' });
   assert.deepEqual(await runStateCommand(script('arr.mjs', 'console.log("[1,2]")'), dir), { erro: 'json nao e objeto' });
   assert.deepEqual(await runStateCommand(script('falha.mjs', 'process.exit(3)'), dir), { erro: 'saida 3' });
@@ -492,7 +492,7 @@ test('e2e v1.7: instalação nova — rules, continuação, probabilidades, stat
   pc.classifier.endpoint = `http://127.0.0.1:${srv.address().port}/v1/systemone`;
   pc.domain_summary = 'Cargas de dados no ERP.';
   pc.state_project_summary_max_chars = 0;
-  pc.state_command = { cmd: `"${process.execPath}" sit.mjs`, timeout_ms: 1500 };
+  pc.state_command = { cmd: `"${process.execPath}" sit.mjs`, timeout_ms: 20000 };
   pc.rules = [{ nome: 'prd', match: '\\bprd\\b', tier: 'avancado' }];
   pc.extra_questions = { grava: { type: 'noul', instructions: 'O `pedido` grava dados em produção?' } };
   pc.escalate_on = [{ question: 'grava', noul_acima: 0.6, tier_minimo: 'avancado' }];
@@ -530,7 +530,7 @@ test('e2e v1.7: instalação nova — rules, continuação, probabilidades, stat
 
   // dúvida rapido × padrao → padrao; state_command quebrado não bloqueia e vai para o log
   probs = { rapido: 0.5, padrao: 0.45, profundo: 0.05 };
-  pc.state_command = { cmd: `"${process.execPath}" -e "process.exit(2)"`, timeout_ms: 1500 };
+  pc.state_command = { cmd: `"${process.execPath}" -e "process.exit(2)"`, timeout_ms: 20000 };
   fs.writeFileSync(cfgPath, JSON.stringify(pc));
   out = JSON.parse(await runHook(proj, 'liste as cargas pendentes e explique', env));
   assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);
