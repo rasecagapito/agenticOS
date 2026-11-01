@@ -16,6 +16,26 @@ const PANE = {
 
 const cmd = (name: string) => ({ name, description: name, source: 'user' as const })
 
+// Como o registro real: cada resposta ocupa várias linhas com o mesmo id e o mesmo usage.
+const resposta = (id: string, model: string, input_tokens: number, output_tokens: number) =>
+  JSON.stringify({ type: 'assistant', message: { id, model, usage: { input_tokens, output_tokens, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } })
+// 2 respostas no Haiku 4.5 somando 1M de entrada + 100k de saída: real = 1 + 0,5 = US$1,50; se Opus 5.5 = 4 + 2 = US$6,00
+const TRANSCRIPT = [
+  JSON.stringify({ type: 'user', message: { content: 'x' } }),
+  resposta('m1', 'claude-haiku-4-5-20251001', 600_000, 60_000),
+  resposta('m1', 'claude-haiku-4-5-20251001', 600_000, 60_000),
+  resposta('m1', 'claude-haiku-4-5-20251001', 600_000, 60_000),
+  resposta('m2', 'claude-haiku-4-5-20251001', 400_000, 40_000),
+  resposta('m2', 'claude-haiku-4-5-20251001', 400_000, 40_000),
+  '{"linha cortada',
+].join('\n')
+const fim = (agent_id: string, agent_type: string) => ({
+  stop_hook_active: false,
+  agent_id,
+  agent_type,
+  agent_transcript_path: `/tmp/subagents/agent-${agent_id}.jsonl`,
+})
+
 const hoje = new Date().toISOString()
 const LOG = [
   { ts: hoje, tipo: 'decisao', origem: 'jev', subagente: 'rapido', modelo: 'Haiku', escolha_jev: 'rapido', confianca: 0.98, jev_ms: 400 },
@@ -30,29 +50,16 @@ test('contabiliza o subagente, mostra economia, decisões e só os botões que e
   on('command.register', () => ({ value: { command: 'painel' } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
-  on('fs.read', () => ({ value: LOG }))
+  on('fs.read', (_, e) => ({ value: e.path.includes('agent-') ? TRANSCRIPT : LOG }))
   on('fs.exists', () => ({ value: true }))
   on('command.list', () => ({ value: [cmd('status'), cmd('wrapup')] }))
   on('command.run', (_, e) => {
     rodados.push(e.command)
     return { text: 'ok' }
   })
-  // 1M de entrada + 100k de saída no Haiku 4.5: real = 1 + 0,5 = US$1,50; se Opus 5.5 = 4 + 2 = US$6,00
-  on('tool.call', () => ({
-    result: {
-      status: 'completed',
-      agentType: 'rapido',
-      resolvedModel: 'claude-haiku-4-5-20251001',
-      usage: { input_tokens: 1_000_000, output_tokens: 100_000, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
-      content: [],
-      totalToolUseCount: 0,
-      totalDurationMs: 1,
-      totalTokens: 1_100_000,
-    },
-  }))
-
+  on('classic.SubagentStop', () => ({}))
   await $.session.start({ cwd: '/', surface: 'vscode', isInteractive: true })
-  await $.tool.call({ tool: 'Agent', description: 'trocar texto', prompt: 'x', subagent_type: 'rapido' })
+  await $.classic.SubagentStop(fim('a1', 'rapido'))
 
   for (const surface of ['terminal', 'desktop', 'vscode'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
@@ -71,6 +78,26 @@ test('contabiliza o subagente, mostra economia, decisões e só os botões que e
   await ui.press({ key: 'wrapup' })
   await ui.unmount()
   expect(rodados).toContain('wrapup')
+})
+
+test('subagente retomado substitui a linha; registro ilegível fica fora da conta', async ($, on) => {
+  on('fs.read', (_, e) => {
+    if (e.path.includes('agent-ruim')) throw new Error('acima de 4 MiB')
+    if (e.path.includes('agent-')) return { value: TRANSCRIPT }
+    return { value: LOG }
+  })
+  on('fs.exists', () => ({ value: true }))
+  on('command.list', () => ({ value: [cmd('status')] }))
+
+  on('classic.SubagentStop', () => ({}))
+  await $.classic.SubagentStop(fim('a1', 'rapido'))
+  await $.classic.SubagentStop(fim('a1', 'rapido')) // mesmo subagente: não soma de novo
+  await $.classic.SubagentStop(fim('ruim', 'profundo'))
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'vscode' })
+  expect((await ui.find({ type: 'Text', text: /Gasto real/ }))?.text).toMatch(/US\$ 1\.50/)
+  expect((await ui.find({ type: 'Text', text: /sem dados de consumo/ }))?.text).toMatch(/^1 /)
+  await ui.unmount()
 })
 
 test('consumo da sessão aparece mesmo sem roteador e acompanha o session.measure', async ($, on) => {

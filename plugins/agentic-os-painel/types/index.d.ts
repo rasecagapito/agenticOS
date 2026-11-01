@@ -1,10 +1,8 @@
-/** Uma execução de subagente contabilizada: tokens reais e custo real vs. custo se fosse Opus. */
+/** Um subagente que terminou: o consumo é somado do registro dele (`path`) ao desenhar o painel. */
 export type Run = {
   id: string
   agent: string
-  model: string
-  real: number
-  opus: number
+  path: string
 }
 
 /** Consumo da sessão como o /cost o soma (US$) e o uso do contexto (%), atualizado pelo session.measure. */
