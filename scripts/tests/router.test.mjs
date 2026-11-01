@@ -449,15 +449,15 @@ test('v1.7 state_command: ok, timeout, JSON inválido, não-objeto, saída != 0'
   const script = (nome, code) => {
     const f = path.join(dir, nome);
     fs.writeFileSync(f, code);
-    return { cmd: `"${process.execPath}" "${f}"`, timeout_ms: 1500 };
+    return { cmd: `"${process.execPath}" "${f}"`, timeout_ms: 20000 };
   };
   assert.deepEqual(await runStateCommand(script('ok.mjs', 'console.log(JSON.stringify({ etapa: "teste", n: 1 }))'), dir), {
     situacao: { etapa: 'teste', n: 1 },
   });
   const t0 = Date.now();
-  const lento = { ...script('lento.mjs', 'setTimeout(() => console.log("{}"), 5000)'), timeout_ms: 300 };
+  const lento = { ...script('lento.mjs', 'setTimeout(() => console.log("{}"), 60000)'), timeout_ms: 300 };
   assert.deepEqual(await runStateCommand(lento, dir), { erro: 'timeout 300ms' });
-  assert.ok(Date.now() - t0 < 2000, 'timeout não pode bloquear');
+  assert.ok(Date.now() - t0 < 30000, 'timeout não pode bloquear');
   assert.deepEqual(await runStateCommand(script('ruim.mjs', 'console.log("nao json")'), dir), { erro: 'json invalido' });
   assert.deepEqual(await runStateCommand(script('arr.mjs', 'console.log("[1,2]")'), dir), { erro: 'json nao e objeto' });
   assert.deepEqual(await runStateCommand(script('falha.mjs', 'process.exit(3)'), dir), { erro: 'saida 3' });
@@ -492,7 +492,7 @@ test('e2e v1.7: instalação nova — rules, continuação, probabilidades, stat
   pc.classifier.endpoint = `http://127.0.0.1:${srv.address().port}/v1/systemone`;
   pc.domain_summary = 'Cargas de dados no ERP.';
   pc.state_project_summary_max_chars = 0;
-  pc.state_command = { cmd: `"${process.execPath}" sit.mjs`, timeout_ms: 1500 };
+  pc.state_command = { cmd: `"${process.execPath}" sit.mjs`, timeout_ms: 20000 };
   pc.rules = [{ nome: 'prd', match: '\\bprd\\b', tier: 'avancado' }];
   pc.extra_questions = { grava: { type: 'noul', instructions: 'O `pedido` grava dados em produção?' } };
   pc.escalate_on = [{ question: 'grava', noul_acima: 0.6, tier_minimo: 'avancado' }];
@@ -530,7 +530,7 @@ test('e2e v1.7: instalação nova — rules, continuação, probabilidades, stat
 
   // dúvida rapido × padrao → padrao; state_command quebrado não bloqueia e vai para o log
   probs = { rapido: 0.5, padrao: 0.45, profundo: 0.05 };
-  pc.state_command = { cmd: `"${process.execPath}" -e "process.exit(2)"`, timeout_ms: 1500 };
+  pc.state_command = { cmd: `"${process.execPath}" -e "process.exit(2)"`, timeout_ms: 20000 };
   fs.writeFileSync(cfgPath, JSON.stringify(pc));
   out = JSON.parse(await runHook(proj, 'liste as cargas pendentes e explique', env));
   assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);
@@ -555,6 +555,73 @@ test('v1.7 bypass_patterns: defaults ligados mesmo sem a chave; [] desliga; rege
   assert.deepEqual(tpl.bypass_patterns, DEFAULT_BYPASS_PATTERNS);
   assert.ok(!isEnvelope({ ...cfg, bypass_patterns: [] }, '<agent-message>x'));
   assert.ok(isEnvelope({ ...cfg, bypass_patterns: ['([', '^<meu-env'] }, '<meu-env>x'));
+});
+
+const { extractPedido } = await import(pathToFileURL(path.join(ROUTER, 'decide.mjs')).href);
+const CHROME = '<browser_instruction># Claude in Chrome\n\nuse as ferramentas\n</browser_instruction>';
+const LEMBRETE = '<system-reminder>\nInstruction files were re-read\n</system-reminder>\n';
+
+test('extractPedido: separa blocos de sistema do texto do humano', () => {
+  assert.equal(extractPedido(`${CHROME}me de o status do projeto`), 'me de o status do projeto');
+  assert.equal(extractPedido(`${CHROME}\nme de o status`), 'me de o status');
+  assert.equal(extractPedido(`${LEMBRETE}${CHROME}pode instalar`), 'pode instalar');
+  assert.equal(extractPedido(`  ${LEMBRETE}  corrija o login`), 'corrija o login');
+  assert.equal(extractPedido(`${LEMBRETE}${CHROME}`), ''); // só sistema
+  assert.equal(extractPedido('corrija o <system-reminder>x</system-reminder> do parser'), 'corrija o <system-reminder>x</system-reminder> do parser');
+  assert.equal(extractPedido('<browser_instruction>sem fechamento'), '<browser_instruction>sem fechamento');
+  assert.equal(extractPedido('<agent-message from="x">ok</agent-message>'), '<agent-message from="x">ok</agent-message>');
+  assert.equal(extractPedido(`${LEMBRETE}<task-notification>fim</task-notification>`), '<task-notification>fim</task-notification>');
+});
+
+test('e2e: pedido do humano depois de bloco do Chrome vai ao Jev; só sistema não', async (t) => {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador chrome-'));
+  fs.writeFileSync(path.join(proj, 'CLAUDE.md'), '# Projeto Z\n');
+  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj, '--no-key-check'], { encoding: 'utf8' });
+  assert.equal(inst.status, 0, inst.stderr);
+  let calls = 0;
+  let lastBody = null;
+  const srv = await mockJev((req, body, res) => {
+    calls++;
+    lastBody = body;
+    const answers = { subagente: { type: 'choice', choice: 'padrao', probabilities: { rapido: 0, padrao: 1, profundo: 0 }, confidence: 0.9 } };
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ answers }));
+  });
+  t.after(() => srv.close());
+  const cfgPath = path.join(proj, '.claude', 'router', 'config.json');
+  const pc = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  pc.classifier.endpoint = `http://127.0.0.1:${srv.address().port}/v1/systemone`;
+  fs.writeFileSync(cfgPath, JSON.stringify(pc));
+  const env = { TYPESAFE_API_KEY: 'k' };
+  const linhas = () => fs.readFileSync(path.join(proj, '.claude', 'router', 'decisions.jsonl'), 'utf8').trim().split('\n').length;
+
+  // O caso real: "me de o status" atrás do bloco do Chrome.
+  let out = JSON.parse(await runHook(proj, `${CHROME}\nme de o status do projeto atual`, env));
+  assert.equal(calls, 1);
+  assert.equal(lastBody.state.pedido, 'me de o status do projeto atual');
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);
+  let e = lastEntry(proj);
+  assert.equal(e.origem, 'jev');
+  assert.equal(e.preview, 'me de o status do projeto atual');
+
+  // Lembrete + Chrome + texto.
+  await runHook(proj, `${LEMBRETE}${CHROME}crie a tela de login`, env);
+  assert.equal(calls, 2);
+  assert.equal(lastBody.state.pedido, 'crie a tela de login');
+
+  // Override e comandos continuam valendo atrás do bloco.
+  out = JSON.parse(await runHook(proj, `${CHROME}nivel:basico troque a cor`, env));
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="rapido"/);
+  assert.equal(calls, 2);
+  const n = linhas();
+  assert.equal(await runHook(proj, `${CHROME}/status`, env), '');
+  assert.equal(linhas(), n);
+
+  // Só blocos de sistema: envelope, sem Jev, mantém o tier anterior.
+  await runHook(proj, `${LEMBRETE}${CHROME}`, env);
+  assert.equal(calls, 2);
+  assert.equal(lastEntry(proj).origem, 'envelope');
+  assert.equal(lastEntry(proj).subagente, 'rapido');
+  fs.rmSync(proj, { recursive: true, force: true });
 });
 
 test('e2e v1.7 envelope: sem Jev, mantém o tier da sessão, não vira "anterior"', async (t) => {

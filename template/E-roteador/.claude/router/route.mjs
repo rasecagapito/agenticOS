@@ -3,7 +3,7 @@
 // Qualquer falha do classificador cai no fallback_tier (padrão: o mais forte). Nunca bloqueia o prompt.
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { decide, isBypass, isEnvelope, matchContinuacao, matchRule, parseOverride } from './decide.mjs';
+import { decide, extractPedido, isBypass, isEnvelope, matchContinuacao, matchRule, parseOverride } from './decide.mjs';
 import { appendLog, keyWarnedThisSession, loadConfig, previousDecision, projectSummary, runStateCommand, summaryMaxChars } from './lib.mjs';
 
 const readStdin = () =>
@@ -169,18 +169,19 @@ async function main() {
   } catch {
     return;
   }
-  const prompt = String(input.prompt || '');
-  if (!prompt.trim()) return;
+  const bruto = String(input.prompt || '');
+  if (!bruto.trim()) return;
+  const prompt = extractPedido(bruto);
 
   // Envelope do harness (retorno de subagente, notificação): sem Jev; mantém o tier da tarefa da sessão.
-  if (isEnvelope(cfg, prompt)) {
+  if (!prompt || isEnvelope(cfg, prompt)) {
     const prev = previousDecision(input.session_id);
     const t = prev?.subagente ? cfg.tiers.find((x) => x.agent === prev.subagente) : null;
     appendLog({
       ts: new Date().toISOString(),
       tipo: 'decisao',
       sessao: input.session_id || null,
-      sha1: crypto.createHash('sha1').update(prompt).digest('hex').slice(0, 12),
+      sha1: crypto.createHash('sha1').update(bruto).digest('hex').slice(0, 12),
       origem: 'envelope',
       tier: t?.id ?? null,
       subagente: t?.agent ?? null,
