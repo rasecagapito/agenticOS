@@ -9,7 +9,7 @@ const LOG = '.claude/router/decisions.jsonl'
 const CONFIG = '.claude/router/config.json'
 
 // Muda o tag quando os campos de Run mudarem: valores de versões antigas são descartados.
-const runs = atom({ plugin: 'agentic-os-painel', key: 'runs' } as const, [] as Run[], { shape: 'runs-1' })
+const runs = atom({ plugin: 'agentic-os-painel', key: 'runs' } as const, [] as Run[], { shape: 'runs-3' })
 const consumo = atom({ plugin: 'agentic-os-painel', key: 'consumo' } as const, { usd: null, ctx: null } as Consumo, {
   shape: 'consumo-1',
 })
@@ -37,7 +37,6 @@ type Usage = {
   cache_creation_input_tokens?: number | null
   cache_read_input_tokens?: number | null
 }
-type AgentResultLike = { usage?: Usage; resolvedModel?: string; modelsUsed?: string[]; agentType?: string }
 
 export function priceOf(model: string): Price {
   const m = model.toLowerCase()
@@ -53,6 +52,29 @@ export function cost(u: Usage, p: Price): number {
       (u.cache_read_input_tokens ?? 0) * p.cacheRead) /
     1e6
   )
+}
+
+// Soma o consumo do registro (.jsonl) de um subagente. Cada resposta ocupa várias linhas com o mesmo
+// `message.id` e o mesmo `usage` (uma por bloco): só a última conta, senão o gasto sai ~3× maior.
+export function somaTranscript(texto: string): { real: number; opus: number } {
+  const respostas = new Map<string, { model: string; usage: Usage }>()
+  let n = 0
+  for (const linha of texto.split('\n')) {
+    if (!linha.trim()) continue
+    try {
+      const m = JSON.parse(linha)?.message
+      if (m?.usage && m.model) respostas.set(m.id ?? `linha-${n++}`, { model: m.model, usage: m.usage })
+    } catch {
+      /* linha cortada: o registro pode estar sendo escrito */
+    }
+  }
+  let real = 0
+  let opus = 0
+  for (const r of respostas.values()) {
+    real += cost(r.usage, priceOf(r.model))
+    opus += cost(r.usage, OPUS)
+  }
+  return { real, opus }
 }
 
 export const usd = (v: number) => `US$ ${v < 0.01 && v > 0 ? v.toFixed(4) : v.toFixed(2)}`
@@ -147,23 +169,14 @@ export const register: Register = on => {
     return { text: r.isPlaced ? 'Painel do Agentic OS aberto.' : `Painel aguardando espaço: ${r.reason}` }
   })
 
-  // Contabiliza cada subagente que termina: tokens reais × preço do modelo usado vs. preço do Opus.
-  on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
-    const ran = await next(e)
-    const r = (ran as { result?: AgentResultLike }).result
-    const u = r?.usage
-    if (u) {
-      const model = r?.resolvedModel ?? r?.modelsUsed?.[0] ?? 'desconhecido'
-      const run: Run = {
-        id: e.tool_use_id,
-        agent: r?.agentType ?? (e as { subagent_type?: string }).subagent_type ?? 'subagente',
-        model,
-        real: cost(u, priceOf(model)),
-        opus: cost(u, OPUS),
-      }
-      await update($, runs, list => [...list, run].slice(-500))
-    }
-    return ran
+  // Guarda o registro de cada subagente que termina, em primeiro ou segundo plano. O resultado do Agent não
+  // serve: em segundo plano volta `async_launched`, sem `usage`. A soma fica para o desenho: neste evento a
+  // última resposta ainda não foi gravada por inteiro. Retomado, o subagente substitui a linha, não soma de novo.
+  on('classic.SubagentStop', async ($, e, next) => {
+    const r = await next(e)
+    const run: Run = { id: e.agent_id, agent: e.agent_type, path: e.agent_transcript_path }
+    await update($, runs, list => [...list.filter(x => x.id !== run.id), run].slice(-500))
+    return r
   }).catch(($, e, next) => next(e)) // falha do painel nunca bloqueia o subagente
 
   // Consumo da sessão (o mesmo total do /cost) e uso do contexto, empurrados pelo engine a cada mudança.
@@ -192,8 +205,18 @@ export const register: Register = on => {
     const temRoteador = log !== '' || (await $.fs.exists(CONFIG).catch(() => false))
     const { porAgente, jevChamadas, ultima } = resumoLog(log)
 
-    const real = lista.reduce((s, x) => s + x.real, 0)
-    const opus = lista.reduce((s, x) => s + x.opus, 0)
+    let real = 0
+    let opus = 0
+    let semDados = 0
+    for (const run of lista) {
+      try {
+        const t = somaTranscript(await $.fs.read(run.path))
+        real += t.real
+        opus += t.opus
+      } catch {
+        semDados++ // registro ausente ou acima do limite de leitura (4 MiB): fora da conta, sem valor inventado
+      }
+    }
     const jev = jevChamadas * JEV_POR_DECISAO
     const economia = opus - real - jev
     const pct = opus > 0 ? Math.round((economia / opus) * 100) : 0
@@ -232,6 +255,7 @@ export const register: Register = on => {
                 <Text dimColor>
                   Jev: ≈{usd(jev)} · {lista.length} subagente(s)
                 </Text>
+                {semDados > 0 && <Text dimColor>{semDados} subagente(s) sem dados de consumo, fora da conta</Text>}
               </Box>
             )}
             <Text> </Text>

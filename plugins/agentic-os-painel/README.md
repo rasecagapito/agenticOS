@@ -39,8 +39,8 @@ Requer um Claude Code com suporte a mods (hooks de função, 2.1.3xx ou mais nov
 
 - **Consumo desta sessão** (sempre, com ou sem roteador): quanto a sessão já custou em US$, o mesmo total do
   `/cost`, e quanto do contexto está em uso. Atualiza sozinho a cada resposta.
-- **Economia nesta sessão** (com o roteador): cada subagente informa ao terminar os tokens e o modelo que usou. O painel
-  multiplica pelo preço do modelo (gasto real) e pelo preço do Opus 5.5 ("se tudo fosse Opus"). A diferença,
+- **Economia nesta sessão** (com o roteador): o painel lê o registro de cada subagente que terminou, em primeiro ou segundo
+  plano, e multiplica os tokens de cada resposta pelo preço do modelo (gasto real) e pelo preço do Opus 5.5 ("se tudo fosse Opus"). A diferença,
   menos o custo estimado do Jev, é a economia.
 - **Decisões de hoje**: quantos pedidos foram para cada subagente, lidas de `.claude/router/decisions.jsonl`
   (o registro do roteador). Avisos internos do Claude Code não contam.
@@ -54,6 +54,7 @@ Sem o roteador instalado, o painel mostra só os botões.
 
 - **Estimativa, não fatura**: preços de tabela em `hooks/register.tsx` (`PRICES`), atualizar quando mudarem.
   O custo da recepção (Haiku) não entra.
+- Registro de subagente acima de 4 MiB fica fora da conta, e o painel avisa.
 - A economia zera a cada sessão; as decisões do dia vêm do registro do roteador.
 - Se o painel falhar, o subagente segue normal (o hook tem `.catch`).
 

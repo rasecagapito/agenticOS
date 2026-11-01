@@ -1,3 +1,20 @@
+# Agentic OS v1.8.6 (painel 1.2.0)
+
+**Correção do painel: a economia não aparecia.** Os subagentes rodam em segundo plano, e o resultado da
+ferramenta Agent volta `async_launched`, sem consumo. A seção "Economia nesta sessão" ficava em "Nenhum
+subagente concluído".
+
+- O painel agora guarda o registro de cada subagente no evento `classic.SubagentStop` e soma o consumo real
+  ao desenhar, cobrindo primeiro e segundo plano.
+- A soma não é feita no próprio evento, porque ali a última resposta ainda não foi gravada por inteiro.
+- Cada resposta conta uma vez: o registro repete a mesma resposta em várias linhas com o mesmo `id`.
+- Registro ilegível (ausente ou acima de 4 MiB) fica fora da conta e o painel avisa, sem inventar valor.
+- Testado com subagente real em segundo plano: o valor do painel bateu com uma conta independente em 3/3 rodadas.
+
+Atualizar: `claude plugin marketplace update agentic-os` e `claude plugin update agentic-os-painel@agentic-os`.
+
+---
+
 # Agentic OS v1.8.5
 
 **Correção: pedidos do humano tratados como aviso interno.** Com a extensão do Chrome conectada ou com lembretes
