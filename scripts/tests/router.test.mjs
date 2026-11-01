@@ -557,6 +557,73 @@ test('v1.7 bypass_patterns: defaults ligados mesmo sem a chave; [] desliga; rege
   assert.ok(isEnvelope({ ...cfg, bypass_patterns: ['([', '^<meu-env'] }, '<meu-env>x'));
 });
 
+const { extractPedido } = await import(pathToFileURL(path.join(ROUTER, 'decide.mjs')).href);
+const CHROME = '<browser_instruction># Claude in Chrome\n\nuse as ferramentas\n</browser_instruction>';
+const LEMBRETE = '<system-reminder>\nInstruction files were re-read\n</system-reminder>\n';
+
+test('extractPedido: separa blocos de sistema do texto do humano', () => {
+  assert.equal(extractPedido(`${CHROME}me de o status do projeto`), 'me de o status do projeto');
+  assert.equal(extractPedido(`${CHROME}\nme de o status`), 'me de o status');
+  assert.equal(extractPedido(`${LEMBRETE}${CHROME}pode instalar`), 'pode instalar');
+  assert.equal(extractPedido(`  ${LEMBRETE}  corrija o login`), 'corrija o login');
+  assert.equal(extractPedido(`${LEMBRETE}${CHROME}`), ''); // só sistema
+  assert.equal(extractPedido('corrija o <system-reminder>x</system-reminder> do parser'), 'corrija o <system-reminder>x</system-reminder> do parser');
+  assert.equal(extractPedido('<browser_instruction>sem fechamento'), '<browser_instruction>sem fechamento');
+  assert.equal(extractPedido('<agent-message from="x">ok</agent-message>'), '<agent-message from="x">ok</agent-message>');
+  assert.equal(extractPedido(`${LEMBRETE}<task-notification>fim</task-notification>`), '<task-notification>fim</task-notification>');
+});
+
+test('e2e: pedido do humano depois de bloco do Chrome vai ao Jev; só sistema não', async (t) => {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador chrome-'));
+  fs.writeFileSync(path.join(proj, 'CLAUDE.md'), '# Projeto Z\n');
+  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), proj, '--no-key-check'], { encoding: 'utf8' });
+  assert.equal(inst.status, 0, inst.stderr);
+  let calls = 0;
+  let lastBody = null;
+  const srv = await mockJev((req, body, res) => {
+    calls++;
+    lastBody = body;
+    const answers = { subagente: { type: 'choice', choice: 'padrao', probabilities: { rapido: 0, padrao: 1, profundo: 0 }, confidence: 0.9 } };
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ answers }));
+  });
+  t.after(() => srv.close());
+  const cfgPath = path.join(proj, '.claude', 'router', 'config.json');
+  const pc = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  pc.classifier.endpoint = `http://127.0.0.1:${srv.address().port}/v1/systemone`;
+  fs.writeFileSync(cfgPath, JSON.stringify(pc));
+  const env = { TYPESAFE_API_KEY: 'k' };
+  const linhas = () => fs.readFileSync(path.join(proj, '.claude', 'router', 'decisions.jsonl'), 'utf8').trim().split('\n').length;
+
+  // O caso real: "me de o status" atrás do bloco do Chrome.
+  let out = JSON.parse(await runHook(proj, `${CHROME}\nme de o status do projeto atual`, env));
+  assert.equal(calls, 1);
+  assert.equal(lastBody.state.pedido, 'me de o status do projeto atual');
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="padrao"/);
+  let e = lastEntry(proj);
+  assert.equal(e.origem, 'jev');
+  assert.equal(e.preview, 'me de o status do projeto atual');
+
+  // Lembrete + Chrome + texto.
+  await runHook(proj, `${LEMBRETE}${CHROME}crie a tela de login`, env);
+  assert.equal(calls, 2);
+  assert.equal(lastBody.state.pedido, 'crie a tela de login');
+
+  // Override e comandos continuam valendo atrás do bloco.
+  out = JSON.parse(await runHook(proj, `${CHROME}nivel:basico troque a cor`, env));
+  assert.match(out.hookSpecificOutput.additionalContext, /subagent_type="rapido"/);
+  assert.equal(calls, 2);
+  const n = linhas();
+  assert.equal(await runHook(proj, `${CHROME}/status`, env), '');
+  assert.equal(linhas(), n);
+
+  // Só blocos de sistema: envelope, sem Jev, mantém o tier anterior.
+  await runHook(proj, `${LEMBRETE}${CHROME}`, env);
+  assert.equal(calls, 2);
+  assert.equal(lastEntry(proj).origem, 'envelope');
+  assert.equal(lastEntry(proj).subagente, 'rapido');
+  fs.rmSync(proj, { recursive: true, force: true });
+});
+
 test('e2e v1.7 envelope: sem Jev, mantém o tier da sessão, não vira "anterior"', async (t) => {
   const proj = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador env-'));
   fs.writeFileSync(path.join(proj, 'CLAUDE.md'), '# Projeto Z\n');

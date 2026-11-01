@@ -1,3 +1,21 @@
+# Agentic OS v1.8.5
+
+**Correção: pedidos do humano tratados como aviso interno.** Com a extensão do Chrome conectada ou com lembretes
+do sistema, o Claude Code coloca blocos `<browser_instruction>` e `<system-reminder>` antes do texto da pessoa,
+na mesma mensagem. O filtro de envelopes olhava só o início e descartava o pedido: o Jev não era chamado e
+valia o nível da tarefa anterior.
+
+- Novo `extractPedido()` em `decide.mjs`: remove os blocos fechados do início e analisa o que sobra. Sobrou
+  texto = pedido da pessoa (Jev, override `nivel:` e `/comandos` valem normalmente). Não sobrou nada = envelope.
+- O registro e o Jev recebem só o texto da pessoa, sem o bloco.
+- Testado com 333 mensagens reais (18 pedidos recuperados, nenhum aviso virou pedido) e com o Jev real pelo
+  gancho global.
+
+Atualizar: `claude plugin marketplace update agentic-os`, `claude plugin update agentic-os@agentic-os` e
+`/router-update` nos projetos com roteador.
+
+---
+
 # Agentic OS v1.8.4
 
 **Correção: roteador rodando duas vezes por mensagem.** Em máquinas com um gancho global de usuário que já
