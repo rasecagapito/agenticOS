@@ -10,6 +10,7 @@ export function gh(args, { input, permitirFalha = false } = {}) {
   const r = spawnSync(bin, argv, {
     input,
     encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
     env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' },
   });
   if (r.error?.code === 'ENOENT') throw new ErroGov('GH_AUSENTE');
@@ -28,6 +29,6 @@ export function classificar({ stdout = '', stderr = '' }, args = []) {
   if (/not logged in|gh auth login/i.test(t)) return new ErroGov('GH_DESLOGADO');
   if (/INSUFFICIENT_SCOPES|required scopes?.*project|missing required scope/i.test(t)) return new ErroGov('SEM_ESCOPO_PROJECT');
   if (/Upgrade to GitHub Pro|make this repository public/i.test(t)) return new ErroGov('PLANO_SEM_PROTECAO');
-  if (/could not resolve host|timed? ?out|ECONNRESET|HTTP 50\d/i.test(t)) return new ErroGov('REDE');
+  if (/could not resolve host|no such host|dial tcp|connection refused|EAI_AGAIN|ECONNRESET|i\/o timeout|HTTP 50\d/i.test(t)) return new ErroGov('REDE');
   return new ErroGov('GH_FALHOU', `gh ${args.join(' ')} → ${t.trim().slice(0, 300)}`);
 }

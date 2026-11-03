@@ -173,3 +173,13 @@ test('ficha: válida passa; erros e segredo são recusados', async () => {
   fs.writeFileSync(path.join(dir, '.agentic-os', 'governanca.json'), '{');
   assert.throws(() => lerFicha(dir), (e) => e.codigo === 'FICHA_INVALIDA');
 });
+
+test('git: parseRemoto ancora o host; gh: REDE não casa "timed out" solto', async () => {
+  const { parseRemoto } = await imp('git.mjs');
+  const { classificar } = await imp('gh.mjs');
+  assert.equal(parseRemoto('https://notgithub.com/o/app'), null);
+  assert.equal(parseRemoto('ssh://git@github.com/o/app.git'), 'o/app');
+  assert.equal(parseRemoto('https://github.com/o/my.app.git'), 'o/my.app');
+  assert.equal(classificar({ stderr: 'dial tcp: lookup api.github.com: no such host' }).codigo, 'REDE');
+  assert.equal(classificar({ stderr: 'HTTP 422: Validation Failed: timed out title' }).codigo, 'GH_FALHOU');
+});

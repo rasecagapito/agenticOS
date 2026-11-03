@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { ErroGov } from './erros.mjs';
 
 export function git(cwd, args, { permitirFalha = false } = {}) {
-  const r = spawnSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' }, timeout: 30000 });
   const res = { code: r.status ?? 1, out: (r.stdout || '').trim(), err: (r.stderr || '').trim() };
   if (res.code !== 0 && !permitirFalha) throw new ErroGov('GIT_FALHOU', `git ${args.join(' ')} → ${res.err}`);
   return res;
@@ -12,7 +12,7 @@ export function git(cwd, args, { permitirFalha = false } = {}) {
 export const ehRepo = (cwd) => git(cwd, ['rev-parse', '--is-inside-work-tree'], { permitirFalha: true }).out === 'true';
 
 export function parseRemoto(url) {
-  const m = String(url).match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
+  const m = String(url).match(/(?:^|[/@])github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
   return m ? `${m[1]}/${m[2]}` : null;
 }
 
