@@ -525,3 +525,32 @@ test('CLI: apply grava a ficha atualizada (e não grava em --dry-run)', async ()
   assert.equal(lerFicha(dir).colunas_ids.a_fazer, 'o2');
   assert.equal(lerFicha(dir).protecao_aplicada.nivel, 'completa');
 });
+
+test('card-pr: ID não numérico é recusado', async () => {
+  const { cardPr } = await imp('cartao.mjs');
+  const { dir } = repoComBare();
+  assert.throws(() => cardPr(dir, fichaTesteSync(), '7-x'), (e) => e.codigo === 'PARAMETRO');
+});
+
+test('card-start: falha ao mover o cartão avisa que branch e TASK já existem', async () => {
+  const { cardStart } = await imp('cartao.mjs');
+  cenario([ITEM('A Fazer'), falha('^project item-edit', 'HTTP 502')]);
+  const { dir, g } = repoComBare();
+  assert.throws(
+    () => cardStart(dir, fichaTesteSync(), 101),
+    (e) => e.codigo === 'REDE' && e.message.includes('à mão') && e.message.includes('feature/101-carga-de-clientes') && !!e.como_resolver,
+  );
+  assert.equal(g('branch', '--show-current'), 'feature/101-carga-de-clientes');
+});
+
+test('ficha: branch_principal é obrigatória', async () => {
+  const { validarFicha } = await imp('ficha.mjs');
+  assert.ok(validarFicha(fichaTesteSync({ branch_principal: '' })).includes('branch_principal ausente'));
+});
+
+test('CLI: opção desconhecida é recusada com PARAMETRO', async () => {
+  const { dir } = repoGit();
+  const r = cli(dir, ['apply', '--dryrun'], {});
+  assert.equal(r.code, 2);
+  assert.equal(r.json.erro.codigo, 'PARAMETRO');
+});

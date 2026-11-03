@@ -13,6 +13,8 @@ import { detect } from './governanca/detect.mjs';
 import { ErroGov } from './governanca/erros.mjs';
 import { ARQ_FICHA, gravarFicha, lerFicha } from './governanca/ficha.mjs';
 
+const FLAGS = ['dry-run', 'owner', 'project', 'analista', 'ficha', 'tipo', 'desc'];
+
 function opcoes(argv) {
   const o = { _: [], analista: [], dryRun: false };
   for (let i = 0; i < argv.length; i++) {
@@ -20,6 +22,7 @@ function opcoes(argv) {
     if (a === '--dry-run') o.dryRun = true;
     else if (a.startsWith('--')) {
       const k = a.slice(2);
+      if (!FLAGS.includes(k)) throw new ErroGov('PARAMETRO', `Opção desconhecida: ${a}`);
       const v = argv[++i];
       if (v === undefined) throw new ErroGov('PARAMETRO', `Falta valor para ${a}.`);
       if (k === 'analista') o.analista.push(v);

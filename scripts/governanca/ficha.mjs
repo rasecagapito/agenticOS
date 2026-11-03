@@ -37,6 +37,7 @@ export function validarFicha(f) {
   if (!/^[^/\s]+\/[^/\s]+$/.test(f?.repo || '')) erros.push('repo deve ser dono/nome');
   if (!f?.project?.owner || !Number.isInteger(f.project.number) || f.project.number < 1)
     erros.push('project.owner e project.number são obrigatórios');
+  if (!f?.branch_principal) erros.push('branch_principal ausente');
   for (const k of Object.keys(COLUNAS_PADRAO)) if (!f?.colunas?.[k]) erros.push(`colunas.${k} ausente`);
   if (!Array.isArray(f?.analistas) || f.analistas.length === 0) erros.push('analistas: informe ao menos um login');
   if (!f?.ambientes?.hom || !f?.ambientes?.prd) erros.push('ambientes.hom e ambientes.prd são obrigatórios');

@@ -70,7 +70,12 @@ export function cardStart(cwd, ficha, id, { tipo = 'feature', desc, dryRun = fal
   fs.writeFileSync(abs, textoTask({ id, desc: d, titulo: c.titulo, repo: ficha.repo, branch, agora: new Date().toISOString() }));
   git(cwd, ['add', task]);
   git(cwd, ['commit', '-q', '-m', `docs(task): TASK-${id} ${d}`]);
-  moverCartao(ficha, c.itemId, 'em_andamento');
+  try {
+    moverCartao(ficha, c.itemId, 'em_andamento');
+  } catch (e) {
+    if (!(e instanceof ErroGov)) throw e;
+    throw new ErroGov(e.codigo, `${e.message} Branch ${branch} e TASK já criados; mova o cartão #${id} para "${ficha.colunas.em_andamento}" no Project à mão.`);
+  }
   return { ok: true, branch, task, acoes };
 }
 
@@ -92,6 +97,7 @@ export function registrarPr(texto, url, agora) {
 }
 
 export function cardPr(cwd, ficha, id, { dryRun = false } = {}) {
+  if (!/^\d+$/.test(String(id))) throw new ErroGov('PARAMETRO', 'O ID do cartão é o número da issue.');
   const atual = branchAtual(cwd);
   if (!Object.values(ficha.prefixos_branch).some((p) => atual.startsWith(`${p}${id}-`)))
     throw new ErroGov('BRANCH_ERRADA', `A branch atual "${atual}" não é do cartão #${id}.`);
