@@ -11,12 +11,16 @@ OUT="agentic-os.skill"
 
 tmp="$(mktemp -d)"
 unzip -qo "$OUT" -d "$tmp"
-if diff -q <(tr -d '\r' < "$tmp/agentic-os/SKILL.md") <(tr -d '\r' < "$SRC") >/dev/null 2>&1; then
-  rm -rf "$tmp"
-  echo "OK: $OUT está sincronizado com $SRC"
-else
-  echo "FAIL: $OUT está DESATUALIZADO em relação a $SRC."
+falhou=0
+for f in SKILL.md wizard.md; do
+  if ! diff -q <(tr -d '\r' < "$tmp/agentic-os/$f") <(tr -d '\r' < "skills/agentic-os/$f") >/dev/null 2>&1; then
+    echo "FAIL: $OUT está DESATUALIZADO em relação a skills/agentic-os/$f."
+    falhou=1
+  fi
+done
+rm -rf "$tmp"
+if [ "$falhou" = 1 ]; then
   echo "      Rode: scripts/build-skill.sh  e commite o resultado."
-  rm -rf "$tmp"
   exit 1
 fi
+echo "OK: $OUT está sincronizado com skills/agentic-os/{SKILL,wizard}.md"
