@@ -411,3 +411,48 @@ test('apply: travas recusam merge, aprovação e DELETE', async () => {
   );
   verificarTravas([{ tipo: 'x', descricao: 'x', gh: ['api', '-X', 'PUT', 'repos/dono/reviews/environments/hom'] }]);
 });
+
+const ITEM = (status) =>
+  ok('^project item-list 3', {
+    items: [{ id: 'ITEM_101', status, title: 'Carga de clientes', content: { type: 'Issue', number: 101, title: 'Carga de clientes', repository: 'dono/app' } }],
+  });
+
+test('card-start: cria branch, TASK, commit e move o cartão', async () => {
+  const { cardStart } = await imp('cartao.mjs');
+  const c = cenario([ITEM('A Fazer'), ok('^project item-edit', '{}')]);
+  const { dir, g } = repoComBare();
+  const r = cardStart(dir, fichaTesteSync(), 101);
+  assert.equal(r.branch, 'feature/101-carga-de-clientes');
+  assert.equal(g('branch', '--show-current'), 'feature/101-carga-de-clientes');
+  const task = fs.readFileSync(path.join(dir, 'docs/tasks/TASK-101-carga-de-clientes.md'), 'utf8');
+  assert.match(task, /\| Branch \| feature\/101-carga-de-clientes \|/);
+  assert.match(g('log', '-1', '--format=%s'), /^docs\(task\): TASK-101/);
+  const edit = c.chamadas().find((x) => x.args[1] === 'item-edit');
+  assert.deepEqual(edit.args.slice(2), ['--id', 'ITEM_101', '--project-id', 'PVT_1', '--field-id', 'FLD_S', '--single-select-option-id', 'o3']);
+  const up = spawnSync('git', ['rev-parse', '--abbrev-ref', '@{upstream}'], { cwd: dir, encoding: 'utf8' });
+  assert.notEqual(up.status, 0); // branch criada com --no-track: nunca aponta para a main remota
+});
+
+test('card-start: --dry-run não muda nada; fix usa prefixo fix/', async () => {
+  const { cardStart } = await imp('cartao.mjs');
+  const c = cenario([ITEM('A Fazer')]);
+  const { dir, g } = repoComBare();
+  const r = cardStart(dir, fichaTesteSync(), 101, { tipo: 'fix', desc: 'Corrige CNPJ', dryRun: true });
+  assert.equal(r.branch, 'fix/101-corrige-cnpj');
+  assert.equal(g('branch', '--show-current'), 'main');
+  assert.equal(c.chamadas().some((x) => x.args[1] === 'item-edit'), false);
+});
+
+test('card-start: recusa cartão fora de A Fazer, inexistente, árvore suja e branch existente', async () => {
+  const { cardStart } = await imp('cartao.mjs');
+  const { dir, g } = repoComBare();
+  cenario([ITEM('Backlog')]);
+  assert.throws(() => cardStart(dir, fichaTesteSync(), 101), (e) => e.codigo === 'CARTAO_FORA_DE_A_FAZER');
+  assert.throws(() => cardStart(dir, fichaTesteSync(), 999), (e) => e.codigo === 'CARTAO_INEXISTENTE');
+  cenario([ITEM('a fazer')]);
+  fs.writeFileSync(path.join(dir, 'sujo.txt'), 'x');
+  assert.throws(() => cardStart(dir, fichaTesteSync(), 101), (e) => e.codigo === 'ARVORE_SUJA');
+  fs.rmSync(path.join(dir, 'sujo.txt'));
+  g('branch', 'feature/101-carga-de-clientes');
+  assert.throws(() => cardStart(dir, fichaTesteSync(), 101), (e) => e.codigo === 'BRANCH_EXISTE');
+});

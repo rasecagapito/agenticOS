@@ -1,0 +1,75 @@
+// Fluxo do cartão: card-start (A Fazer → branch + TASK → Em andamento) e card-pr (push + PR ligado).
+import fs from 'node:fs';
+import path from 'node:path';
+import { norm } from './colunas.mjs';
+import { ErroGov } from './erros.mjs';
+import { gh, ghJson } from './gh.mjs';
+import { arvoreLimpa, branchAtual, branchExiste, git, pushBranch } from './git.mjs';
+import { caminhoTask, nomeBranch, slug } from './nomes.mjs';
+
+export function acharCartao(ficha, id) {
+  const { owner, number } = ficha.project;
+  const lista = ghJson(['project', 'item-list', String(number), '--owner', owner, '--format', 'json', '--limit', '1000']);
+  const repo = ficha.repo.toLowerCase();
+  const item = (lista?.items || []).find(
+    (i) => i.content?.number === Number(id) && (!i.content.repository || String(i.content.repository).toLowerCase() === repo),
+  );
+  if (!item) throw new ErroGov('CARTAO_INEXISTENTE', `Cartão #${id} não encontrado no Project ${ficha.project.url}.`);
+  return { itemId: item.id, titulo: item.content.title || item.title || `cartao-${id}`, status: item.status || '' };
+}
+
+export function moverCartao(ficha, itemId, chave) {
+  const opcao = ficha.colunas_ids?.[chave];
+  if (!opcao) throw new ErroGov('FICHA_INVALIDA', `Sem id da coluna "${ficha.colunas[chave]}". Rode: github-setup.mjs apply`);
+  gh(['project', 'item-edit', '--id', itemId, '--project-id', ficha.project.id, '--field-id', ficha.project.campo_status_id, '--single-select-option-id', opcao]);
+}
+
+export function textoTask({ id, desc, titulo, repo, branch, agora }) {
+  return `# TASK-${id} — ${titulo}
+
+| Campo | Valor |
+|---|---|
+| Cartão | #${id} |
+| Repositório | ${repo} |
+| Branch | ${branch} |
+| Início | ${agora} |
+| PR | (pendente: /cartao pr ${id}) |
+
+## Plano
+Ver \`changes/${id}-${desc}/\` (proposal.md, tasks.md).
+
+## Histórico
+- ${agora} — cartão movido para Em andamento; branch criada.
+`;
+}
+
+export function cardStart(cwd, ficha, id, { tipo = 'feature', desc, dryRun = false } = {}) {
+  if (!['feature', 'fix'].includes(tipo)) throw new ErroGov('PARAMETRO', '--tipo deve ser feature ou fix.');
+  if (!/^\d+$/.test(String(id))) throw new ErroGov('PARAMETRO', 'O ID do cartão é o número da issue.');
+  const c = acharCartao(ficha, id);
+  if (norm(c.status) !== norm(ficha.colunas.a_fazer))
+    throw new ErroGov('CARTAO_FORA_DE_A_FAZER', `Cartão #${id} está em "${c.status || 'sem coluna'}"; mova para "${ficha.colunas.a_fazer}".`);
+  if (!arvoreLimpa(cwd)) throw new ErroGov('ARVORE_SUJA');
+  const d = slug(desc || c.titulo) || `cartao-${id}`;
+  const branch = nomeBranch(ficha, tipo, id, d);
+  const task = caminhoTask(id, d);
+  if (branchExiste(cwd, branch)) throw new ErroGov('BRANCH_EXISTE', `A branch ${branch} já existe. Retome nela (git switch ${branch}) ou pare.`);
+  const principal = ficha.branch_principal;
+  const acoes = [
+    `git fetch origin ${principal}`,
+    `git switch --no-track -c ${branch} origin/${principal}`,
+    `criar ${task}`,
+    `git commit (TASK-${id})`,
+    `mover cartão #${id} → ${ficha.colunas.em_andamento}`,
+  ];
+  if (dryRun) return { ok: true, dry_run: true, branch, task, acoes };
+  git(cwd, ['fetch', 'origin', principal]);
+  git(cwd, ['switch', '--no-track', '-c', branch, `origin/${principal}`]);
+  const abs = path.join(cwd, task);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, textoTask({ id, desc: d, titulo: c.titulo, repo: ficha.repo, branch, agora: new Date().toISOString() }));
+  git(cwd, ['add', task]);
+  git(cwd, ['commit', '-q', '-m', `docs(task): TASK-${id} ${d}`]);
+  moverCartao(ficha, c.itemId, 'em_andamento');
+  return { ok: true, branch, task, acoes };
+}
