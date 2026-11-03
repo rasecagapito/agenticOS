@@ -1,5 +1,11 @@
 // Proteção da branch principal. Trava 3: o corpo gerado nunca é mais fraco que a regra atual.
 // `atual` = resposta de GET repos/{repo}/branches/{b}/protection (ou null se não protegida).
+const lista = (o) => ({
+  users: (o.users || []).map((u) => u.login),
+  teams: (o.teams || []).map((t) => t.slug),
+  apps: (o.apps || []).map((x) => x.slug),
+});
+
 export function mesclarProtecao(atual) {
   const a = atual || {};
   const rev = a.required_pull_request_reviews || {};
@@ -7,7 +13,7 @@ export function mesclarProtecao(atual) {
   return {
     required_status_checks: sc
       ? sc.checks?.length
-        ? { strict: !!sc.strict, checks: sc.checks }
+        ? { strict: !!sc.strict, checks: sc.checks.map((c) => ({ ...c, app_id: c.app_id ?? -1 })) }
         : { strict: !!sc.strict, contexts: sc.contexts || [] }
       : null,
     enforce_admins: true,
@@ -16,6 +22,8 @@ export function mesclarProtecao(atual) {
       require_code_owner_reviews: true,
       require_last_push_approval: true,
       required_approving_review_count: Math.max(1, rev.required_approving_review_count || 0),
+      ...(rev.dismissal_restrictions ? { dismissal_restrictions: lista(rev.dismissal_restrictions) } : {}),
+      ...(rev.bypass_pull_request_allowances ? { bypass_pull_request_allowances: lista(rev.bypass_pull_request_allowances) } : {}),
     },
     restrictions: a.restrictions
       ? {
@@ -29,6 +37,8 @@ export function mesclarProtecao(atual) {
     allow_deletions: false,
     required_conversation_resolution: !!a.required_conversation_resolution?.enabled,
     lock_branch: !!a.lock_branch?.enabled,
+    block_creations: !!a.block_creations?.enabled,
+    allow_fork_syncing: !!a.allow_fork_syncing?.enabled,
   };
 }
 

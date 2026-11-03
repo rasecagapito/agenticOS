@@ -8,13 +8,29 @@ import { diffProtecao, mesclarProtecao } from './protecao.mjs';
 const MUTACAO_COLUNAS =
   'mutation($input:UpdateProjectV2FieldInput!){updateProjectV2Field(input:$input){projectV2Field{... on ProjectV2SingleSelectField{options{id name}}}}}';
 
-const PROIBIDO = /\bpr (merge|review)\b|\/reviews\b|\/merges\b|-X DELETE|--method DELETE/i;
+const PROIBIDO =
+  /\bpr (merge|review|close)\b|\/pulls\/\d+\/(merge|reviews)|mergePullRequest|addPullRequestReview|deleteRef|enqueuePullRequest/i;
+const METODOS_OK = new Set(['GET', 'PUT', 'POST']);
+
+function metodos(args) {
+  const m = [];
+  args.forEach((x, i) => {
+    if (x === '-X' || x === '--method') m.push(args[i + 1]);
+    else {
+      const k = /^(?:-X|--method)=?(.+)$/.exec(x);
+      if (k) m.push(k[1]);
+    }
+  });
+  return m;
+}
 
 export function verificarTravas(acoes) {
   for (const a of acoes) {
     if (!a.gh) continue;
     const t = a.gh.join(' ');
-    if (PROIBIDO.test(t)) throw new ErroGov('TRAVA', `Ação proibida: gh ${t}`);
+    if (metodos(a.gh).some((m) => !METODOS_OK.has(String(m).toUpperCase())))
+      throw new ErroGov('TRAVA', `Método HTTP proibido: gh ${t}`);
+    if (PROIBIDO.test(t + ' ' + (a.input || ''))) throw new ErroGov('TRAVA', `Ação proibida: gh ${t}`);
   }
 }
 
@@ -52,14 +68,20 @@ export function planejar(estado, ficha) {
   const { hom, prd } = ficha.ambientes;
   if (!ambs.has(hom))
     acoes.push({ tipo: 'ambiente', descricao: `Criar ambiente ${hom}`, gh: ['api', '-X', 'PUT', `repos/${repo}/environments/${hom}`] });
-  const atuais = ambs.get(prd)?.revisores || [];
+  const prdAtual = ambs.get(prd);
+  const atuais = prdAtual?.revisores || [];
   const revisores = uniaoRevisores(atuais, estado.analistas.map((a) => ({ type: 'User', id: a.id })));
-  if (!ambs.has(prd) || revisores.length > atuais.length)
+  if (!prdAtual || revisores.length > atuais.length || !prdAtual.prevent_self_review)
     acoes.push({
       tipo: 'ambiente',
       descricao: `Ambiente ${prd} com aprovação obrigatória de: ${ficha.analistas.join(', ')}`,
       gh: ['api', '-X', 'PUT', `repos/${repo}/environments/${prd}`, '--input', '-'],
-      input: JSON.stringify({ reviewers: revisores, prevent_self_review: true }),
+      input: JSON.stringify({
+        reviewers: revisores,
+        prevent_self_review: true,
+        ...(prdAtual?.wait_timer ? { wait_timer: prdAtual.wait_timer } : {}),
+        ...(prdAtual?.branch_policy ? { deployment_branch_policy: prdAtual.branch_policy } : {}),
+      }),
     });
   const branch = ficha.branch_principal;
   if (estado.protecao.estado === 'indisponivel_no_plano') {
@@ -120,6 +142,7 @@ export function aplicar(cwd, ficha, { dryRun = false } = {}) {
   const r = executar(planejar(estado, ficha), ficha, { dryRun });
   if (dryRun) return { ok: true, dry_run: true, ...r };
   const st = statusDoProject(ficha.project.owner, ficha.project.number);
+  if (!st) throw new ErroGov('GH_FALHOU', 'O Project não tem o campo Status.');
   const nova = {
     ...ficha,
     project: { ...ficha.project, campo_status_id: st.campo_status_id },

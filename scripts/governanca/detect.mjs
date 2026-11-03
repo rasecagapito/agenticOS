@@ -7,16 +7,22 @@ export function lerProtecao(repo, branch) {
   if (s.code === 0) return { estado: 'ativa', regras: JSON.parse(s.stdout) };
   const e = classificar(s);
   if (e.codigo === 'PLANO_SEM_PROTECAO') return { estado: 'indisponivel_no_plano' };
-  if (/not protected|Not Found|404/i.test(`${s.stderr}${s.stdout}`)) return { estado: 'nenhuma' };
+  if (/Branch not protected/i.test(s.stderr + s.stdout)) return { estado: 'nenhuma' };
   throw e;
 }
 
 export function lerAmbientes(repo) {
-  const s = gh(['api', `repos/${repo}/environments`], { permitirFalha: true });
-  if (s.code !== 0) return [];
+  const s = gh(['api', `repos/${repo}/environments?per_page=100`], { permitirFalha: true });
+  if (s.code !== 0) {
+    if (classificar(s).codigo === 'PLANO_SEM_PROTECAO' || /HTTP 404/.test(s.stderr)) return [];
+    throw classificar(s);
+  }
   const d = JSON.parse(s.stdout || '{}');
   return (d.environments || []).map((e) => ({
     nome: e.name,
+    wait_timer: (e.protection_rules || []).find((p) => p.type === 'wait_timer')?.wait_timer || 0,
+    branch_policy: e.deployment_branch_policy || null,
+    prevent_self_review: !!(e.protection_rules || []).find((p) => p.type === 'required_reviewers')?.prevent_self_review,
     revisores: (e.protection_rules || [])
       .filter((p) => p.type === 'required_reviewers')
       .flatMap((p) => p.reviewers || [])
@@ -25,7 +31,7 @@ export function lerAmbientes(repo) {
 }
 
 export function statusDoProject(owner, number) {
-  const f = ghJson(['project', 'field-list', String(number), '--owner', owner, '--format', 'json']);
+  const f = ghJson(['project', 'field-list', String(number), '--owner', owner, '--format', 'json', '--limit', '100']);
   const st = (f?.fields || []).find((x) => x.name === 'Status');
   if (!st) return null;
   const q = 'query($id:ID!){node(id:$id){... on ProjectV2SingleSelectField{options{id name color description}}}}';

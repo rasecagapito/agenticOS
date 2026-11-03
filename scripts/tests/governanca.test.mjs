@@ -204,9 +204,18 @@ test('proteção: sem regra atual → alvo completo; diff mostra antes → depoi
 test('proteção: nunca enfraquece regras existentes', async () => {
   const { mesclarProtecao, diffProtecao } = await imp('protecao.mjs');
   const atual = {
-    required_status_checks: { strict: true, contexts: ['ci'], checks: [{ context: 'ci', app_id: 15368 }] },
+    required_status_checks: { strict: true, contexts: ['ci'], checks: [{ context: 'ci', app_id: 15368 }, { context: 'lint', app_id: null }] },
     enforce_admins: { enabled: true },
-    required_pull_request_reviews: { required_approving_review_count: 2, dismiss_stale_reviews: true, require_code_owner_reviews: true, require_last_push_approval: true },
+    required_pull_request_reviews: {
+      required_approving_review_count: 2,
+      dismiss_stale_reviews: true,
+      require_code_owner_reviews: true,
+      require_last_push_approval: true,
+      dismissal_restrictions: { users: [{ login: 'chefe' }], teams: [{ slug: 'time' }], apps: [{ slug: 'bot' }] },
+      bypass_pull_request_allowances: { users: [{ login: 'chefe' }], teams: [], apps: [{ slug: 'bot' }] },
+    },
+    block_creations: { enabled: true },
+    allow_fork_syncing: { enabled: true },
     restrictions: { users: [{ login: 'chefe' }], teams: [], apps: [] },
     required_linear_history: { enabled: true },
     allow_force_pushes: { enabled: false },
@@ -216,7 +225,12 @@ test('proteção: nunca enfraquece regras existentes', async () => {
   };
   const c = mesclarProtecao(atual);
   assert.equal(c.required_pull_request_reviews.required_approving_review_count, 2);
-  assert.deepEqual(c.required_status_checks, { strict: true, checks: [{ context: 'ci', app_id: 15368 }] });
+  assert.deepEqual(c.required_status_checks, { strict: true, checks: [{ context: 'ci', app_id: 15368 }, { context: 'lint', app_id: -1 }] });
+  assert.deepEqual(c.required_pull_request_reviews.dismissal_restrictions, { users: ['chefe'], teams: ['time'], apps: ['bot'] });
+  assert.deepEqual(c.required_pull_request_reviews.bypass_pull_request_allowances, { users: ['chefe'], teams: [], apps: ['bot'] });
+  assert.equal(c.block_creations, true);
+  assert.equal(c.allow_fork_syncing, true);
+  assert.equal('dismissal_restrictions' in mesclarProtecao(null).required_pull_request_reviews, false);
   assert.deepEqual(c.restrictions, { users: ['chefe'], teams: [], apps: [] });
   assert.equal(c.required_linear_history, true);
   assert.equal(c.required_conversation_resolution, true);
@@ -232,7 +246,7 @@ const BASE = [
   falha('^api repos/dono/app/collaborators/', 'HTTP 404: Not Found'),
   ok('^api repos/dono/app$', { default_branch: 'main', private: true, owner: { type: 'User' } }),
   falha('^api repos/dono/app/branches/main/protection$', 'gh: Branch not protected (HTTP 404)'),
-  ok('^api repos/dono/app/environments$', { total_count: 0, environments: [] }),
+  ok('^api repos/dono/app/environments\\?per_page=100$', { total_count: 0, environments: [] }),
   ok('^project list', { projects: [{ number: 3, title: 'App', url: 'https://github.com/users/dono/projects/3', id: 'PVT_1' }] }),
   ok('^project field-list 3', { fields: [{ id: 'FLD_S', name: 'Status', type: 'ProjectV2SingleSelectField' }] }),
   ok('^api graphql -f query=query', {
@@ -280,6 +294,47 @@ test('detect: plano sem proteção é reconhecido', async () => {
   ]);
   const { dir } = repoGit();
   assert.deepEqual(detect(dir).protecao, { estado: 'indisponivel_no_plano' });
+});
+
+test('detect: erro de rede nos ambientes não é engolido', async () => {
+  const { detect } = await imp('detect.mjs');
+  cenario([falha('^api repos/dono/app/environments\\?per_page=100$', 'error connecting to api.github.com: could not resolve host'), ...BASE]);
+  const { dir } = repoGit();
+  assert.throws(() => detect(dir), (e) => e.codigo === 'REDE');
+});
+
+test('apply: ambiente prd existente preserva wait_timer e branch policy', async () => {
+  const { aplicar } = await imp('apply.mjs');
+  const pol = { protected_branches: false, custom_branch_policies: true };
+  cenario([
+    ok('^api repos/dono/app/environments\\?per_page=100$', {
+      environments: [
+        { name: 'hom', protection_rules: [] },
+        {
+          name: 'prd',
+          deployment_branch_policy: pol,
+          protection_rules: [
+            { type: 'wait_timer', wait_timer: 30 },
+            { type: 'required_reviewers', prevent_self_review: false, reviewers: [{ type: 'User', reviewer: { id: 42 } }] },
+          ],
+        },
+      ],
+    }),
+    ...BASE,
+  ]);
+  const { dir } = repoGit();
+  const r = aplicar(dir, fichaTesteSync(), { dryRun: true });
+  const { planejar } = await imp('apply.mjs');
+  const { detect } = await imp('detect.mjs');
+  const f = fichaTesteSync();
+  const acao = planejar(detect(dir, { project: 3, analistas: ['analista'] }), f).find((a) => a.gh.join(' ').includes('environments/prd'));
+  assert.ok(acao && r.ok);
+  assert.deepEqual(JSON.parse(acao.input), {
+    reviewers: [{ type: 'User', id: 42 }],
+    prevent_self_review: true,
+    wait_timer: 30,
+    deployment_branch_policy: pol,
+  });
 });
 
 const ESCRITA = (c) => c.args.includes('-X') || c.args.includes('--input');
@@ -348,6 +403,11 @@ test('apply: plano sem proteção → erro, ou parcial se aceito', async () => {
 
 test('apply: travas recusam merge, aprovação e DELETE', async () => {
   const { verificarTravas } = await imp('apply.mjs');
-  for (const args of [['pr', 'merge', '7'], ['pr', 'review', '7', '--approve'], ['api', 'repos/d/a/pulls/7/reviews'], ['api', '-X', 'DELETE', 'repos/d/a/branches/main/protection']])
+  for (const args of [['pr', 'merge', '7'], ['pr', 'review', '7', '--approve'], ['api', 'repos/d/a/pulls/7/reviews'], ['api', '-X', 'DELETE', 'repos/d/a/branches/main/protection'], ['api', '-XDELETE', 'x'], ['api', '--method=DELETE', 'x'], ['api', '-X', 'PUT', 'repos/d/a/pulls/7/merge']])
     assert.throws(() => verificarTravas([{ tipo: 'x', descricao: 'x', gh: args }]), (e) => e.codigo === 'TRAVA');
+  assert.throws(
+    () => verificarTravas([{ tipo: 'x', descricao: 'x', gh: ['api', 'graphql', '--input', '-'], input: '{"query":"mutation{mergePullRequest(input:{})}"}' }]),
+    (e) => e.codigo === 'TRAVA',
+  );
+  verificarTravas([{ tipo: 'x', descricao: 'x', gh: ['api', '-X', 'PUT', 'repos/dono/reviews/environments/hom'] }]);
 });
