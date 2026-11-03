@@ -131,13 +131,12 @@ export function resumoLog(texto: string, hoje = new Date()) {
 type Atalho = { rotulo: string; command: string; args?: string }
 
 // Para cada ação: comando próprio do projeto (/status) se existir; senão a skill do plugin
-// (/agentic-os:agentic-os /status). /handoff só em projeto multi-provedor (comando ou memory/handoff.md).
-export function atalhos(nomes: string[], temHandoff: boolean): Atalho[] {
+// (/agentic-os:agentic-os /status). Os três botões aparecem em todo projeto, para o painel ser igual em todos.
+export function atalhos(nomes: string[]): Atalho[] {
   const set = new Set(nomes)
   const skill = nomes.find(n => n === 'agentic-os:agentic-os') ?? nomes.find(n => /(^|:)agentic-os$/.test(n))
   const out: Atalho[] = []
   for (const acao of ['status', 'wrapup', 'handoff']) {
-    if (acao === 'handoff' && !temHandoff && !set.has('handoff')) continue
     if (set.has(acao)) out.push({ rotulo: `/${acao}`, command: acao })
     else if (skill) out.push({ rotulo: `/${acao}`, command: skill, args: `/${acao}` })
   }
@@ -223,8 +222,7 @@ export const register: Register = on => {
     const total = Object.values(porAgente).reduce((s, n) => s + n, 0)
 
     const nomes = (await $.command.list().catch(() => [])).map(c => c.name)
-    const temHandoff = await $.fs.exists('memory/handoff.md').catch(() => false)
-    const botoes = atalhos(nomes, temHandoff)
+    const botoes = atalhos(nomes)
     const rodar = (a: Atalho) => () => {
       $.command
         .run({ command: a.command, args: a.args })
@@ -237,11 +235,8 @@ export const register: Register = on => {
         <Text>{gasto.usd == null ? 'Custo ainda indisponível' : `${usd(gasto.usd)} gastos (igual ao /cost)`}</Text>
         {gasto.ctx != null && <Text dimColor>Contexto usado: {Math.round(gasto.ctx)}%</Text>}
         <Text> </Text>
-        {!temRoteador && (
-          <Text dimColor>Roteador de modelos não instalado: a economia por subagente aparece quando ele estiver ativo.</Text>
-        )}
-        {temRoteador && (
-          <Box flexDirection="column">
+        {/* Mesmo layout em todo projeto: sem roteador, as seções aparecem e dizem por que estão vazias. */}
+        <Box flexDirection="column">
             <Text bold>Economia nesta sessão</Text>
             {lista.length === 0 ? (
               <Text dimColor>Nenhum subagente concluído ainda.</Text>
@@ -265,9 +260,10 @@ export const register: Register = on => {
                 {a.padEnd(9)} {'█'.repeat(Math.min(12, porAgente[a] ?? 0))} {porAgente[a] ?? 0}
               </Text>
             ))}
-            <Text dimColor>Última: {segmento(ultima)}</Text>
-          </Box>
-        )}
+            <Text dimColor>
+              {temRoteador ? `Última: ${segmento(ultima)}` : 'Roteador de modelos não instalado neste projeto.'}
+            </Text>
+        </Box>
         <Text> </Text>
         {botoes.length === 0 ? (
           <Text dimColor>Comandos do Agentic OS não encontrados (instale o plugin agentic-os).</Text>
@@ -278,7 +274,11 @@ export const register: Register = on => {
             ))}
           </Box>
         )}
-        <Text dimColor>Estimativa: preços de tabela; custo da recepção (Haiku) não incluído.</Text>
+        <Text dimColor>
+          {temRoteador
+            ? 'Estimativa: preços de tabela; custo da recepção (Haiku) não incluído.'
+            : 'Estimativa: preços de tabela; custo da sessão principal não incluído.'}
+        </Text>
       </Box>
     )
   })

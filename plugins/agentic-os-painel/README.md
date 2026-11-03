@@ -39,16 +39,15 @@ Requer um Claude Code com suporte a mods (hooks de função, 2.1.3xx ou mais nov
 
 - **Consumo desta sessão** (sempre, com ou sem roteador): quanto a sessão já custou em US$, o mesmo total do
   `/cost`, e quanto do contexto está em uso. Atualiza sozinho a cada resposta.
-- **Economia nesta sessão** (com o roteador): o painel lê o registro de cada subagente que terminou, em primeiro ou segundo
+- **Economia nesta sessão**: o painel lê o registro de cada subagente que terminou, em primeiro ou segundo
   plano, e multiplica os tokens de cada resposta pelo preço do modelo (gasto real) e pelo preço do Opus 5.5 ("se tudo fosse Opus"). A diferença,
   menos o custo estimado do Jev, é a economia.
 - **Decisões de hoje**: quantos pedidos foram para cada subagente, lidas de `.claude/router/decisions.jsonl`
-  (o registro do roteador). Avisos internos do Claude Code não contam.
+  (o registro do roteador). Avisos internos do Claude Code não contam. Sem o roteador, mostra 0 e avisa.
 - **Botões**: rodam `/status`, `/wrapup` e `/handoff` como se você tivesse digitado. Usam o comando próprio do
-  projeto se existir; senão, a skill do plugin (`/agentic-os:agentic-os /status`). `/handoff` só aparece em
-  projetos multi-provedor.
+  projeto se existir; senão, a skill do plugin (`/agentic-os:agentic-os /status`).
 
-Sem o roteador instalado, o painel mostra só os botões.
+O layout é o mesmo em todo projeto. Sem o roteador instalado, as seções continuam lá e dizem por que estão vazias.
 
 ## Limitações
 
