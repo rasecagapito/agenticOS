@@ -71,3 +71,61 @@ test('gh: falha com permitirFalha devolve código sem lançar', async () => {
   assert.equal(r.code, 1);
   assert.match(r.stderr, /404/);
 });
+
+// Repo git temporário. remoto: URL do origin (string) ou null.
+function repoGit({ remoto = 'https://github.com/dono/app.git' } = {}) {
+  const dir = fs.mkdtempSync(path.join(TMP, 'proj-'));
+  const g = (...a) => {
+    const r = spawnSync('git', a, { cwd: dir, encoding: 'utf8' });
+    if (r.status) throw new Error(r.stderr);
+    return r.stdout.trim();
+  };
+  g('init', '-q', '-b', 'main');
+  fs.writeFileSync(path.join(dir, 'README.md'), 'x\n');
+  g('add', '.');
+  g('commit', '-qm', 'init');
+  if (remoto) g('remote', 'add', 'origin', remoto);
+  return { dir, g };
+}
+// Repo com origin real (bare local) para fetch/push.
+function repoComBare() {
+  const bare = fs.mkdtempSync(path.join(TMP, 'bare-'));
+  spawnSync('git', ['init', '-q', '--bare', '-b', 'main', bare]);
+  const p = repoGit({ remoto: bare });
+  p.g('push', '-q', 'origin', 'main');
+  const shaBare = (ref) => spawnSync('git', ['rev-parse', ref], { cwd: bare, encoding: 'utf8' }).stdout.trim();
+  return { ...p, bare, shaBare };
+}
+
+test('nomes: slug, branch e TASK', async () => {
+  const { slug, nomeBranch, caminhoTask } = await imp('nomes.mjs');
+  assert.equal(slug('Carga de Clientes — Ação!'), 'carga-de-clientes-acao');
+  assert.equal(slug('a'.repeat(60)).length, 40);
+  const ficha = { prefixos_branch: { feature: 'feature/', fix: 'fix/' } };
+  assert.equal(nomeBranch(ficha, 'fix', 102, 'carga-itens'), 'fix/102-carga-itens');
+  assert.equal(caminhoTask(101, 'carga-clientes'), 'docs/tasks/TASK-101-carga-clientes.md');
+});
+
+test('git: remoto, árvore limpa, branch existe', async () => {
+  const { parseRemoto, remotoOrigin, ehRepo, arvoreLimpa, branchExiste } = await imp('git.mjs');
+  assert.equal(parseRemoto('https://github.com/dono/app.git'), 'dono/app');
+  assert.equal(parseRemoto('git@github.com:dono/app.git'), 'dono/app');
+  assert.equal(parseRemoto('https://gitlab.com/dono/app.git'), null);
+  const { dir, g } = repoGit();
+  assert.equal(ehRepo(dir), true);
+  assert.equal(ehRepo(TMP), false);
+  assert.equal(remotoOrigin(dir), 'dono/app');
+  assert.equal(arvoreLimpa(dir), true);
+  fs.writeFileSync(path.join(dir, 'novo.txt'), 'y');
+  assert.equal(arvoreLimpa(dir), false);
+  g('branch', 'feature/1-x');
+  assert.equal(branchExiste(dir, 'feature/1-x'), true);
+  assert.equal(branchExiste(dir, 'feature/2-y'), false);
+});
+
+test('git: trava — push na branch principal é proibido', async () => {
+  const { pushBranch } = await imp('git.mjs');
+  const { dir } = repoComBare();
+  assert.throws(() => pushBranch(dir, 'main', 'main'), (e) => e.codigo === 'TRAVA');
+  assert.throws(() => pushBranch(dir, '', 'main'), (e) => e.codigo === 'TRAVA');
+});
