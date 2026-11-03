@@ -39,7 +39,8 @@ As partes 2–4 entram depois como **etapas novas do wizard** e **campos novos d
 | Peça | Arquivo | Papel |
 |---|---|---|
 | Wizard | `skills/agentic-os/wizard.md` (novo) | Roteiro das etapas. `SKILL.md` apenas aponta para ele. |
-| Script GitHub | `scripts/github-setup.mjs` (novo) | Subcomandos `detect`, `apply`, `card-start`, `card-pr`; todos aceitam `--dry-run`. Saída JSON para a skill ler. |
+| Script GitHub | `scripts/github-setup.mjs` + módulos em `scripts/governanca/` (novos) | Subcomandos `detect`, `apply`, `card-start`, `card-pr`; todos aceitam `--dry-run`. Saída JSON para a skill ler. |
+| Instalador | `scripts/install-governanca.mjs` (novo) | Grava a ficha, copia o script para `.agentic-os/bin/` do projeto e os arquivos da camada F; upsert de blocos marcados. Idempotente (mesmo padrão do `install-router.mjs`). |
 | Molde da camada | `template/F-governanca/` (novo) | Arquivos copiados para o projeto. |
 | Documentação | `docs/GOVERNANCA.md` (novo) + seção no `docs/guia-completo.html` | Explicação para leigo. |
 | Testes | `tests/github-setup.test.mjs` (novo) | `gh` falso via PATH com respostas gravadas. |
@@ -49,6 +50,7 @@ As partes 2–4 entram depois como **etapas novas do wizard** e **campos novos d
 | Peça | Arquivo |
 |---|---|
 | Ficha | `.agentic-os/governanca.json` |
+| Script (cópia) | `.agentic-os/bin/github-setup.mjs` + `governanca/` — o procedimento chama esta cópia (funciona em qualquer IA, sem depender do caminho do plugin) |
 | Estado do wizard | `.agentic-os/wizard-estado.json` (retomada; pode ser apagado ao terminar) |
 | Procedimento | `automation/procedures/cartao.md` (provider-neutro) |
 | Comando | `.claude/commands/cartao.md` (wrapper fino, ≤ 6 linhas) |
@@ -62,7 +64,7 @@ As partes 2–4 entram depois como **etapas novas do wizard** e **campos novos d
   "versao": 1,
   "repo": "dono/nome",
   "branch_principal": "main",
-  "project": { "url": "https://github.com/users/dono/projects/3", "id": "PVT_...", "campo_status_id": "PVTSSF_..." },
+  "project": { "owner": "dono", "number": 3, "url": "https://github.com/users/dono/projects/3", "id": "PVT_...", "campo_status_id": "PVTSSF_..." },
   "colunas": {
     "backlog": "Backlog", "a_fazer": "A Fazer", "em_andamento": "Em andamento",
     "em_validacao": "Em validação", "aprovado": "Aprovado", "concluido": "Concluído", "bloqueado": "Bloqueado"
@@ -71,6 +73,7 @@ As partes 2–4 entram depois como **etapas novas do wizard** e **campos novos d
   "analistas": ["login-do-analista"],
   "ambientes": { "hom": "hom", "prd": "prd" },
   "prefixos_branch": { "feature": "feature/", "fix": "fix/" },
+  "aceitar_protecao_parcial": false,
   "protecao_aplicada": { "em": "2026-11-03T12:00:00Z", "nivel": "completa | parcial | nenhuma", "motivo": "…" }
 }
 ```
@@ -133,7 +136,7 @@ em stdout (`{ ok, acoes: [...], avisos: [...], erro?: { codigo, mensagem, como_r
 | `detect [--owner X]` | Git, remoto, branch principal, Projects, campo Status e opções, Environments, regras da branch principal, plano/visibilidade, login do agente | Não |
 | `apply --ficha <arq>` | Cria colunas faltantes, Environments `hom`/`prd` (com revisor obrigatório no `prd` quando o plano permitir), proteção da branch principal | Sim (com `--dry-run`: não) |
 | `card-start <ID> [--tipo feature\|fix] [--desc slug]` | Valida cartão em "A Fazer", árvore limpa; cria branch a partir da principal atualizada; move cartão para "Em andamento"; cria `docs/tasks/TASK-<ID>-<desc>.md` | Sim |
-| `card-pr <ID>` | Push da branch do cartão; abre PR para a principal com `Cartão #<ID>` e link do cartão no corpo; liga PR ao item do Project; grava link no TASK | Sim |
+| `card-pr <ID>` | Push da branch do cartão; abre PR para a principal com `Cartão #<ID>` e link do Project no corpo (a menção `#<ID>` liga o PR à issue do cartão); comenta o link do PR na issue; grava link no TASK | Sim |
 
 ### Proteção aplicada pelo `apply` (nível completo)
 
@@ -142,6 +145,8 @@ em stdout (`{ ok, acoes: [...], avisos: [...], erro?: { codigo, mensagem, como_r
 - Bloquear push direto e force-push; bloquear exclusão da branch.
 - `enforce_admins` ligado (nem o dono burla sem desligar à mão).
 - Environment `prd` com revisores obrigatórios = analistas.
+
+**Cartão = issue do repositório adicionada ao Project** (ID = número da issue). Rascunhos do Project não têm número → `CARTAO_INEXISTENTE` pede para converter em issue.
 
 ### Travas fixas (sem flag para desligar)
 
