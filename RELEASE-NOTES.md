@@ -1,3 +1,17 @@
+# Agentic OS v1.8.7 (painel 1.2.1)
+
+**Painel igual em todos os projetos.** Antes, num projeto sem o roteador o painel mostrava só o consumo e os
+botões. Agora mostra sempre as mesmas seções, como no projeto com roteador:
+
+- Consumo desta sessão, Economia nesta sessão, Decisões de hoje e os botões `/status`, `/wrapup` e `/handoff`.
+- Sem o roteador, Decisões de hoje mostra 0 e avisa "Roteador de modelos não instalado neste projeto".
+- A economia conta qualquer subagente que terminar, com ou sem roteador.
+- `/handoff` aparece em todo projeto (usa a skill quando o projeto não tem o comando).
+
+Atualizar: `claude plugin marketplace update agentic-os` e `claude plugin update agentic-os-painel@agentic-os`.
+
+---
+
 # Agentic OS v1.8.6 (painel 1.2.0)
 
 **Correção do painel: a economia não aparecia.** Os subagentes rodam em segundo plano, e o resultado da
