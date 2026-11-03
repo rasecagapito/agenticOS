@@ -183,3 +183,42 @@ test('git: parseRemoto ancora o host; gh: REDE não casa "timed out" solto', asy
   assert.equal(classificar({ stderr: 'dial tcp: lookup api.github.com: no such host' }).codigo, 'REDE');
   assert.equal(classificar({ stderr: 'HTTP 422: Validation Failed: timed out title' }).codigo, 'GH_FALHOU');
 });
+
+test('proteção: sem regra atual → alvo completo; diff mostra antes → depois', async () => {
+  const { mesclarProtecao, diffProtecao } = await imp('protecao.mjs');
+  const corpo = mesclarProtecao(null);
+  assert.equal(corpo.enforce_admins, true);
+  assert.equal(corpo.allow_force_pushes, false);
+  assert.equal(corpo.allow_deletions, false);
+  assert.deepEqual(corpo.required_pull_request_reviews, {
+    dismiss_stale_reviews: true,
+    require_code_owner_reviews: true,
+    require_last_push_approval: true,
+    required_approving_review_count: 1,
+  });
+  const diff = diffProtecao(null, corpo);
+  assert.ok(diff.includes('PR obrigatório: false → true'));
+  assert.ok(diff.includes('Force-push permitido: true → false'));
+});
+
+test('proteção: nunca enfraquece regras existentes', async () => {
+  const { mesclarProtecao, diffProtecao } = await imp('protecao.mjs');
+  const atual = {
+    required_status_checks: { strict: true, contexts: ['ci'], checks: [{ context: 'ci', app_id: 15368 }] },
+    enforce_admins: { enabled: true },
+    required_pull_request_reviews: { required_approving_review_count: 2, dismiss_stale_reviews: true, require_code_owner_reviews: true, require_last_push_approval: true },
+    restrictions: { users: [{ login: 'chefe' }], teams: [], apps: [] },
+    required_linear_history: { enabled: true },
+    allow_force_pushes: { enabled: false },
+    allow_deletions: { enabled: false },
+    required_conversation_resolution: { enabled: true },
+    lock_branch: { enabled: false },
+  };
+  const c = mesclarProtecao(atual);
+  assert.equal(c.required_pull_request_reviews.required_approving_review_count, 2);
+  assert.deepEqual(c.required_status_checks, { strict: true, checks: [{ context: 'ci', app_id: 15368 }] });
+  assert.deepEqual(c.restrictions, { users: ['chefe'], teams: [], apps: [] });
+  assert.equal(c.required_linear_history, true);
+  assert.equal(c.required_conversation_resolution, true);
+  assert.deepEqual(diffProtecao(atual, c), []);
+});
