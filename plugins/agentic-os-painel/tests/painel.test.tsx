@@ -70,7 +70,7 @@ test('contabiliza o subagente, mostra economia, decisões e só os botões que e
     expect((await ui.find({ type: 'Text', text: /Última/ }))?.text).toMatch(/jev 0\.83 → profundo \(Opus\)/)
     expect(await ui.find({ type: 'Button', key: 'status' })).toBeDefined()
     expect(await ui.find({ type: 'Button', key: 'wrapup' })).toBeDefined()
-    expect(await ui.find({ type: 'Button', key: 'handoff' })).toBeUndefined()
+    expect(await ui.find({ type: 'Button', key: 'handoff' })).toBeUndefined() // sem comando nem skill
     await ui.unmount()
   }
 
@@ -149,7 +149,7 @@ test('sem tela no início não tenta abrir; abre quando a tela se conecta', asyn
   expect(abertos).toEqual(['agentic-os-painel'])
 })
 
-test('sem comandos próprios: botões chamam a skill do plugin com /status e /wrapup', async ($, on) => {
+test('sem comandos próprios: os três botões chamam a skill do plugin', async ($, on) => {
   const rodados: Array<{ command: string; args: string }> = []
   on('fs.read', () => {
     throw new Error('ENOENT')
@@ -164,10 +164,12 @@ test('sem comandos próprios: botões chamam a skill do plugin com /status e /wr
   const ui = await $.ui.mount({ ...PANE, surface: 'vscode' })
   expect(await ui.find({ type: 'Button', key: 'status' })).toBeDefined()
   expect(await ui.find({ type: 'Button', key: 'wrapup' })).toBeDefined()
-  expect(await ui.find({ type: 'Button', key: 'handoff' })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: 'handoff' })).toBeDefined()
   await ui.press({ key: 'status' })
+  await ui.press({ key: 'handoff' })
   await ui.unmount()
   expect(rodados[0]).toEqual({ command: 'agentic-os:agentic-os', args: '/status' })
+  expect(rodados[1]).toEqual({ command: 'agentic-os:agentic-os', args: '/handoff' })
 })
 
 test('nenhum comando do Agentic OS: explica em vez de ficar vazio', async ($, on) => {
@@ -182,7 +184,7 @@ test('nenhum comando do Agentic OS: explica em vez de ficar vazio', async ($, on
   await ui.unmount()
 })
 
-test('sem roteador: avisa e ainda mostra os botões', async ($, on) => {
+test('sem roteador: mesmo layout do projeto com roteador, com seções vazias explicadas', async ($, on) => {
   on('fs.read', () => {
     throw new Error('ENOENT')
   })
@@ -190,7 +192,12 @@ test('sem roteador: avisa e ainda mostra os botões', async ($, on) => {
   on('command.list', () => ({ value: [cmd('status'), cmd('wrapup'), cmd('handoff')] }))
 
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  expect((await ui.find({ type: 'Text', text: /não instalado/ }))?.text).toBeDefined()
-  expect(await ui.find({ type: 'Button', key: 'handoff' })).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /Consumo desta sessão/ }))?.text).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /Economia nesta sessão/ }))?.text).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /Nenhum subagente concluído/ }))?.text).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /Decisões de hoje/ }))?.text).toMatch(/\(0\)/)
+  expect((await ui.find({ type: 'Text', text: /não instalado neste projeto/ }))?.text).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /sessão principal não incluído/ }))?.text).toBeDefined()
+  for (const key of ['status', 'wrapup', 'handoff']) expect(await ui.find({ type: 'Button', key })).toBeDefined()
   await ui.unmount()
 })
