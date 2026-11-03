@@ -1,0 +1,30 @@
+name: governanca-check
+
+on:
+  push:
+    paths:
+      - "template/F-governanca/**"
+      - "scripts/github-setup.mjs"
+      - "scripts/install-governanca.mjs"
+      - "scripts/governanca/**"
+      - "scripts/tests/governanca.test.mjs"
+      - "scripts/tests/fixtures/fake-gh.mjs"
+  pull_request:
+    paths:
+      - "template/F-governanca/**"
+      - "scripts/github-setup.mjs"
+      - "scripts/install-governanca.mjs"
+      - "scripts/governanca/**"
+      - "scripts/tests/governanca.test.mjs"
+      - "scripts/tests/fixtures/fake-gh.mjs"
+
+jobs:
+  check-governanca:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Testes da governança GitHub (camada F)
+        run: bash scripts/check-governanca.sh
