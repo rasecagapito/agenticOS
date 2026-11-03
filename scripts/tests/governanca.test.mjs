@@ -554,3 +554,49 @@ test('CLI: opção desconhecida é recusada com PARAMETRO', async () => {
   assert.equal(r.code, 2);
   assert.equal(r.json.erro.codigo, 'PARAMETRO');
 });
+
+const INSTALL = path.join(REPO, 'scripts', 'install-governanca.mjs');
+function instalar(dest, ficha, extra = []) {
+  const arq = path.join(fs.mkdtempSync(path.join(TMP, 'resp-')), 'ficha.json');
+  fs.writeFileSync(arq, JSON.stringify(ficha));
+  return spawnSync(process.execPath, [INSTALL, dest, '--ficha-json', arq, ...extra], { encoding: 'utf8' });
+}
+
+test('install: cria ficha, script, procedimento, comando, blocos; idempotente', async () => {
+  const { dir } = repoGit();
+  fs.mkdirSync(path.join(dir, 'automation'));
+  fs.writeFileSync(path.join(dir, 'automation', 'guardrails.md'), '# Guardrails\n\n- regra antiga\n');
+  fs.mkdirSync(path.join(dir, '.github'));
+  fs.writeFileSync(path.join(dir, '.github', 'CODEOWNERS'), 'docs/ @escritor\n');
+  const f = fichaTesteSync({ analistas: ['analista', 'outra'] });
+  assert.equal(instalar(dir, f).status, 0);
+  const ler = (p) => fs.readFileSync(path.join(dir, p), 'utf8');
+  assert.equal(JSON.parse(ler('.agentic-os/governanca.json')).repo, 'dono/app');
+  assert.ok(fs.existsSync(path.join(dir, '.agentic-os/bin/github-setup.mjs')));
+  for (const m of fs.readdirSync(GOV)) assert.ok(fs.existsSync(path.join(dir, '.agentic-os/bin/governanca', m)), m);
+  assert.ok(fs.existsSync(path.join(dir, 'automation/procedures/cartao.md')));
+  assert.ok(ler('.claude/commands/cartao.md').split('\n').length <= 6);
+  assert.ok(fs.existsSync(path.join(dir, 'docs/tasks/README.md')));
+  assert.match(ler('automation/guardrails.md'), /- regra antiga[\s\S]*agentic-os:governanca:start[\s\S]*Sem assinatura/);
+  assert.match(ler('.github/CODEOWNERS'), /^docs\/ @escritor\n[\s\S]*^\* @analista @outra$/m);
+  assert.match(ler('.gitignore'), /\.agentic-os\/wizard-estado\.json/);
+  const antes = ['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler);
+  assert.equal(instalar(dir, f).status, 0);
+  assert.deepEqual(['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler), antes);
+});
+
+test('install: preserva ids e proteção já aplicados; recusa segredo; dry-run não escreve', async () => {
+  const { dir } = repoGit();
+  const f = fichaTesteSync({ colunas_ids: { a_fazer: 'o2' }, protecao_aplicada: { em: 'x', nivel: 'completa', motivo: '' } });
+  assert.equal(instalar(dir, f).status, 0);
+  assert.equal(instalar(dir, fichaTesteSync({ colunas_ids: {}, protecao_aplicada: null })).status, 0);
+  const salva = JSON.parse(fs.readFileSync(path.join(dir, '.agentic-os/governanca.json'), 'utf8'));
+  assert.equal(salva.colunas_ids.a_fazer, 'o2');
+  assert.equal(salva.protecao_aplicada.nivel, 'completa');
+  const r = instalar(dir, { ...f, extra: { token: 'x' } });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stdout + r.stderr, /segredo/);
+  const novo = repoGit().dir;
+  assert.equal(instalar(novo, f, ['--dry-run']).status, 0);
+  assert.equal(fs.existsSync(path.join(novo, '.agentic-os')), false);
+});
