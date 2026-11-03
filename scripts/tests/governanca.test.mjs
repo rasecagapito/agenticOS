@@ -490,3 +490,38 @@ test('card-pr: PR já aberto não duplica; branch errada é recusada', async () 
   g('switch', '-q', 'main');
   assert.throws(() => cardPr(dir, fichaTesteSync(), 101), (e) => e.codigo === 'BRANCH_ERRADA');
 });
+
+const CLI = path.join(REPO, 'scripts', 'github-setup.mjs');
+function cli(cwd, args, env) {
+  const r = spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8', env: { ...process.env, ...env } });
+  return { code: r.status, json: r.stdout.trim() ? JSON.parse(r.stdout) : null, stderr: r.stderr };
+}
+
+test('CLI: detect imprime JSON; erro conhecido sai com 2 e código', async () => {
+  const { env } = cenario(BASE);
+  const { dir } = repoGit();
+  const r = cli(dir, ['detect', '--project', '3', '--analista', 'analista'], env);
+  assert.equal(r.code, 0);
+  assert.equal(r.json.ok, true);
+  assert.equal(r.json.repo, 'dono/app');
+  assert.equal(r.json.analistas[0].id, 42);
+  const e = cli(dir, ['card-start', '101'], env); // sem ficha
+  assert.equal(e.code, 2);
+  assert.equal(e.json.ok, false);
+  assert.equal(e.json.erro.codigo, 'FICHA_INVALIDA');
+  assert.ok(e.json.erro.como_resolver);
+  assert.equal(cli(dir, ['inventado'], env).json.erro.codigo, 'PARAMETRO');
+});
+
+test('CLI: apply grava a ficha atualizada (e não grava em --dry-run)', async () => {
+  const { gravarFicha, lerFicha } = await imp('ficha.mjs');
+  const { env } = cenario([ok('^api graphql --input -$', '{}'), ok('^api -X PUT', '{}'), ...BASE]);
+  const { dir } = repoGit();
+  gravarFicha(dir, fichaTesteSync({ colunas_ids: {} }));
+  assert.equal(cli(dir, ['apply', '--dry-run'], env).code, 0);
+  assert.deepEqual(lerFicha(dir).colunas_ids, {});
+  const r = cli(dir, ['apply'], env);
+  assert.equal(r.code, 0);
+  assert.equal(lerFicha(dir).colunas_ids.a_fazer, 'o2');
+  assert.equal(lerFicha(dir).protecao_aplicada.nivel, 'completa');
+});
