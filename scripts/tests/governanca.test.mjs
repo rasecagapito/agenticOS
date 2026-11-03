@@ -129,3 +129,47 @@ test('git: trava — push na branch principal é proibido', async () => {
   assert.throws(() => pushBranch(dir, 'main', 'main'), (e) => e.codigo === 'TRAVA');
   assert.throws(() => pushBranch(dir, '', 'main'), (e) => e.codigo === 'TRAVA');
 });
+
+const { fichaPadrao } = await imp('ficha.mjs');
+function fichaTesteSync(extra = {}) {
+  return fichaPadrao({
+    repo: 'dono/app',
+    project: { owner: 'dono', number: 3, url: 'https://github.com/users/dono/projects/3', id: 'PVT_1', campo_status_id: 'FLD_S' },
+    colunas_ids: { a_fazer: 'o2', em_andamento: 'o3' },
+    analistas: ['analista'],
+    ...extra,
+  });
+}
+
+test('colunas: faltantes ignoram acento/caixa; mescla preserva existentes; ids por nome', async () => {
+  const { COLUNAS_PADRAO, colunasFaltantes, opcoesMescladas, mapearIds } = await imp('colunas.mjs');
+  const opcoes = [
+    { id: 'o1', name: 'Todo', color: 'GRAY', description: '' },
+    { id: 'o2', name: 'a fazer', color: 'BLUE', description: 'd' },
+    { id: 'o3', name: 'Em Andamento', color: 'YELLOW', description: '' },
+  ];
+  const faltam = colunasFaltantes(opcoes, COLUNAS_PADRAO);
+  assert.deepEqual(faltam, ['Backlog', 'Em validação', 'Aprovado', 'Concluído', 'Bloqueado']);
+  const m = opcoesMescladas(opcoes, faltam);
+  assert.equal(m.length, 8);
+  assert.deepEqual(m[1], { name: 'a fazer', color: 'BLUE', description: 'd' });
+  assert.equal(m[7].name, 'Bloqueado');
+  const ids = mapearIds(opcoes, COLUNAS_PADRAO);
+  assert.equal(ids.a_fazer, 'o2');
+  assert.equal(ids.em_andamento, 'o3');
+  assert.equal(ids.backlog, null);
+});
+
+test('ficha: válida passa; erros e segredo são recusados', async () => {
+  const { validarFicha, lerFicha, gravarFicha } = await imp('ficha.mjs');
+  const f = fichaTesteSync();
+  assert.deepEqual(validarFicha(f), []);
+  assert.match(validarFicha({ ...f, repo: 'semdono' }).join(), /dono\/nome/);
+  assert.match(validarFicha({ ...f, analistas: [] }).join(), /analistas/);
+  assert.match(validarFicha({ ...f, extra: { github_token: 'x' } }).join(), /segredo/);
+  const dir = fs.mkdtempSync(path.join(TMP, 'ficha-'));
+  gravarFicha(dir, f);
+  assert.deepEqual(lerFicha(dir), f);
+  fs.writeFileSync(path.join(dir, '.agentic-os', 'governanca.json'), '{');
+  assert.throws(() => lerFicha(dir), (e) => e.codigo === 'FICHA_INVALIDA');
+});
