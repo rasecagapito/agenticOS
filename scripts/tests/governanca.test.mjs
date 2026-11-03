@@ -281,3 +281,73 @@ test('detect: plano sem proteção é reconhecido', async () => {
   const { dir } = repoGit();
   assert.deepEqual(detect(dir).protecao, { estado: 'indisponivel_no_plano' });
 });
+
+const ESCRITA = (c) => c.args.includes('-X') || c.args.includes('--input');
+
+test('apply --dry-run: lista ações e não escreve nada', async () => {
+  const { aplicar } = await imp('apply.mjs');
+  const c = cenario(BASE);
+  const { dir } = repoGit();
+  const r = aplicar(dir, fichaTesteSync(), { dryRun: true });
+  assert.equal(r.dry_run, true);
+  assert.deepEqual(r.acoes.map((a) => a.tipo), ['colunas', 'ambiente', 'ambiente', 'protecao']);
+  assert.ok(r.acoes.every((a) => a.status === 'planejado' && a.comando.startsWith('gh ')));
+  assert.equal(c.chamadas().filter(ESCRITA).length, 0);
+});
+
+test('apply: cria colunas, ambientes e proteção; devolve ficha com ids', async () => {
+  const { aplicar } = await imp('apply.mjs');
+  const c = cenario([
+    ok('^api graphql --input -$', '{}'),
+    ok('^api -X PUT repos/dono/app/environments/', '{}'),
+    ok('^api -X PUT repos/dono/app/branches/main/protection', '{}'),
+    ...BASE,
+  ]);
+  const { dir } = repoGit();
+  const r = aplicar(dir, fichaTesteSync());
+  assert.ok(r.acoes.every((a) => a.status === 'feito'));
+  const escritas = c.chamadas().filter(ESCRITA);
+  const mut = JSON.parse(escritas[0].input);
+  assert.equal(mut.variables.input.fieldId, 'FLD_S');
+  assert.deepEqual(mut.variables.input.singleSelectOptions.slice(0, 2).map((o) => o.name), ['Todo', 'A Fazer']);
+  const prd = escritas.find((e) => e.args.join(' ').includes('environments/prd'));
+  assert.deepEqual(JSON.parse(prd.input), { reviewers: [{ type: 'User', id: 42 }], prevent_self_review: true });
+  const prot = JSON.parse(escritas.find((e) => e.args.join(' ').includes('/protection')).input);
+  assert.equal(prot.required_pull_request_reviews.dismiss_stale_reviews, true);
+  assert.equal(r.ficha.colunas_ids.a_fazer, 'o2');
+  assert.equal(r.ficha.protecao_aplicada.nivel, 'completa');
+});
+
+test('apply: analista sem acesso → convite; analista inválido → erro', async () => {
+  const { aplicar } = await imp('apply.mjs');
+  cenario(BASE);
+  const { dir } = repoGit();
+  cenario([ok('^api users/novo$', { id: 7 }), ...BASE]);
+  const r = aplicar(dir, fichaTesteSync({ analistas: ['novo'] }), { dryRun: true });
+  assert.equal(r.acoes[0].tipo, 'convite');
+  assert.match(r.acoes[0].comando, /collaborators\/novo -f permission=push/);
+  assert.throws(() => aplicar(dir, fichaTesteSync({ analistas: ['agente'] }), { dryRun: true }), (e) => e.codigo === 'ANALISTA_IGUAL_AGENTE');
+});
+
+test('apply: plano sem proteção → erro, ou parcial se aceito', async () => {
+  const { aplicar } = await imp('apply.mjs');
+  cenario([
+    falha('^api repos/dono/app/branches/main/protection$', 'Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)'),
+    falha('^api -X PUT repos/dono/app/environments/prd', 'Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)'),
+    ok('^api graphql --input -$', '{}'),
+    ok('^api -X PUT repos/dono/app/environments/', '{}'),
+    ...BASE,
+  ]);
+  const { dir } = repoGit();
+  assert.throws(() => aplicar(dir, fichaTesteSync(), { dryRun: true }), (e) => e.codigo === 'PLANO_SEM_PROTECAO');
+  const r = aplicar(dir, fichaTesteSync({ aceitar_protecao_parcial: true }));
+  assert.equal(r.ficha.protecao_aplicada.nivel, 'parcial');
+  assert.ok(r.acoes.some((a) => a.tipo === 'protecao' && a.status === 'pulado'));
+  assert.ok(r.acoes.some((a) => a.descricao.includes('prd') && a.status === 'pulado'));
+});
+
+test('apply: travas recusam merge, aprovação e DELETE', async () => {
+  const { verificarTravas } = await imp('apply.mjs');
+  for (const args of [['pr', 'merge', '7'], ['pr', 'review', '7', '--approve'], ['api', 'repos/d/a/pulls/7/reviews'], ['api', '-X', 'DELETE', 'repos/d/a/branches/main/protection']])
+    assert.throws(() => verificarTravas([{ tipo: 'x', descricao: 'x', gh: args }]), (e) => e.codigo === 'TRAVA');
+});
