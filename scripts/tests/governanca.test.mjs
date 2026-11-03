@@ -222,3 +222,62 @@ test('proteção: nunca enfraquece regras existentes', async () => {
   assert.equal(c.required_conversation_resolution, true);
   assert.deepEqual(diffProtecao(atual, c), []);
 });
+
+// Cenário de um repo privado sem proteção, Project 3 com Status {Todo, A Fazer}.
+const BASE = [
+  ok('^api user$', { login: 'agente' }),
+  ok('^api users/analista$', { id: 42, login: 'analista' }),
+  falha('^api users/', 'HTTP 404: Not Found'),
+  ok('^api repos/dono/app/collaborators/analista$', ''),
+  falha('^api repos/dono/app/collaborators/', 'HTTP 404: Not Found'),
+  ok('^api repos/dono/app$', { default_branch: 'main', private: true, owner: { type: 'User' } }),
+  falha('^api repos/dono/app/branches/main/protection$', 'gh: Branch not protected (HTTP 404)'),
+  ok('^api repos/dono/app/environments$', { total_count: 0, environments: [] }),
+  ok('^project list', { projects: [{ number: 3, title: 'App', url: 'https://github.com/users/dono/projects/3', id: 'PVT_1' }] }),
+  ok('^project field-list 3', { fields: [{ id: 'FLD_S', name: 'Status', type: 'ProjectV2SingleSelectField' }] }),
+  ok('^api graphql -f query=query', {
+    data: { node: { options: [{ id: 'o1', name: 'Todo', color: 'GRAY', description: '' }, { id: 'o2', name: 'A Fazer', color: 'BLUE', description: '' }] } },
+  }),
+];
+
+test('detect: lê git, repo, proteção, ambientes, Projects, Status e analistas', async () => {
+  const { detect } = await imp('detect.mjs');
+  cenario(BASE);
+  const { dir } = repoGit();
+  const r = detect(dir, { project: 3, analistas: ['analista', 'agente', 'fantasma', 'outro'] });
+  assert.equal(r.git, true);
+  assert.equal(r.repo, 'dono/app');
+  assert.equal(r.login, 'agente');
+  assert.equal(r.branch_principal, 'main');
+  assert.equal(r.privado, true);
+  assert.deepEqual(r.protecao, { estado: 'nenhuma' });
+  assert.deepEqual(r.ambientes, []);
+  assert.equal(r.owner, 'dono');
+  assert.equal(r.projects[0].id, 'PVT_1');
+  assert.equal(r.status_project.campo_status_id, 'FLD_S');
+  assert.equal(r.status_project.opcoes.length, 2);
+  assert.deepEqual(r.analistas[0], { login: 'analista', id: 42, colaborador: true });
+  assert.equal(r.analistas[1].erro, 'ANALISTA_IGUAL_AGENTE');
+  assert.equal(r.analistas[2].erro, 'ANALISTA_INEXISTENTE');
+});
+
+test('detect: pasta sem git e repo sem remoto viram avisos', async () => {
+  const { detect } = await imp('detect.mjs');
+  cenario(BASE);
+  const semGit = fs.mkdtempSync(path.join(TMP, 'nada-'));
+  assert.deepEqual(detect(semGit).avisos, ['NAO_E_GIT']);
+  const { dir } = repoGit({ remoto: null });
+  const r = detect(dir);
+  assert.deepEqual(r.avisos, ['SEM_REMOTO']);
+  assert.equal(r.owner, 'agente');
+});
+
+test('detect: plano sem proteção é reconhecido', async () => {
+  const { detect } = await imp('detect.mjs');
+  cenario([
+    falha('^api repos/dono/app/branches/main/protection$', 'Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)'),
+    ...BASE,
+  ]);
+  const { dir } = repoGit();
+  assert.deepEqual(detect(dir).protecao, { estado: 'indisponivel_no_plano' });
+});
