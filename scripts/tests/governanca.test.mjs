@@ -600,3 +600,16 @@ test('install: preserva ids e proteção já aplicados; recusa segredo; dry-run 
   assert.equal(instalar(novo, f, ['--dry-run']).status, 0);
   assert.equal(fs.existsSync(path.join(novo, '.agentic-os')), false);
 });
+
+test('install: trocar de repo ou Project descarta ids e proteção antigos', async () => {
+  const { dir } = repoGit();
+  const f = fichaTesteSync({ colunas_ids: { a_fazer: 'o2' }, protecao_aplicada: { em: 'x', nivel: 'completa', motivo: '' } });
+  assert.equal(instalar(dir, f).status, 0);
+  const outro = fichaTesteSync({ repo: 'dono/outro', colunas_ids: {}, protecao_aplicada: null });
+  outro.project = { ...outro.project, id: '', campo_status_id: '' };
+  assert.equal(instalar(dir, outro).status, 0);
+  const salva = JSON.parse(fs.readFileSync(path.join(dir, '.agentic-os/governanca.json'), 'utf8'));
+  assert.deepEqual(salva.colunas_ids, {});
+  assert.equal(salva.protecao_aplicada, null);
+  assert.equal(salva.project.id, '');
+});

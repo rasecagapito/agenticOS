@@ -25,7 +25,8 @@ export function upsertBloco(texto, id, conteudo, marca = (s) => `<!-- ${s} -->`)
 }
 
 function mesclarFicha(nova, antiga) {
-  if (!antiga) return nova;
+  // Só reaproveita ids e proteção se for o mesmo repo e o mesmo Project (senão seriam dados de outro lugar).
+  if (!antiga || antiga.repo !== nova.repo || antiga.project?.number !== nova.project?.number) return nova;
   const vazio = (v) => v === undefined || v === null || v === '' || (typeof v === 'object' && !Object.keys(v).length);
   return {
     ...nova,
