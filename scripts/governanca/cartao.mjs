@@ -73,3 +73,57 @@ export function cardStart(cwd, ficha, id, { tipo = 'feature', desc, dryRun = fal
   moverCartao(ficha, c.itemId, 'em_andamento');
   return { ok: true, branch, task, acoes };
 }
+
+export function corpoPr({ id, titulo, ficha, task }) {
+  return [
+    `Cartão #${id} — ${titulo}`,
+    `Project: ${ficha.project.url}`,
+    task ? `TASK: \`${task}\`` : null,
+    '',
+    `Este PR só entra na \`${ficha.branch_principal}\` com a aprovação do analista (revisão obrigatória). Commit novo depois da aprovação descarta a aprovação.`,
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+}
+
+export function registrarPr(texto, url, agora) {
+  if (texto.includes(url)) return texto;
+  return texto.replace(/^\| PR \|.*\|$/m, `| PR | ${url} |`).trimEnd() + `\n- ${agora} — PR aberto: ${url}\n`;
+}
+
+export function cardPr(cwd, ficha, id, { dryRun = false } = {}) {
+  const atual = branchAtual(cwd);
+  if (!Object.values(ficha.prefixos_branch).some((p) => atual.startsWith(`${p}${id}-`)))
+    throw new ErroGov('BRANCH_ERRADA', `A branch atual "${atual}" não é do cartão #${id}.`);
+  if (!arvoreLimpa(cwd)) throw new ErroGov('ARVORE_SUJA');
+  const c = acharCartao(ficha, id);
+  const dirTasks = path.join(cwd, 'docs', 'tasks');
+  const nome = fs.existsSync(dirTasks) ? fs.readdirSync(dirTasks).find((f) => f.startsWith(`TASK-${id}-`)) : null;
+  const task = nome ? `docs/tasks/${nome}` : null;
+  const existente = ghJson(['pr', 'list', '--repo', ficha.repo, '--head', atual, '--state', 'open', '--json', 'url']) || [];
+  const acoes = [
+    `git push -u origin ${atual}`,
+    existente.length ? `PR já aberto: ${existente[0].url}` : `gh pr create --base ${ficha.branch_principal} --head ${atual}`,
+    existente.length ? 'cartão já comentado' : `comentar o link do PR no cartão #${id}`,
+    task ? `registrar o PR em ${task}` : 'sem TASK para registrar',
+  ];
+  if (dryRun) return { ok: true, dry_run: true, branch: atual, acoes };
+  pushBranch(cwd, atual, ficha.branch_principal);
+  let url = existente[0]?.url;
+  if (!url) {
+    url = gh(['pr', 'create', '--repo', ficha.repo, '--base', ficha.branch_principal, '--head', atual, '--title', `[#${id}] ${c.titulo}`, '--body', corpoPr({ id, titulo: c.titulo, ficha, task })]).stdout.trim();
+    gh(['issue', 'comment', String(id), '--repo', ficha.repo, '--body', `PR aberto: ${url} — aguardando aprovação do analista.`]);
+  }
+  if (task) {
+    const abs = path.join(cwd, task);
+    const antes = fs.readFileSync(abs, 'utf8');
+    const depois = registrarPr(antes, url, new Date().toISOString());
+    if (depois !== antes) {
+      fs.writeFileSync(abs, depois);
+      git(cwd, ['add', task]);
+      git(cwd, ['commit', '-q', '-m', `docs(task): TASK-${id} PR aberto`]);
+      pushBranch(cwd, atual, ficha.branch_principal);
+    }
+  }
+  return { ok: true, branch: atual, pr: url, acoes };
+}

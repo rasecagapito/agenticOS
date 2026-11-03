@@ -456,3 +456,37 @@ test('card-start: recusa cartão fora de A Fazer, inexistente, árvore suja e br
   g('branch', 'feature/101-carga-de-clientes');
   assert.throws(() => cardStart(dir, fichaTesteSync(), 101), (e) => e.codigo === 'BRANCH_EXISTE');
 });
+
+test('card-pr: push da branch, PR ligado, comentário no cartão e TASK atualizado; main intocada', async () => {
+  const { cardStart, cardPr } = await imp('cartao.mjs');
+  const { dir, g, shaBare } = repoComBare();
+  cenario([ITEM('A Fazer'), ok('^project item-edit', '{}')]);
+  cardStart(dir, fichaTesteSync(), 101);
+  const mainAntes = shaBare('main');
+  const c = cenario([ITEM('Em andamento'), ok('^pr list', []), ok('^pr create', 'https://github.com/dono/app/pull/7\n'), ok('^issue comment', '')]);
+  const r = cardPr(dir, fichaTesteSync(), 101);
+  assert.equal(r.pr, 'https://github.com/dono/app/pull/7');
+  assert.equal(shaBare('main'), mainAntes);
+  assert.equal(shaBare('feature/101-carga-de-clientes'), g('rev-parse', 'HEAD'));
+  const criar = c.chamadas().find((x) => x.args[1] === 'create').args;
+  assert.deepEqual(criar.slice(2, 8), ['--repo', 'dono/app', '--base', 'main', '--head', 'feature/101-carga-de-clientes']);
+  const corpo = criar[criar.indexOf('--body') + 1];
+  assert.match(corpo, /Cartão #101/);
+  assert.doesNotMatch(corpo, /closes|fixes|resolves/i);
+  assert.ok(c.chamadas().some((x) => x.args[0] === 'issue' && x.args[2] === '101'));
+  const task = fs.readFileSync(path.join(dir, 'docs/tasks/TASK-101-carga-de-clientes.md'), 'utf8');
+  assert.match(task, /\| PR \| https:\/\/github.com\/dono\/app\/pull\/7 \|/);
+  assert.equal(g('status', '--porcelain'), '');
+});
+
+test('card-pr: PR já aberto não duplica; branch errada é recusada', async () => {
+  const { cardStart, cardPr } = await imp('cartao.mjs');
+  const { dir, g } = repoComBare();
+  cenario([ITEM('A Fazer'), ok('^project item-edit', '{}')]);
+  cardStart(dir, fichaTesteSync(), 101);
+  const c = cenario([ITEM('Em andamento'), ok('^pr list', [{ url: 'https://github.com/dono/app/pull/7' }])]);
+  assert.equal(cardPr(dir, fichaTesteSync(), 101).pr, 'https://github.com/dono/app/pull/7');
+  assert.equal(c.chamadas().some((x) => x.args[1] === 'create'), false);
+  g('switch', '-q', 'main');
+  assert.throws(() => cardPr(dir, fichaTesteSync(), 101), (e) => e.codigo === 'BRANCH_ERRADA');
+});
