@@ -3,14 +3,20 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ErroGov } from './erros.mjs';
-import { arvoreLimpa, branchAtual, git } from './git.mjs';
+import { branchAtual, git } from './git.mjs';
 import { gh } from './gh.mjs';
 import { lerPermitidos, varrerSegredos } from './segredos.mjs';
 
 export const DIR_ESTADO = '.agentic-os/supervisor';
 export const CICLOS_POR_RODADA = 3;
 const LIMITE_TESTES_MS = 10 * 60 * 1000;
+const RUNNER = fileURLToPath(new URL('./rodar-comando.mjs', import.meta.url));
+const MARCADOR_TEMPO = '__AGENTIC_OS_TEMPO_ESGOTADO__';
+// Só arquivos rastreados contam: o que o commit revisado não contém (ex.: coverage/) não trava o fluxo.
+const rastreadosLimpos = (cwd) => git(cwd, ['status', '--porcelain', '--untracked-files=no']).out === '';
+export const formatarLimite = (ms) => (ms >= 60000 ? `${Math.round(ms / 60000)} min` : `${Math.max(1, Math.round(ms / 1000))} s`);
 const at = (prova) => ({ status: 'atendido', prova });
 const nao = (prova) => ({ status: 'nao_atendido', prova });
 
@@ -33,13 +39,25 @@ export function acharProposal(cwd, id) {
 }
 
 export function extrairCriterios(texto) {
-  const m = String(texto).match(/^##\s+crit[eé]rios de aceite\s*$([\s\S]*?)(?=^##\s|(?![\s\S]))/im);
-  if (!m) return [];
-  return m[1]
-    .split('\n')
-    .map((l) => l.match(/^\s*[-*]\s+(?:\[[ xX]\]\s+)?(.+?)\s*$/))
-    .filter(Boolean)
-    .map((x) => x[1]);
+  const itens = [];
+  let dentro = false;
+  let cerca = false;
+  for (const l of String(texto).normalize('NFC').split(/\r?\n/)) {
+    if (/^\s*```/.test(l)) {
+      cerca = !cerca;
+      continue;
+    }
+    if (cerca) continue;
+    if (/^##\s+crit[eé]rios de aceite\s*$/i.test(l)) {
+      dentro = true;
+      continue;
+    }
+    if (!dentro) continue;
+    if (/^##\s/.test(l)) break;
+    const m = l.match(/^[-*]\s+(?:\[[ xX]\]\s+)?(.+?)\s*$/);
+    if (m) itens.push(m[1]);
+  }
+  return itens;
 }
 
 export function lerCriterios(cwd, id) {
@@ -68,10 +86,16 @@ export function lerCriterios(cwd, id) {
 
 export function rodarTestes(cwd, comando, { limiteMs = LIMITE_TESTES_MS } = {}) {
   if (!comando) return nao('comando de testes não configurado (comando_testes na ficha)');
-  const r = spawnSync(comando, { cwd, shell: true, encoding: 'utf8', timeout: limiteMs, maxBuffer: 64 * 1024 * 1024 });
-  if (r.error?.code === 'ETIMEDOUT' || (r.status === null && r.signal))
-    return nao(`tempo esgotado (${Math.round(limiteMs / 1000)} s): ${comando}`);
-  const saida = `${r.stdout || ''}${r.stderr || ''}`.trim().split('\n').slice(-40).join('\n');
+  const r = spawnSync(process.execPath, [RUNNER, comando, String(limiteMs)], {
+    cwd, encoding: 'utf8', timeout: limiteMs + 30000, maxBuffer: 64 * 1024 * 1024,
+  });
+  if (r.error) {
+    if (r.error.code === 'ETIMEDOUT') return nao(`tempo esgotado (${formatarLimite(limiteMs)}): ${comando}`);
+    return nao(`falha ao executar os testes (${r.error.code || 'erro'}): ${r.error.message}`);
+  }
+  const bruta = `${r.stdout || ''}${r.stderr || ''}`;
+  if (bruta.includes(MARCADOR_TEMPO)) return nao(`tempo esgotado (${formatarLimite(limiteMs)}): ${comando}`);
+  const saida = bruta.trim().split('\n').slice(-40).join('\n');
   const prova = `${comando} → saída ${r.status}${saida ? `\n${saida}` : ''}`;
   return r.status === 0 ? at(prova) : nao(prova);
 }
@@ -84,11 +108,11 @@ export function baseComum(cwd, principal) {
   throw new ErroGov('GIT_FALHOU', `Sem base comum com ${principal}.`);
 }
 
-export function checagensBase(cwd, ficha, id, { limiteMs } = {}) {
+export function checagensBase(cwd, ficha, id, { limiteMs, proposal } = {}) {
   const branch = branchAtual(cwd);
   if (!Object.values(ficha.prefixos_branch).some((p) => branch.startsWith(`${p}${id}-`)))
     throw new ErroGov('BRANCH_ERRADA', `A branch atual "${branch}" não é do cartão #${id}.`);
-  if (!arvoreLimpa(cwd)) throw new ErroGov('ARVORE_SUJA');
+  if (!rastreadosLimpos(cwd)) throw new ErroGov('ARVORE_SUJA');
   const commit = git(cwd, ['rev-parse', 'HEAD']).out;
   const { ref, base } = baseComum(cwd, ficha.branch_principal);
   const curto = (s) => s.slice(0, 7);
@@ -101,7 +125,7 @@ export function checagensBase(cwd, ficha, id, { limiteMs } = {}) {
   const frente = Number(git(cwd, ['rev-list', '--count', `${base}..HEAD`]).out);
   const b3 = frente > 0 ? at(`branch ${branch}; ${frente} commit(s) à frente de ${ref} (base ${curto(base)})`) : nao(`nenhum commit na branch ${branch} à frente de ${ref}`);
   const task = acharTask(cwd, id);
-  const b4 = task ? at(task) : nao(`docs/tasks/TASK-${id}-*.md não encontrado`);
+  const b4 = task ? at(proposal ? `${task}; ${proposal}` : task) : nao(`docs/tasks/TASK-${id}-*.md não encontrado`);
   const resultados = [
     { id: 'B1', texto: 'Testes do projeto passam', ...b1 },
     { id: 'B2', texto: 'Nenhum segredo no diff da branch', ...b2 },
@@ -169,8 +193,8 @@ export function reviewCheck(cwd, ficha, id, { limiteMs } = {}) {
   const e = lerEstado(cwd, n);
   if (e.situacao === 'aguardando_decisao') throw new ErroGov('AGUARDA_DECISAO');
   const { proposal, criterios } = lerCriterios(cwd, n);
-  const b = checagensBase(cwd, ficha, n, { limiteMs });
-  e.pendente = { commit: b.commit, intervalo: b.intervalo, resultados: b.resultados, criterios };
+  const b = checagensBase(cwd, ficha, n, { limiteMs, proposal });
+  e.pendente = { commit: b.commit, intervalo: b.intervalo, resultados: b.resultados, criterios, liberados: b.liberados };
   gravarEstado(cwd, e);
   return {
     ok: true, id: n, rodada: e.rodada, ciclo: e.ciclo + 1, commit: b.commit, intervalo: b.intervalo, branch: b.branch,
@@ -184,8 +208,10 @@ export function reviewRecord(cwd, ficha, id, arqParecer) {
   if (e.situacao === 'aguardando_decisao') throw new ErroGov('AGUARDA_DECISAO');
   if (!e.pendente) throw new ErroGov('PARECER_INVALIDO', 'Não há revisão pendente: rode review-check antes.');
   const head = git(cwd, ['rev-parse', 'HEAD']).out;
-  if (head !== e.pendente.commit || !arvoreLimpa(cwd))
-    throw new ErroGov('PARECER_INVALIDO', 'O código mudou desde o review-check. Rode review-check de novo.');
+  if (head !== e.pendente.commit)
+    throw new ErroGov('PARECER_INVALIDO', `O HEAD mudou desde o review-check (era ${e.pendente.commit.slice(0, 7)}, agora ${head.slice(0, 7)}). Rode review-check de novo.`);
+  if (!rastreadosLimpos(cwd))
+    throw new ErroGov('PARECER_INVALIDO', 'Há mudança rastreada não commitada desde o review-check. Commite ou desfaça e rode review-check de novo.');
   let parecer;
   try {
     parecer = JSON.parse(fs.readFileSync(path.resolve(cwd, String(arqParecer || '')), 'utf8'));
@@ -195,7 +221,7 @@ export function reviewRecord(cwd, ficha, id, arqParecer) {
   const criterios = consolidar(e.pendente, parecer);
   const nota = calcularNota(criterios);
   e.ciclo += 1;
-  e.historico.push({ rodada: e.rodada, ciclo: e.ciclo, commit: head, nota, em: agora(), resumo: String(parecer.resumo || ''), criterios });
+  e.historico.push({ rodada: e.rodada, ciclo: e.ciclo, commit: head, nota, em: agora(), resumo: String(parecer.resumo || ''), liberados: e.pendente.liberados || [], criterios });
   if (nota === 10) {
     e.situacao = 'pronto_para_pr';
     e.valida = { commit: head, nota, tipo: 'nota_10', rodada: e.rodada, ciclo: e.ciclo };
@@ -244,7 +270,9 @@ export function reviewDecide(cwd, ficha, id, { seguir = false, novaRodada = fals
 export function exigirRevisao(cwd, id) {
   const e = lerEstado(cwd, id);
   if (!e.valida) throw new ErroGov('SEM_REVISAO');
-  const mudou = git(cwd, ['diff', '--name-only', e.valida.commit, 'HEAD']).out.split('\n').filter(Boolean);
+  if (git(cwd, ['cat-file', '-e', `${e.valida.commit}^{commit}`], { permitirFalha: true }).code !== 0)
+    throw new ErroGov('REVISAO_VENCIDA', `O commit revisado não existe mais; revise de novo (/cartao revisar ${id}).`);
+  const mudou = git(cwd, ['diff', '--no-renames', '--name-only', e.valida.commit, 'HEAD']).out.split('\n').filter(Boolean);
   const fora = mudou.filter((f) => !new RegExp(`^docs/tasks/TASK-${id}-[^/]+\\.md$`).test(f));
   if (fora.length) throw new ErroGov('REVISAO_VENCIDA', `Mudou depois da revisão: ${fora.slice(0, 5).join(', ')}. Rode /cartao revisar ${id} de novo.`);
   return e;
@@ -266,6 +294,8 @@ export function secaoSupervisor(e) {
   ];
   if (v.tipo === 'liberado_pelo_usuario')
     linhas.push(`> ⚠️ **Nota ${v.nota}/10 — liberada pelo usuário em ${v.em}.** Motivo: ${v.motivo}`, `> Não atendidos: ${nao.join(', ')}`, '');
+  if (h.liberados?.length)
+    linhas.push(`Segredos liberados pelo usuário: ${h.liberados.map((x) => `${x.arquivo}:${x.linha} (${x.tipo})`).join(', ')}`, '');
   const rodadas = e.decisoes.filter((d) => d.tipo === 'nova_rodada');
   if (rodadas.length) linhas.push(`Novas análises pedidas pelo usuário: ${rodadas.map((d) => `${d.em} (${cel(d.motivo)})`).join('; ')}`, '');
   linhas.push('| Critério | Descrição | Status | Prova |', '|---|---|---|---|');

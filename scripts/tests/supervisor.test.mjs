@@ -124,6 +124,57 @@ test('segredos: lerPermitidos ignora vazias e comentários', async () => {
   assert.deepEqual(lerPermitidos(dir), ['chave-de-teste-123']);
 });
 
+const diffDe = (...linhas) => ['+++ b/c.txt', '@@ -0,0 +1,9 @@', ...linhas.map((l) => `+${l}`)].join('\n');
+
+test('segredos: senha/chave literal com prefixo, JSON, .env e YAML; referências não acusam', async () => {
+  const { varrerSegredos } = await imp('segredos.mjs');
+  const positivos = [
+    'DB_PASSWORD="hunter2222"',
+    'GITHUB_TOKEN="abcdefghijkl"',
+    '"password": "hunter2222"',
+    'API_KEY=abcdef123456',
+    'password: hunter2222',
+  ];
+  for (const p of positivos) assert.equal(varrerSegredos(diffDe(p)).achados.length, 1, p);
+  const negativos = [
+    'password = os.environ["X"]',
+    'token: process.env.TOKEN',
+    'api_key=${KEY}',
+    'senha = getSenha()',
+  ];
+  for (const n of negativos) assert.equal(varrerSegredos(diffDe(n)).achados.length, 0, n);
+});
+
+test('segredos: permitido compara com o trecho achado; vários achados por linha', async () => {
+  const { varrerSegredos } = await imp('segredos.mjs');
+  const tok = 'gh' + 'p_' + 'a'.repeat(36);
+  const aws = 'AKIA' + 'ABCDEFGHIJKLMNOP';
+  const r = varrerSegredos(diffDe(`host=localhost ${tok}`), ['localhost']);
+  assert.equal(r.achados.length, 1);
+  assert.equal(r.liberados.length, 0);
+  const r2 = varrerSegredos(diffDe(`${aws} ${tok}`), [aws]);
+  assert.equal(r2.achados.length, 1);
+  assert.equal(r2.liberados.length, 1);
+  assert.equal(r2.achados[0].tipo, 'token GitHub');
+  const r3 = varrerSegredos(diffDe(`${tok} ${tok.replace('a', 'b')}`));
+  assert.equal(r3.achados.length, 2);
+});
+
+test('segredos: linha adicionada começando com "++ " não vira cabeçalho', async () => {
+  const { varrerSegredos } = await imp('segredos.mjs');
+  const diff = ['diff --git a/c.txt b/c.txt', '--- a/c.txt', '+++ b/c.txt', '@@ -0,0 +1,1 @@', "+++ password='hunter2222'"].join('\n');
+  const r = varrerSegredos(diff);
+  assert.equal(r.achados.length, 1);
+  assert.equal(r.achados[0].arquivo, 'c.txt');
+});
+
+test('critérios: ignora cercas de código e itens indentados; título NFD casa', async () => {
+  const { extrairCriterios } = await imp('supervisor.mjs');
+  const nfd = 'Critérios de aceite'.normalize('NFD');
+  const txt = `# x\n\n## ${nfd}\n- topo 1\n  - subitem\n\t- tab\n\`\`\`\n- x\n## falso\n\`\`\`\n* topo 2\n\n## Fim\n- fora\n`;
+  assert.deepEqual(extrairCriterios(txt), ['topo 1', 'topo 2']);
+});
+
 test('critérios: lê lista do proposal (G1, G2, E*, C*); sem seção → SEM_CRITERIOS', async () => {
   const { lerCriterios, extrairCriterios } = await imp('supervisor.mjs');
   assert.deepEqual(extrairCriterios('# x\n## Critérios de aceite\n- a\n* [ ] b\n\n## Outro\n- c\n'), ['a', 'b']);
@@ -166,9 +217,9 @@ test('checagens base: B1–B4 atendidos; segredo e branch errada', async () => {
   const r2 = checagensBase(p.dir, ficha(), 101);
   assert.equal(r2.resultados[1].status, 'nao_atendido');
   assert.match(r2.resultados[1].prova, /cfg\.mjs:1/);
-  fs.writeFileSync(path.join(p.dir, 'sujo.txt'), 'x');
+  fs.appendFileSync(path.join(p.dir, 'carga.mjs'), '// sujo\n');
   assert.throws(() => checagensBase(p.dir, ficha(), 101), (e) => e.codigo === 'ARVORE_SUJA');
-  fs.rmSync(path.join(p.dir, 'sujo.txt'));
+  p.g('checkout', '--', 'carga.mjs');
   p.g('switch', '-q', 'main');
   assert.throws(() => checagensBase(p.dir, ficha(), 101), (e) => e.codigo === 'BRANCH_ERRADA');
 });
@@ -312,4 +363,94 @@ test('secaoSupervisor: tabela; liberação mostra aviso com motivo', async () =>
   const lib = secaoSupervisor({ ...base, valida: { commit: 'abcdef1234', nota: 5, tipo: 'liberado_pelo_usuario', motivo: 'prazo', em: '2026-11-04T11:00:00Z', rodada: 1, ciclo: 3 } });
   assert.match(lib, /⚠️ \*\*Nota 5\/10 — liberada pelo usuário em 2026-11-04T11:00:00Z\.\*\* Motivo: prazo/);
   assert.match(lib, /Não atendidos: C2/);
+  assert.doesNotMatch(lib, /Segredos liberados/);
+  const comLib = secaoSupervisor({
+    historico: [{ ...base.historico[0], liberados: [{ arquivo: 'a.txt', linha: 3, tipo: 'chave AWS', trecho: 'AKIA…OP' }] }],
+    decisoes: [],
+    valida: { commit: 'abcdef1234', nota: 5, tipo: 'nota_10', rodada: 1, ciclo: 3 },
+  });
+  assert.match(comLib, /Segredos liberados pelo usuário: a\.txt:3 \(chave AWS\)/);
+});
+
+test('B1: estouro de tempo mata a árvore de processos (sem neto órfão)', async () => {
+  const { rodarTestes } = await imp('supervisor.mjs');
+  const dir = fs.mkdtempSync(path.join(TMP, 'orf-'));
+  const marca = path.join(dir, 'neto.txt');
+  fs.writeFileSync(path.join(dir, 'neto.mjs'), `import fs from 'node:fs';\nsetTimeout(() => fs.writeFileSync(${JSON.stringify(marca)}, 'x'), 2000);\n`);
+  fs.writeFileSync(
+    path.join(dir, 'pai.mjs'),
+    `import { spawn } from 'node:child_process';\nspawn(process.execPath, [${JSON.stringify(path.join(dir, 'neto.mjs'))}], { stdio: 'ignore' });\nsetTimeout(() => {}, 30000);\n`,
+  );
+  const r = rodarTestes(dir, `node "${path.join(dir, 'pai.mjs')}"`, { limiteMs: 700 });
+  assert.equal(r.status, 'nao_atendido');
+  assert.match(r.prova, /tempo esgotado/);
+  await new Promise((res) => setTimeout(res, 3500));
+  assert.equal(fs.existsSync(marca), false);
+});
+
+test('B1: erro de buffer não é reportado como tempo esgotado; formato do tempo', async () => {
+  const { rodarTestes } = await imp('supervisor.mjs');
+  const dir = fs.mkdtempSync(path.join(TMP, 'buf-'));
+  assert.match(rodarTestes(dir, 'node -e "setTimeout(()=>{},5000)"', { limiteMs: 300 }).prova, /tempo esgotado \(\d+ s\)/);
+  const { formatarLimite } = await imp('supervisor.mjs');
+  assert.equal(formatarLimite(600000), '10 min');
+  assert.equal(formatarLimite(30000), '30 s');
+});
+
+test('arquivos não rastreados (coverage/) e sem .gitignore do estado não travam check/record', async () => {
+  const { reviewCheck, reviewRecord, lerEstado } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  fs.writeFileSync(path.join(p.dir, '.gitignore'), '');
+  p.g('commit', '-qam', 'sem ignore');
+  cenario([ok('^issue comment', '')]);
+  const f = ficha({ comando_testes: 'node -e "require(\'fs\').mkdirSync(\'coverage\',{recursive:true});require(\'fs\').writeFileSync(\'coverage/x.txt\',\'1\')"' });
+  const chk = reviewCheck(p.dir, f, 101);
+  assert.match(chk.base[3].prova, /TASK-101-carga\.md/);
+  assert.match(chk.base[3].prova, /changes\/101-carga\/proposal\.md/);
+  const r = reviewRecord(p.dir, f, 101, gravarParecer(p.dir, parecer(chk)));
+  assert.equal(r.nota, 10);
+  assert.equal(lerEstado(p.dir, 101).valida.nota, 10);
+});
+
+test('record: mensagem diz se HEAD mudou ou há mudança rastreada', async () => {
+  const { reviewCheck, reviewRecord } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  cenario([ok('^issue comment', '')]);
+  const chk = reviewCheck(p.dir, ficha(), 101);
+  fs.appendFileSync(path.join(p.dir, 'carga.mjs'), '// y\n');
+  assert.throws(() => reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk))), (e) => e.codigo === 'PARECER_INVALIDO' && /rastreada/.test(e.message));
+  p.g('commit', '-qam', 'y');
+  assert.throws(() => reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk))), (e) => e.codigo === 'PARECER_INVALIDO' && /HEAD/.test(e.message));
+});
+
+test('liberados chegam ao histórico e à seção do PR', async () => {
+  const { reviewCheck, reviewRecord, lerEstado, secaoSupervisor } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  cenario([ok('^issue comment', '')]);
+  const aws = 'AKIA' + 'ABCDEFGHIJKLMNOP';
+  fs.mkdirSync(path.join(p.dir, '.agentic-os'), { recursive: true });
+  fs.writeFileSync(path.join(p.dir, '.agentic-os/segredos-permitidos.txt'), aws + '\n');
+  fs.writeFileSync(path.join(p.dir, 'ex.txt'), `${aws}\n`);
+  p.g('add', 'ex.txt');
+  p.g('commit', '-qm', 'ex');
+  const chk = reviewCheck(p.dir, ficha(), 101);
+  reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk)));
+  const e = lerEstado(p.dir, 101);
+  assert.equal(e.historico[0].liberados.length, 1);
+  assert.match(secaoSupervisor(e), /Segredos liberados pelo usuário: ex\.txt:1 \(chave AWS\)/);
+});
+
+test('exigirRevisao: rename para nome da TASK não escapa; commit inexistente → REVISAO_VENCIDA', async () => {
+  const { reviewCheck, reviewRecord, exigirRevisao, lerEstado, gravarEstado } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  cenario([ok('^issue comment', '')]);
+  const chk = reviewCheck(p.dir, ficha(), 101);
+  reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk)));
+  p.g('mv', 'carga.mjs', 'docs/tasks/TASK-101-outro.md');
+  p.g('commit', '-qm', 'rename');
+  assert.throws(() => exigirRevisao(p.dir, 101), (e) => e.codigo === 'REVISAO_VENCIDA' && /carga\.mjs/.test(e.message));
+  const e = lerEstado(p.dir, 101);
+  e.valida.commit = '0'.repeat(40);
+  gravarEstado(p.dir, e);
+  assert.throws(() => exigirRevisao(p.dir, 101), (x) => x.codigo === 'REVISAO_VENCIDA' && /não existe mais/.test(x.message));
 });
