@@ -20,6 +20,7 @@ export function fichaPadrao(parcial = {}) {
     prefixos_branch: { feature: 'feature/', fix: 'fix/' },
     aceitar_protecao_parcial: false,
     protecao_aplicada: null,
+    comando_testes: null,
     ...parcial,
   };
 }

@@ -21,6 +21,11 @@ export const ERROS = {
   BRANCH_EXISTE: 'A branch do cartão já existe. Retome nela (git switch <branch>) ou pare.',
   BRANCH_ERRADA: 'Rode na branch do cartão (git switch <branch>).',
   TRAVA: 'Ação proibida pela governança (push/merge na branch principal, aprovar PR ou afrouxar proteção).',
+  SEM_CRITERIOS: 'Adicione "## Critérios de aceite" (lista de itens verificáveis) ao proposal.md do cartão (changes/<ID>-<desc>/).',
+  PARECER_INVALIDO: 'Rode /cartao revisar <ID> de novo: o parecer precisa ser JSON do Supervisor para o commit atual.',
+  AGUARDA_DECISAO: '3ª nota abaixo de 10: pergunte ao usuário se segue com a nota atual ou faz nova análise (review-decide).',
+  SEM_REVISAO: 'Rode /cartao revisar <ID> antes de abrir o PR.',
+  REVISAO_VENCIDA: 'Houve commit depois da revisão. Rode /cartao revisar <ID> de novo.',
 };
 
 export class ErroGov extends Error {
