@@ -82,3 +82,44 @@ test('erros novos têm como_resolver; ficha padrão traz comando_testes null', a
   const { fichaPadrao } = await imp('ficha.mjs');
   assert.equal(fichaPadrao().comando_testes, null);
 });
+
+test('segredos: acha token no + do diff, com arquivo:linha e texto mascarado; ignora linhas removidas', async () => {
+  const { varrerSegredos } = await imp('segredos.mjs');
+  const tok = 'gh' + 'p_' + 'a'.repeat(36);
+  const diff = [
+    'diff --git a/x.mjs b/x.mjs', '--- a/x.mjs', '+++ b/x.mjs', '@@ -1,0 +5,2 @@',
+    '+const ok = 1;', `+const t = '${tok}';`, '@@ -9 +10,0 @@', `-const velho = '${tok}';`,
+  ].join('\n');
+  const { achados, liberados } = varrerSegredos(diff);
+  assert.equal(achados.length, 1);
+  assert.equal(achados[0].arquivo, 'x.mjs');
+  assert.equal(achados[0].linha, 6);
+  assert.equal(achados[0].tipo, 'token GitHub');
+  assert.ok(!achados[0].trecho.includes(tok));
+  assert.equal(liberados.length, 0);
+});
+
+test('segredos: padrões AWS, sk-, PEM e senha literal; texto permitido vai para liberados', async () => {
+  const { varrerSegredos } = await imp('segredos.mjs');
+  const linhas = [
+    'AKIA' + 'ABCDEFGHIJKLMNOP',
+    'sk-' + 'x'.repeat(24),
+    '-----BEGIN RSA ' + 'PRIVATE KEY-----',
+    'senha = "' + 'segredo123' + '"',
+  ];
+  const diff = ['+++ b/c.txt', '@@ -0,0 +1,4 @@', ...linhas.map((l) => `+${l}`)].join('\n');
+  const r = varrerSegredos(diff);
+  assert.deepEqual(r.achados.map((a) => a.tipo), ['chave AWS', 'chave sk-', 'chave privada', 'senha/chave literal']);
+  const r2 = varrerSegredos(diff, ['sk-' + 'x'.repeat(24)]);
+  assert.equal(r2.achados.length, 3);
+  assert.equal(r2.liberados.length, 1);
+});
+
+test('segredos: lerPermitidos ignora vazias e comentários', async () => {
+  const { lerPermitidos } = await imp('segredos.mjs');
+  const dir = fs.mkdtempSync(path.join(TMP, 'perm-'));
+  assert.deepEqual(lerPermitidos(dir), []);
+  fs.mkdirSync(path.join(dir, '.agentic-os'));
+  fs.writeFileSync(path.join(dir, '.agentic-os/segredos-permitidos.txt'), '# exemplo\n\nchave-de-teste-123\n');
+  assert.deepEqual(lerPermitidos(dir), ['chave-de-teste-123']);
+});
