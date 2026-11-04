@@ -123,3 +123,61 @@ test('segredos: lerPermitidos ignora vazias e comentários', async () => {
   fs.writeFileSync(path.join(dir, '.agentic-os/segredos-permitidos.txt'), '# exemplo\n\nchave-de-teste-123\n');
   assert.deepEqual(lerPermitidos(dir), ['chave-de-teste-123']);
 });
+
+test('critérios: lê lista do proposal (G1, G2, E*, C*); sem seção → SEM_CRITERIOS', async () => {
+  const { lerCriterios, extrairCriterios } = await imp('supervisor.mjs');
+  assert.deepEqual(extrairCriterios('# x\n## Critérios de aceite\n- a\n* [ ] b\n\n## Outro\n- c\n'), ['a', 'b']);
+  assert.deepEqual(extrairCriterios('## criterios de aceite\n- só\n'), ['só']);
+  const { dir } = projetoCartao();
+  fs.mkdirSync(path.join(dir, 'automation'));
+  fs.writeFileSync(path.join(dir, 'automation/evaluation.json'), JSON.stringify({ gates: { revisao_cartao: ['Logs sem dados pessoais'] } }));
+  const r = lerCriterios(dir, 101);
+  assert.equal(r.proposal, 'changes/101-carga/proposal.md');
+  assert.deepEqual(r.criterios.map((c) => c.id), ['G1', 'G2', 'E1', 'C1', 'C2']);
+  assert.equal(r.criterios[3].texto, 'Importa CSV com 3 colunas');
+  const sem = projetoCartao({ semProposal: true });
+  assert.throws(() => lerCriterios(sem.dir, 101), (e) => e.codigo === 'SEM_CRITERIOS');
+  const vazio = projetoCartao({ criterios: [] });
+  assert.throws(() => lerCriterios(vazio.dir, 101), (e) => e.codigo === 'SEM_CRITERIOS');
+});
+
+test('B1: testes passam, falham, sem comando e tempo esgotado', async () => {
+  const { rodarTestes } = await imp('supervisor.mjs');
+  const dir = fs.mkdtempSync(path.join(TMP, 't-'));
+  assert.equal(rodarTestes(dir, 'node -e "process.exit(0)"').status, 'atendido');
+  const f = rodarTestes(dir, 'node -e "console.log(\'quebrou\');process.exit(3)"');
+  assert.equal(f.status, 'nao_atendido');
+  assert.match(f.prova, /saída 3[\s\S]*quebrou/);
+  assert.match(rodarTestes(dir, null).prova, /não configurado/);
+  const t = rodarTestes(dir, 'node -e "setTimeout(()=>{},5000)"', { limiteMs: 300 });
+  assert.equal(t.status, 'nao_atendido');
+  assert.match(t.prova, /tempo esgotado/);
+});
+
+test('checagens base: B1–B4 atendidos; segredo e branch errada', async () => {
+  const { checagensBase } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  const r = checagensBase(p.dir, ficha(), 101);
+  assert.equal(r.commit, p.head());
+  assert.deepEqual(r.resultados.map((c) => [c.id, c.status]), [['B1', 'atendido'], ['B2', 'atendido'], ['B3', 'atendido'], ['B4', 'atendido']]);
+  fs.writeFileSync(path.join(p.dir, 'cfg.mjs'), `export const k = '${'gh' + 'p_' + 'b'.repeat(36)}';\n`);
+  p.g('add', '.');
+  p.g('commit', '-qm', 'cfg');
+  const r2 = checagensBase(p.dir, ficha(), 101);
+  assert.equal(r2.resultados[1].status, 'nao_atendido');
+  assert.match(r2.resultados[1].prova, /cfg\.mjs:1/);
+  fs.writeFileSync(path.join(p.dir, 'sujo.txt'), 'x');
+  assert.throws(() => checagensBase(p.dir, ficha(), 101), (e) => e.codigo === 'ARVORE_SUJA');
+  fs.rmSync(path.join(p.dir, 'sujo.txt'));
+  p.g('switch', '-q', 'main');
+  assert.throws(() => checagensBase(p.dir, ficha(), 101), (e) => e.codigo === 'BRANCH_ERRADA');
+});
+
+test('checagens base: sem TASK → B4 não atendido', async () => {
+  const { checagensBase } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  p.g('rm', '-q', 'docs/tasks/TASK-101-carga.md');
+  p.g('commit', '-qm', 'rm task');
+  const b4 = checagensBase(p.dir, ficha(), 101).resultados[3];
+  assert.equal(b4.status, 'nao_atendido');
+});
