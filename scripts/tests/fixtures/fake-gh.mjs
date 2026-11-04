@@ -12,7 +12,15 @@ if (args.includes('--input')) {
     input = fs.readFileSync(0, 'utf8');
   } catch {}
 }
-if (process.env.AGENTIC_OS_GH_LOG) fs.appendFileSync(process.env.AGENTIC_OS_GH_LOG, JSON.stringify({ args, input }) + '\n');
+// --body-file: o arquivo é temporário (apagado depois); registra o conteúdo para os testes conferirem.
+let body_file;
+const bf = args.indexOf('--body-file');
+if (bf >= 0) {
+  try {
+    body_file = fs.readFileSync(args[bf + 1], 'utf8');
+  } catch {}
+}
+if (process.env.AGENTIC_OS_GH_LOG) fs.appendFileSync(process.env.AGENTIC_OS_GH_LOG, JSON.stringify({ args, input, body_file }) + '\n');
 const regras = JSON.parse(fs.readFileSync(process.env.AGENTIC_OS_GH_SCENARIO, 'utf8'));
 const r = regras.find((x) => new RegExp(x.re).test(linha));
 if (!r) {

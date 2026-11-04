@@ -537,6 +537,7 @@ Instalar: `node <plugin>/scripts/install-governanca.mjs <projeto> --ficha-json <
 `node .agentic-os/bin/github-setup.mjs apply` no projeto. Uso diário: `/cartao <ID>` e `/cartao pr <ID>`
 (`automation/procedures/cartao.md`). Travas: o agente nunca faz push/merge na principal, nunca aprova PR e
 nunca afrouxa proteção. Detalhes: `docs/GOVERNANCA.md`.
+`/cartao revisar <ID>`: Supervisor independente (Opus fixo) dá nota 0–10 com prova; PR só com 10 ou liberação do usuário. Ver `docs/GOVERNANCA.md`.
 
 ---
 

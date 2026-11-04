@@ -458,25 +458,42 @@ test('card-start: recusa cartão fora de A Fazer, inexistente, árvore suja e br
   assert.throws(() => cardStart(dir, fichaTesteSync(), 101), (e) => e.codigo === 'BRANCH_EXISTE');
 });
 
+// Revisão válida do Supervisor para o HEAD atual (os testes de card-pr não testam o Supervisor).
+function revisaoValida(dir, g, id = 101) {
+  const commit = g('rev-parse', 'HEAD');
+  const crit = [{ id: 'C1', texto: 'x', status: 'atendido', prova: 'ok' }];
+  const e = { id, rodada: 1, ciclo: 1, situacao: 'pronto_para_pr', pendente: null, decisoes: [],
+    historico: [{ rodada: 1, ciclo: 1, commit, nota: 10, em: 'x', criterios: crit }],
+    valida: { commit, nota: 10, tipo: 'nota_10', rodada: 1, ciclo: 1 } };
+  fs.mkdirSync(path.join(dir, '.agentic-os', 'supervisor'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.agentic-os', 'supervisor', `${id}.json`), JSON.stringify(e));
+  const gi = path.join(dir, '.git', 'info', 'exclude');
+  fs.appendFileSync(gi, '\n.agentic-os/supervisor/\n');
+}
+
 test('card-pr: push da branch, PR ligado, comentário no cartão e TASK atualizado; main intocada', async () => {
   const { cardStart, cardPr } = await imp('cartao.mjs');
   const { dir, g, shaBare } = repoComBare();
   cenario([ITEM('A Fazer'), ok('^project item-edit', '{}')]);
   cardStart(dir, fichaTesteSync(), 101);
+  revisaoValida(dir, g);
   const mainAntes = shaBare('main');
   const c = cenario([ITEM('Em andamento'), ok('^pr list', []), ok('^pr create', 'https://github.com/dono/app/pull/7\n'), ok('^issue comment', '')]);
   const r = cardPr(dir, fichaTesteSync(), 101);
   assert.equal(r.pr, 'https://github.com/dono/app/pull/7');
   assert.equal(shaBare('main'), mainAntes);
   assert.equal(shaBare('feature/101-carga-de-clientes'), g('rev-parse', 'HEAD'));
-  const criar = c.chamadas().find((x) => x.args[1] === 'create').args;
+  const chamada = c.chamadas().find((x) => x.args[1] === 'create');
+  const criar = chamada.args;
   assert.deepEqual(criar.slice(2, 8), ['--repo', 'dono/app', '--base', 'main', '--head', 'feature/101-carga-de-clientes']);
-  const corpo = criar[criar.indexOf('--body') + 1];
+  assert.ok(criar.includes('--body-file') && !criar.includes('--body'));
+  const corpo = chamada.body_file;
   assert.match(corpo, /Cartão #101/);
   assert.doesNotMatch(corpo, /closes|fixes|resolves/i);
   assert.ok(c.chamadas().some((x) => x.args[0] === 'issue' && x.args[2] === '101'));
   const task = fs.readFileSync(path.join(dir, 'docs/tasks/TASK-101-carga-de-clientes.md'), 'utf8');
   assert.match(task, /\| PR \| https:\/\/github.com\/dono\/app\/pull\/7 \|/);
+  assert.match(corpo, /## Supervisor/);
   assert.equal(g('status', '--porcelain'), '');
 });
 
@@ -485,8 +502,12 @@ test('card-pr: PR já aberto não duplica; branch errada é recusada', async () 
   const { dir, g } = repoComBare();
   cenario([ITEM('A Fazer'), ok('^project item-edit', '{}')]);
   cardStart(dir, fichaTesteSync(), 101);
-  const c = cenario([ITEM('Em andamento'), ok('^pr list', [{ url: 'https://github.com/dono/app/pull/7' }])]);
+  revisaoValida(dir, g);
+  const c = cenario([ITEM('Em andamento'), ok('^pr list', [{ url: 'https://github.com/dono/app/pull/7' }]), ok('^pr edit', '')]);
   assert.equal(cardPr(dir, fichaTesteSync(), 101).pr, 'https://github.com/dono/app/pull/7');
+  const edit = c.chamadas().find((x) => x.args[1] === 'edit');
+  assert.deepEqual(edit.args.slice(0, 5), ['pr', 'edit', 'https://github.com/dono/app/pull/7', '--repo', 'dono/app']);
+  assert.match(edit.body_file, /## Supervisor/);
   assert.equal(c.chamadas().some((x) => x.args[1] === 'create'), false);
   g('switch', '-q', 'main');
   assert.throws(() => cardPr(dir, fichaTesteSync(), 101), (e) => e.codigo === 'BRANCH_ERRADA');
@@ -581,6 +602,13 @@ test('install: cria ficha, script, procedimento, comando, blocos; idempotente', 
   assert.match(ler('automation/guardrails.md'), /- regra antiga[\s\S]*agentic-os:governanca:start[\s\S]*Sem assinatura/);
   assert.match(ler('.github/CODEOWNERS'), /^docs\/ @escritor\n[\s\S]*^\* @analista @outra$/m);
   assert.match(ler('.gitignore'), /\.agentic-os\/wizard-estado\.json/);
+  const ag = ler('.claude/agents/supervisor.md');
+  assert.match(ag, /^model: opus$/m);
+  assert.match(ag, /^tools: Read, Grep, Glob, Bash$/m);
+  assert.doesNotMatch(ag, /^tools:.*\b(Edit|Write)\b/m);
+  assert.match(ler('.gitignore'), /^\.agentic-os\/supervisor\/$/m);
+  assert.match(ler('automation/procedures/cartao.md'), /## `\/cartao revisar <ID>`/);
+  assert.match(ler('automation/guardrails.md'), /11\. Escrever o parecer do Supervisor/);
   const antes = ['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler);
   assert.equal(instalar(dir, f).status, 0);
   assert.deepEqual(['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler), antes);

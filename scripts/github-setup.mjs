@@ -6,25 +6,30 @@
 //   node github-setup.mjs apply [--ficha arq] [--dry-run]
 //   node github-setup.mjs card-start <ID> [--tipo feature|fix] [--desc texto] [--dry-run]
 //   node github-setup.mjs card-pr <ID> [--dry-run]
+//   node github-setup.mjs review-check <ID>
+//   node github-setup.mjs review-record <ID> --parecer <arquivo>
+//   node github-setup.mjs review-decide <ID> (--seguir | --nova-rodada) --motivo "texto"   ← só com o "sim" do usuário
 // Travas fixas: nunca push/merge na branch principal, nunca aprova PR, proteção só endurece.
 import { aplicar } from './governanca/apply.mjs';
 import { cardPr, cardStart } from './governanca/cartao.mjs';
 import { detect } from './governanca/detect.mjs';
 import { ErroGov } from './governanca/erros.mjs';
 import { ARQ_FICHA, gravarFicha, lerFicha } from './governanca/ficha.mjs';
+import { reviewCheck, reviewDecide, reviewRecord } from './governanca/supervisor.mjs';
 
-const FLAGS = ['dry-run', 'owner', 'project', 'analista', 'ficha', 'tipo', 'desc'];
+const FLAGS = ['dry-run', 'owner', 'project', 'analista', 'ficha', 'tipo', 'desc', 'parecer', 'motivo'];
+const BOOLEANAS = { '--dry-run': 'dryRun', '--seguir': 'seguir', '--nova-rodada': 'novaRodada' };
 
 function opcoes(argv) {
-  const o = { _: [], analista: [], dryRun: false };
+  const o = { _: [], analista: [], dryRun: false, seguir: false, novaRodada: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--dry-run') o.dryRun = true;
+    if (BOOLEANAS[a]) o[BOOLEANAS[a]] = true;
     else if (a.startsWith('--')) {
       const k = a.slice(2);
       if (!FLAGS.includes(k)) throw new ErroGov('PARAMETRO', `Opção desconhecida: ${a}`);
       const v = argv[++i];
-      if (v === undefined) throw new ErroGov('PARAMETRO', `Falta valor para ${a}.`);
+      if (v === undefined || v.startsWith('--')) throw new ErroGov('PARAMETRO', `Falta valor para ${a}.`);
       if (k === 'analista') o.analista.push(v);
       else o[k] = v;
     } else o._.push(a);
@@ -48,8 +53,14 @@ function rodar(argv, cwd) {
       return cardStart(cwd, lerFicha(cwd, arq), o._[0], { tipo: o.tipo, desc: o.desc, dryRun: o.dryRun });
     case 'card-pr':
       return cardPr(cwd, lerFicha(cwd, arq), o._[0], { dryRun: o.dryRun });
+    case 'review-check':
+      return reviewCheck(cwd, lerFicha(cwd, arq), o._[0]);
+    case 'review-record':
+      return reviewRecord(cwd, lerFicha(cwd, arq), o._[0], o.parecer);
+    case 'review-decide':
+      return reviewDecide(cwd, lerFicha(cwd, arq), o._[0], { seguir: o.seguir, novaRodada: o.novaRodada, motivo: o.motivo });
     default:
-      throw new ErroGov('PARAMETRO', `Subcomando desconhecido: ${sub ?? '(nenhum)'}. Use detect | apply | card-start | card-pr.`);
+      throw new ErroGov('PARAMETRO', `Subcomando desconhecido: ${sub ?? '(nenhum)'}. Use detect | apply | card-start | card-pr | review-check | review-record | review-decide.`);
   }
 }
 

@@ -3,7 +3,7 @@
 // Uso: node scripts/install-governanca.mjs <projeto> --ficha-json <arquivo> [--dry-run]
 //  - Valida e grava .agentic-os/governanca.json (preserva colunas_ids, ids do Project e protecao_aplicada já gravados).
 //  - Copia scripts/github-setup.mjs + scripts/governanca/ para .agentic-os/bin/ (o procedimento usa esta cópia).
-//  - Copia procedimento /cartao, comando e docs/tasks/README.md (este só se não existir).
+//  - Copia procedimento /cartao, comando, agente supervisor e docs/tasks/README.md (este só se não existir).
 //  - Upsert de blocos marcados em automation/guardrails.md, .github/CODEOWNERS e .gitignore.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -70,13 +70,14 @@ export function instalar(dest, ficha, { dryRun = false } = {}) {
 
   escrever('automation/procedures/cartao.md', lerSrc('automation/procedures/cartao.md'));
   escrever('.claude/commands/cartao.md', lerSrc('.claude/commands/cartao.md'));
+  escrever('.claude/agents/supervisor.md', lerSrc('.claude/agents/supervisor.md'));
   if (!fs.existsSync(path.join(dest, 'docs/tasks/README.md'))) escrever('docs/tasks/README.md', lerSrc('docs/tasks/README.md'));
 
   escrever('automation/guardrails.md', upsertBloco(ler('automation/guardrails.md'), 'governanca', lerSrc('guardrails-bloco.md')));
   const hash = (s) => `# ${s}`;
   const donos = ficha.analistas.map((l) => `@${l}`).join(' ');
   escrever('.github/CODEOWNERS', upsertBloco(ler('.github/CODEOWNERS'), 'governanca', `* ${donos}`, hash));
-  escrever('.gitignore', upsertBloco(ler('.gitignore'), 'governanca', '.agentic-os/wizard-estado.json', hash));
+  escrever('.gitignore', upsertBloco(ler('.gitignore'), 'governanca', '.agentic-os/wizard-estado.json\n.agentic-os/supervisor/', hash));
   return { ok: true, dry_run: dryRun, plano };
 }
 
