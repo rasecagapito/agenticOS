@@ -4,7 +4,7 @@
 > (branch). Para entrar no estoque oficial (`main`), a porta só abre com o crachá do analista
 > (aprovação no GitHub) — e se alguém mexer na peça depois do crachá, a porta tranca de novo.
 
-## O que faz (Partes 0 e 1)
+## O que faz (Partes 0, 1 e 2)
 
 1. **Wizard** (`/agentic-os`): pergunta tudo em etapas e configura o projeto.
 2. **Ficha** `.agentic-os/governanca.json`: repo, Project, colunas, analista(s), ambientes. Sem segredo.
@@ -15,7 +15,48 @@
    commit novo, aprovação do último push, vale para admins, sem force-push nem exclusão.
 6. **Environments** `hom` e `prd` (o `prd` exige aprovação do analista).
 
-Próximas partes: Supervisor (nota 0–10), HOM + assinatura, publicação PRD.
+7. **`/cartao revisar <ID>`**: Supervisor (nota 0–10) — veja a seção abaixo.
+
+Próximas partes: HOM + assinatura, publicação PRD.
+
+## Supervisor (Parte 2)
+
+> Analogia: o fiscal de obra. Quem construiu não se fiscaliza: um fiscal independente confere cada item da
+> lista de aceite e só carimba com prova. O que dá para medir com régua (testes, segredos) é medido por um
+> script, sem opinião de IA.
+
+**Quem mede o quê**
+- **Script** (B1–B4): B1 testes do projeto passam (`comando_testes` da ficha); B2 nenhum segredo no diff da
+  branch; B3 trabalho na branch do cartão, principal intocada; B4 TASK do cartão existe.
+- **Supervisor** (subagente `supervisor`, Opus fixo, sem edição): G1 guardrails respeitados, G2 documentação
+  afetada atualizada, E* gates extras de `automation/evaluation.json` (`gates.revisao_cartao`), C* os
+  "Critérios de aceite" do `proposal.md` do cartão.
+- **Usuário**: decide as exceções (seguir com nota baixa, nova análise, liberar texto no detector de segredos).
+
+**Nota** = ⌊10 × atendidos ÷ total⌋. Critério sem prova, ausente ou com status inválido conta como **não
+atendido**. A nota fica presa ao commit: commit novo (fora o TASK do cartão) vence a revisão.
+
+**Rodada** = 3 notas. Nota 10 → `/cartao pr`. Abaixo de 10 → o executor corrige só os pendentes e revisa de
+novo. Na 3ª nota abaixo de 10 o usuário escolhe: **seguir** com a nota atual (o PR mostra ⚠️ e o motivo) ou
+**nova análise** (começa outra rodada). O agente nunca decide isso sozinho (`review-decide` só com o "sim").
+
+**`ARVORE_SUJA` no revisar:** `review-check` recusa arquivo modificado ou não rastreado e não ignorado, porque
+os testes rodariam com código fora do commit. Commite o que faz parte do cartão ou ponha artefatos de teste
+(`coverage/`, relatórios) no `.gitignore`.
+
+**Segredos (B2):** procura chaves AWS, tokens GitHub, `sk-…`, chaves privadas e senhas literais (`password`,
+`token`, `secret`, `api_key`… com valor entre aspas, ou sem aspas se tiver dígito ou símbolo). Limite honesto:
+**senha sem aspas só com letras não é detectada** (evita travar anotações de tipo como `token: string`).
+Falso alarme: só o usuário libera o texto exato em `.agentic-os/segredos-permitidos.txt`; o PR lista o que foi
+liberado.
+
+**Limite honesto:** o estado fica em `.agentic-os/supervisor/` (local, fora do git). É registro, não cadeado:
+quem tem acesso ao disco pode editá-lo. A trava real do merge continua sendo a aprovação do analista no GitHub.
+
+**Custo:** cada revisão chama o Opus, mesmo com o roteador Jev (até 3 por rodada).
+
+**Divergência do Prompt Mestre:** o Prompt Mestre previa a nota dada pelo próprio agente; aqui a nota é
+calculada pelo script a partir de provas, e a 3ª nota baixa vai para o usuário em vez de seguir automático.
 
 ## Requisitos
 
@@ -43,6 +84,11 @@ continuam acima, mas para arquivos cobertos por `*` o analista passa a ser o don
 `node .agentic-os/bin/github-setup.mjs <detect|apply|card-start|card-pr> [--dry-run]` — saída JSON;
 erro conhecido sai com código 2 e `erro.codigo` + `erro.como_resolver`.
 
+Supervisor:
+- `review-check <ID>` — mede B1–B4 e lista os critérios G/E/C.
+- `review-record <ID> --parecer <arquivo>` — junta o parecer, calcula a nota e comenta no cartão.
+- `review-decide <ID> (--seguir | --nova-rodada) --motivo "texto"` — só com o "sim" do usuário.
+
 | Código | Como resolver |
 |---|---|
 | GH_AUSENTE / GH_DESLOGADO | Instalar o `gh` / `gh auth login` |
@@ -50,6 +96,9 @@ erro conhecido sai com código 2 e `erro.codigo` + `erro.como_resolver`.
 | PLANO_SEM_PROTECAO | Tornar público / subir de plano / proteção parcial |
 | ANALISTA_IGUAL_AGENTE | Usar outra conta para o analista |
 | CARTAO_INEXISTENTE / CARTAO_FORA_DE_A_FAZER | Criar a issue no Project / mover para "A Fazer" |
-| ARVORE_SUJA | Commitar ou `git stash` |
+| ARVORE_SUJA | Commitar ou `git stash`; artefatos de teste vão no `.gitignore` |
+| SEM_CRITERIOS | Adicionar `## Critérios de aceite` ao `proposal.md` |
+| PARECER_INVALIDO / AGUARDA_DECISAO | Rodar `/cartao revisar` de novo / o usuário decide |
+| SEM_REVISAO / REVISAO_VENCIDA | Rodar `/cartao revisar <ID>` antes do `/cartao pr` |
 | BRANCH_EXISTE | `git switch <branch>` para retomar |
 | REDE | Repetir (seguro) |

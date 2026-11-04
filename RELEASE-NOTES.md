@@ -1,3 +1,16 @@
+# Agentic OS v1.10.0
+
+- **Supervisor (Parte 2 da governança):** `/cartao revisar <ID>` — subagente `supervisor` independente
+  (Opus fixo, sem edição) julga os critérios do cartão com prova; o script mede testes, segredos, branch e
+  TASK e calcula a nota ⌊10 × atendidos ÷ total⌋ (sem prova = não atendido). Até 2 correções automáticas;
+  na 3ª nota abaixo de 10 o usuário decide: seguir (⚠️ no PR) ou nova análise. Nota presa ao commit:
+  `/cartao pr` só abre PR com nota 10 ou liberação gravada. Subcomandos `review-check|record|decide`.
+  PR já aberto tem o corpo atualizado (`gh pr edit`); o corpo vai por arquivo (`--body-file`).
+- `review-check` recusa árvore suja ou arquivo não rastreado e não ignorado (artefatos de teste vão no
+  `.gitignore`). Limite do detector de segredos: senha sem aspas só com letras não é detectada.
+- Wizard: comando de testes na ficha (`comando_testes`) e aviso de custo do Supervisor.
+- Conformidade: F7–F8. Guardrail 11.
+
 # Agentic OS v1.9.0
 
 - **Wizard de configuração:** `/agentic-os` configura tudo em etapas (uma pergunta por tela, opções com

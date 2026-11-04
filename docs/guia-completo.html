@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agentic OS — Guia Completo</title>
-<meta name="description" content="Como funciona o plugin Agentic OS v1.9.0: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
+<meta name="description" content="Como funciona o plugin Agentic OS v1.10.0: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
 <style>
 :root{
   --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f0eee8; --text:#1d1c1a; --muted:#5f5b53;
@@ -107,7 +107,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
 <div class="layout">
 <nav class="toc" aria-label="Sumário">
   <div class="brand">Agentic OS</div>
-  <div class="ver">Guia completo · v1.9.0</div>
+  <div class="ver">Guia completo · v1.10.0</div>
   <div class="links">
     <div class="grp">Entender</div>
     <a href="#oque">1. O que é</a>
@@ -137,7 +137,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
   <p class="lead">Um jeito de organizar os arquivos do seu projeto para que a IA (Claude, Codex, Gemini…) lembre o que já foi feito, siga regras, trabalhe com especialistas e use o modelo certo para cada tarefa.</p>
   <div class="pills">
     <span class="pill">Plugin para Claude Code e Codex</span>
-    <span class="pill">Versão 1.9.0</span>
+    <span class="pill">Versão 1.10.0</span>
     <span class="pill">Funciona em qualquer projeto</span>
     <span class="pill">Tudo opcional e por camadas</span>
   </div>
@@ -381,12 +381,22 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
     <li><b><code>main</code> protegida:</b> só entra por PR, com aprovação do analista; commit novo derruba a aprovação; vale até para administradores; sem apagar nem reescrever histórico.</li>
     <li><b>Ambientes <code>hom</code> e <code>prd</code>:</b> o <code>prd</code> exige aprovação do analista.</li>
   </ul>
+  <h3>Supervisor: nota de 0 a 10</h3>
+  <p>Pense num <b>fiscal de obra</b>: quem construiu não se fiscaliza. Antes do PR, o <code>/cartao revisar &lt;ID&gt;</code> chama um fiscal independente que confere cada item da lista de aceite do cartão e só carimba com prova (arquivo e linha, ou comando e resultado). O que dá para medir com régua é medido por um script, sem opinião de IA.</p>
+  <ul>
+    <li><b>O script mede:</b> os testes do projeto passam, nenhum segredo no código da branch, trabalho na branch certa e o arquivo TASK existe. O script também calcula a nota (itens atendidos ÷ total, de 0 a 10).</li>
+    <li><b>O Supervisor julga:</b> regras do projeto respeitadas, documentação atualizada e cada "Critério de aceite" do cartão. Sem prova, o item conta como não atendido.</li>
+    <li><b>Só o 10 passa direto</b> para o <code>/cartao pr</code>. Abaixo disso, o agente corrige só o que faltou e revisa de novo.</li>
+    <li><b>Na 3ª nota abaixo de 10, você decide:</b> seguir com a nota atual ou pedir uma nova análise. Se você liberar, o PR mostra um aviso ⚠️ com a nota e o motivo.</li>
+    <li><b>A nota vale para um commit.</b> Mexeu no código depois, precisa revisar de novo.</li>
+    <li><b>Dica:</b> se aparecer erro de "árvore suja", commite o que faz parte do cartão ou ponha pastas geradas pelos testes (como <code>coverage/</code>) no <code>.gitignore</code>.</li>
+  </ul>
   <h3>O que você precisa</h3>
   <ul>
     <li>O <code>gh</code> (GitHub CLI) instalado e logado, com a permissão de Projects (<code>gh auth refresh -s project</code>).</li>
     <li>O analista com <b>conta GitHub própria</b>: o GitHub não deixa quem abriu o PR aprová-lo. O wizard convida a conta para o repositório.</li>
   </ul>
-  <div class="box warn"><b class="t">Pode custar</b>Em repositório <b>privado no plano gratuito</b> do GitHub, a trava da <code>main</code> (PR + aprovação do analista) e a aprovação do ambiente <code>prd</code> <b>não funcionam</b>: o GitHub bloqueia as duas (confirmado em teste real). O wizard avisa no início e oferece três caminhos: tornar o repositório público, assinar plano pago ou seguir com proteção parcial — sem trava na <code>main</code>, a disciplina fica só nas regras do agente (fica registrado na ficha).</div>
+  <div class="box warn"><b class="t">Pode custar</b>Em repositório <b>privado no plano gratuito</b> do GitHub, a trava da <code>main</code> (PR + aprovação do analista) e a aprovação do ambiente <code>prd</code> <b>não funcionam</b>: o GitHub bloqueia as duas (confirmado em teste real). O wizard avisa no início e oferece três caminhos: tornar o repositório público, assinar plano pago ou seguir com proteção parcial — sem trava na <code>main</code>, a disciplina fica só nas regras do agente (fica registrado na ficha).<br><br><b>Supervisor:</b> cada revisão de cartão usa o modelo Opus (até 3 por rodada), mesmo com o roteador Jev ligado.</div>
   <div class="box info"><b class="t">Travas que não se desligam</b>O script nunca faz push nem merge na branch principal, nunca aprova PR, nunca apaga nada e só <b>endurece</b> a proteção: se a regra atual já for mais forte, ela é mantida. Detalhes em <code>docs/GOVERNANCA.md</code>.</div>
 </section>
 
@@ -436,7 +446,7 @@ export TYPESAFE_API_KEY=sua-chave        # macOS / Linux</code></pre>
       Na instalação, o instalador <b>testa a chave</b> e diz se está OK, recusada ou faltando.</li>
     <li><b>Pré-visualizar</b> o que vai mudar (não altera nada):
       <pre><code>node "&lt;plugin&gt;/scripts/install-router.mjs" "C:/caminho/do/projeto" --dry-run</code></pre>
-      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.9.0</code> (ou um clone do repositório).</li>
+      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.10.0</code> (ou um clone do repositório).</li>
     <li><b>Instalar:</b> o mesmo comando sem <code>--dry-run</code>.</li>
     <li><b>Reiniciar</b> o Claude Code no projeto.</li>
   </ol>
@@ -467,6 +477,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   <h3>Histórico recente</h3>
   <div class="tablewrap"><table>
     <tr><th>Versão</th><th>Principal novidade</th></tr>
+    <tr><td>1.10.0</td><td>Supervisor: <code>/cartao revisar</code> dá nota de 0 a 10 com prova; o PR só abre com nota 10 ou liberação do usuário (aviso ⚠️ no PR).</td></tr>
     <tr><td>1.9.0</td><td>Wizard de configuração (uma pergunta por tela) e camada opcional de Governança GitHub: cartão, branch, PR e <code>main</code> protegida com aprovação do analista.</td></tr>
     <tr><td>1.8.7</td><td>Painel 1.2.1: mesmo formato em todos os projetos, com ou sem roteador.</td></tr>
     <tr><td>1.8.6</td><td>Painel 1.2.0: a economia passa a contar subagentes em segundo plano.</td></tr>
@@ -525,7 +536,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   </table></div>
 </section>
 
-<footer>Agentic OS v1.9.0 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
+<footer>Agentic OS v1.10.0 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
 </main>
 </div>
 <script>
