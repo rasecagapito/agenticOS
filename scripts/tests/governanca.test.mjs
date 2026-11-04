@@ -597,6 +597,13 @@ test('install: cria ficha, script, procedimento, comando, blocos; idempotente', 
   assert.match(ler('automation/guardrails.md'), /- regra antiga[\s\S]*agentic-os:governanca:start[\s\S]*Sem assinatura/);
   assert.match(ler('.github/CODEOWNERS'), /^docs\/ @escritor\n[\s\S]*^\* @analista @outra$/m);
   assert.match(ler('.gitignore'), /\.agentic-os\/wizard-estado\.json/);
+  const ag = ler('.claude/agents/supervisor.md');
+  assert.match(ag, /^model: opus$/m);
+  assert.match(ag, /^tools: Read, Grep, Glob, Bash$/m);
+  assert.doesNotMatch(ag, /^tools:.*\b(Edit|Write)\b/m);
+  assert.match(ler('.gitignore'), /^\.agentic-os\/supervisor\/$/m);
+  assert.match(ler('automation/procedures/cartao.md'), /## `\/cartao revisar <ID>`/);
+  assert.match(ler('automation/guardrails.md'), /11\. Escrever o parecer do Supervisor/);
   const antes = ['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler);
   assert.equal(instalar(dir, f).status, 0);
   assert.deepEqual(['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler), antes);

@@ -10,6 +10,7 @@
 8. Ignorar falha crítica de segurança.
 9. Falsificar testes ou assinaturas.
 10. Alterar regras de proteção do GitHub para contornar aprovação.
+11. Escrever o parecer do Supervisor no lugar dele, editar `.agentic-os/supervisor/` ou rodar `review-decide` sem o "sim" do usuário.
 
 O orquestrador nunca assina nem simula aprovação em nome do analista.
 **Sem assinatura, sem merge na principal e sem publicação em PRD.**
