@@ -29,7 +29,7 @@ function opcoes(argv) {
       const k = a.slice(2);
       if (!FLAGS.includes(k)) throw new ErroGov('PARAMETRO', `Opção desconhecida: ${a}`);
       const v = argv[++i];
-      if (v === undefined) throw new ErroGov('PARAMETRO', `Falta valor para ${a}.`);
+      if (v === undefined || v.startsWith('--')) throw new ErroGov('PARAMETRO', `Falta valor para ${a}.`);
       if (k === 'analista') o.analista.push(v);
       else o[k] = v;
     } else o._.push(a);

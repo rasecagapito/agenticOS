@@ -283,6 +283,8 @@ export function exigirRevisao(cwd, id) {
   return e;
 }
 
+// Mantém o corpo do PR curto: no máximo 10 itens, o resto vira "+K outros".
+const limitar = (itens, sep) => itens.slice(0, 10).join(sep) + (itens.length > 10 ? ` +${itens.length - 10} outros` : '');
 const cel = (s) => String(s).split('\n')[0].slice(0, 120).replace(/\|/g, '\\|');
 
 export function secaoSupervisor(e) {
@@ -300,9 +302,9 @@ export function secaoSupervisor(e) {
   if (v.tipo === 'liberado_pelo_usuario')
     linhas.push(`> ⚠️ **Nota ${v.nota}/10 — liberada pelo usuário em ${v.em}.** Motivo: ${v.motivo}`, `> Não atendidos: ${nao.join(', ')}`, '');
   if (h.liberados?.length)
-    linhas.push(`Segredos liberados pelo usuário: ${h.liberados.map((x) => `${x.arquivo}:${x.linha} (${x.tipo})`).join(', ')}`, '');
+    linhas.push(`Segredos liberados pelo usuário: ${limitar(h.liberados.map((x) => `${x.arquivo}:${x.linha} (${x.tipo})`), ', ')}`, '');
   const rodadas = e.decisoes.filter((d) => d.tipo === 'nova_rodada');
-  if (rodadas.length) linhas.push(`Novas análises pedidas pelo usuário: ${rodadas.map((d) => `${d.em} (${cel(d.motivo)})`).join('; ')}`, '');
+  if (rodadas.length) linhas.push(`Novas análises pedidas pelo usuário: ${limitar(rodadas.map((d) => `${d.em} (${cel(d.motivo)})`), '; ')}`, '');
   linhas.push('| Critério | Descrição | Status | Prova |', '|---|---|---|---|');
   for (const c of h.criterios) linhas.push(`| ${c.id} | ${cel(c.texto)} | ${c.status === 'atendido' ? '✅' : '❌'} | ${cel(c.prova)} |`);
   return linhas.join('\n') + '\n';

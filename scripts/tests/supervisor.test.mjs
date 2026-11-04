@@ -505,8 +505,7 @@ test('card-pr: recusa sem revisão; com liberação o corpo do PR e o TASK traze
   reviewDecide(p.dir, ficha(), 101, { seguir: true, motivo: 'prazo do cliente' });
   const c = cenario([ITEM, ok('^pr list', []), ok('^pr create', 'https://github.com/dono/app/pull/9\n'), ok('^issue comment', '')]);
   assert.equal(cardPr(p.dir, ficha(), 101).pr, 'https://github.com/dono/app/pull/9');
-  const criar = c.chamadas().find((x) => x.args[1] === 'create').args;
-  const corpo = criar[criar.indexOf('--body') + 1];
+  const corpo = c.chamadas().find((x) => x.args[1] === 'create').body_file;
   assert.match(corpo, /## Supervisor[\s\S]*⚠️ \*\*Nota 8\/10[\s\S]*Motivo: prazo do cliente/);
   const task = fs.readFileSync(path.join(p.dir, 'docs/tasks/TASK-101-carga.md'), 'utf8');
   assert.match(task, /## Supervisor[\s\S]*⚠️[\s\S]*## Histórico/);
@@ -536,6 +535,63 @@ test('CLI: review-check/record/decide de ponta a ponta; flags booleanas', async 
   assert.equal(dec.code, 2);
   assert.equal(dec.json.erro.codigo, 'PARAMETRO');
   assert.equal(cli(p.dir, ['review-check', '101', '--seguir-errado']).json.erro.codigo, 'PARAMETRO');
+});
+
+test('registrarSupervisor: TASK em CRLF troca a seção sem duplicar e mantém CRLF', async () => {
+  const { registrarSupervisor } = await imp('cartao.mjs');
+  const sec = (c) => `## Supervisor\n\n| Commit |\n|---|\n| ${c} |\n`;
+  const base = '# TASK\r\n\r\n## Plano\r\nx\r\n\r\n## Histórico\r\n- a\r\n';
+  const um = registrarSupervisor(base, sec('AAAAAAA'));
+  const dois = registrarSupervisor(um, sec('BBBBBBB'));
+  assert.equal((dois.match(/## Supervisor/g) || []).length, 1);
+  assert.match(dois, /BBBBBBB/);
+  assert.doesNotMatch(dois, /AAAAAAA/);
+  assert.ok(!/[^\r]\n/.test(dois), 'só CRLF');
+  assert.match(dois, /## Supervisor[\s\S]*## Histórico/);
+  assert.equal(registrarSupervisor('a\n## Histórico\nb\n', 'x $& y\n').includes('x $& y'), true);
+});
+
+test('secaoSupervisor: liberados e novas análises limitados a 10 itens + "+K outros"', async () => {
+  const { secaoSupervisor } = await imp('supervisor.mjs');
+  const lib = Array.from({ length: 13 }, (_, i) => ({ arquivo: `f${i}.txt`, linha: 1, tipo: 'chave AWS', trecho: 'x' }));
+  const dec = Array.from({ length: 12 }, (_, i) => ({ tipo: 'nova_rodada', motivo: `m${i}`, em: `d${i}` }));
+  const s = secaoSupervisor({
+    historico: [{ rodada: 1, ciclo: 1, commit: 'abcdef1234', nota: 10, em: 'x', liberados: lib, criterios: [{ id: 'C1', texto: 'a', status: 'atendido', prova: 'p' }] }],
+    decisoes: dec,
+    valida: { commit: 'abcdef1234', nota: 10, tipo: 'nota_10', rodada: 1, ciclo: 1 },
+  });
+  assert.match(s, /f9\.txt:1/);
+  assert.doesNotMatch(s, /f10\.txt/);
+  assert.match(s, /\+3 outros/);
+  assert.match(s, /m9\)/);
+  assert.doesNotMatch(s, /m10\)/);
+  assert.match(s, /\+2 outros/);
+});
+
+test('card-pr: PR existente tem o corpo atualizado; dry-run lista a ação', async () => {
+  const { cardPr } = await imp('cartao.mjs');
+  const { reviewCheck, reviewRecord } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  cenario([ok('^issue comment', '')]);
+  const chk = reviewCheck(p.dir, ficha(), 101);
+  reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk)));
+  const ITEM = ok('^project item-list 3', { items: [{ id: 'ITEM_101', status: 'Em andamento', content: { type: 'Issue', number: 101, title: 'Carga', repository: 'dono/app' } }] });
+  const url = 'https://github.com/dono/app/pull/9';
+  const c = cenario([ITEM, ok('^pr list', [{ url }]), ok('^pr edit', '')]);
+  const dry = cardPr(p.dir, ficha(), 101, { dryRun: true });
+  assert.ok(dry.acoes.some((a) => /atualizar corpo do PR/.test(a)));
+  cardPr(p.dir, ficha(), 101);
+  const edit = c.chamadas().find((x) => x.args[1] === 'edit');
+  assert.ok(edit.args.includes('--body-file'));
+  assert.match(edit.body_file, /## Supervisor/);
+});
+
+test('CLI: valor de opção que começa com -- é PARAMETRO', async () => {
+  const dir = fs.mkdtempSync(path.join(TMP, 'cli-'));
+  const r = cli(dir, ['review-decide', '5', '--nova-rodada', '--motivo', '--seguir']);
+  assert.equal(r.code, 2);
+  assert.equal(r.json.erro.codigo, 'PARAMETRO');
+  assert.match(r.json.erro.mensagem, /Falta valor para --motivo/);
 });
 
 test('exigirRevisao: rename para nome da TASK não escapa; commit inexistente → REVISAO_VENCIDA', async () => {
