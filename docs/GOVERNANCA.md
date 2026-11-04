@@ -51,12 +51,16 @@ Falso alarme: só o usuário libera o texto exato em `.agentic-os/segredos-permi
 liberado.
 
 **Limite honesto:** o estado fica em `.agentic-os/supervisor/` (local, fora do git). É registro, não cadeado:
-quem tem acesso ao disco pode editá-lo. A trava real do merge continua sendo a aprovação do analista no GitHub.
+quem tem acesso ao disco pode editá-lo, e apagá-lo zera os ciclos. Por isso o PR sempre mostra o commit revisado,
+a nota, as rodadas e as liberações: uma burla fica visível para o analista. A trava real do merge continua sendo
+a aprovação do analista no GitHub.
 
 **Custo:** cada revisão chama o Opus, mesmo com o roteador Jev (até 3 por rodada).
 
-**Divergência do Prompt Mestre:** o Prompt Mestre previa a nota dada pelo próprio agente; aqui a nota é
-calculada pelo script a partir de provas, e a 3ª nota baixa vai para o usuário em vez de seguir automático.
+**Divergência do Prompt Mestre (decisão do usuário):** o Prompt Mestre manda manter a atividade **bloqueada**
+depois de dois ciclos de correção e exige "10/10 comprovada" para concluir. Aqui, depois da 3ª nota abaixo de 10, o
+cartão não trava: o usuário escolhe seguir com a nota atual (⚠️ no PR) ou pedir nova análise. A regra de conclusão
+do cartão passa a ser "nota 10 **ou** exceção autorizada pelo usuário e registrada".
 
 ## Requisitos
 

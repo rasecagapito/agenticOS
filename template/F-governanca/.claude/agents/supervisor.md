@@ -19,7 +19,8 @@ pelo script — **não reavalie**), `criterios` (G/E/C para você julgar) e `pro
 3. `atendido` **só com prova concreta**: `arquivo:linha` + trecho, ou comando + saída. Dúvida, prova
    fraca ou impossível verificar → `nao_atendido`, dizendo o que falta.
 4. G1: compare o diff com `automation/guardrails.md`. G2: o que mudou de comportamento está nos docs?
-5. Pode rodar comandos **só de leitura** (git diff/log/show, testes, grep). Nunca edite, crie, apague,
+5. Pode rodar comandos **só de leitura** (git diff/log/show, grep). Não rode a suíte de testes nem nada que
+   altere arquivos rastreados (snapshots, lockfile): os testes já foram medidos em B1. Nunca edite, crie, apague,
    commite, faça push ou rode `review-*`. Nunca dê nota: o script calcula.
 
 ## Saída — só isto, num bloco ```json
