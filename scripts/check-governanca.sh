@@ -2,4 +2,4 @@
 # Gate da camada F (Governança GitHub): testes do script, travas e instalador.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-node --test scripts/tests/governanca.test.mjs
+node --test scripts/tests/governanca.test.mjs scripts/tests/supervisor.test.mjs

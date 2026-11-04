@@ -1,11 +1,13 @@
 // Fluxo do cartão: card-start (A Fazer → branch + TASK → Em andamento) e card-pr (push + PR ligado).
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { norm } from './colunas.mjs';
 import { ErroGov } from './erros.mjs';
 import { gh, ghJson } from './gh.mjs';
 import { arvoreLimpa, branchAtual, branchExiste, git, pushBranch } from './git.mjs';
 import { caminhoTask, nomeBranch, slug } from './nomes.mjs';
+import { exigirRevisao, secaoSupervisor } from './supervisor.mjs';
 
 export function acharCartao(ficha, id) {
   const { owner, number } = ficha.project;
@@ -79,16 +81,40 @@ export function cardStart(cwd, ficha, id, { tipo = 'feature', desc, dryRun = fal
   return { ok: true, branch, task, acoes };
 }
 
-export function corpoPr({ id, titulo, ficha, task }) {
+export function corpoPr({ id, titulo, ficha, task, supervisor }) {
   return [
     `Cartão #${id} — ${titulo}`,
     `Project: ${ficha.project.url}`,
     task ? `TASK: \`${task}\`` : null,
     '',
     `Este PR só entra na \`${ficha.branch_principal}\` com a aprovação do analista (revisão obrigatória). Commit novo depois da aprovação descarta a aprovação.`,
+    supervisor ? `\n${supervisor}` : null,
   ]
     .filter((l) => l !== null)
     .join('\n');
+}
+
+// Insere ou troca a seção "## Supervisor" do TASK (antes de "## Histórico", se houver).
+export function registrarSupervisor(original, secao) {
+  const crlf = original.includes('\r\n');
+  const texto = original.replace(/\r\n/g, '\n');
+  const s = secao.replace(/\r\n/g, '\n').trimEnd() + '\n';
+  let r;
+  if (/^## Supervisor$/m.test(texto)) r = texto.replace(/^## Supervisor\n[\s\S]*?(?=^## |(?![\s\S]))/m, () => `${s}\n`);
+  else if (/^## Histórico$/m.test(texto)) r = texto.replace(/^## Histórico$/m, () => `${s}\n## Histórico`);
+  else r = texto.trimEnd() + `\n\n${s}`;
+  return crlf ? r.replace(/\n/g, '\r\n') : r;
+}
+
+// Corpo longo vai por arquivo temporário (--body-file), apagado em seguida.
+function ghComCorpo(args, corpo) {
+  const arq = path.join(os.tmpdir(), `agentic-os-pr-${process.pid}-${Date.now()}.md`);
+  fs.writeFileSync(arq, corpo);
+  try {
+    return gh([...args, '--body-file', arq]);
+  } finally {
+    fs.rmSync(arq, { force: true });
+  }
 }
 
 export function registrarPr(texto, url, agora) {
@@ -102,28 +128,34 @@ export function cardPr(cwd, ficha, id, { dryRun = false } = {}) {
   if (!Object.values(ficha.prefixos_branch).some((p) => atual.startsWith(`${p}${id}-`)))
     throw new ErroGov('BRANCH_ERRADA', `A branch atual "${atual}" não é do cartão #${id}.`);
   if (!arvoreLimpa(cwd)) throw new ErroGov('ARVORE_SUJA');
+  const supervisor = secaoSupervisor(exigirRevisao(cwd, Number(id)));
   const c = acharCartao(ficha, id);
   const dirTasks = path.join(cwd, 'docs', 'tasks');
   const nome = fs.existsSync(dirTasks) ? fs.readdirSync(dirTasks).find((f) => f.startsWith(`TASK-${id}-`)) : null;
   const task = nome ? `docs/tasks/${nome}` : null;
   const existente = ghJson(['pr', 'list', '--repo', ficha.repo, '--head', atual, '--state', 'open', '--json', 'url']) || [];
   const acoes = [
+    'exigir revisão do Supervisor (nota 10 ou liberação do usuário)',
     `git push -u origin ${atual}`,
     existente.length ? `PR já aberto: ${existente[0].url}` : `gh pr create --base ${ficha.branch_principal} --head ${atual}`,
+    existente.length ? `atualizar corpo do PR ${existente[0].url}` : 'corpo do PR com a seção Supervisor',
     existente.length ? 'cartão já comentado' : `comentar o link do PR no cartão #${id}`,
     task ? `registrar o PR em ${task}` : 'sem TASK para registrar',
   ];
   if (dryRun) return { ok: true, dry_run: true, branch: atual, acoes };
   pushBranch(cwd, atual, ficha.branch_principal);
   let url = existente[0]?.url;
+  const corpo = corpoPr({ id, titulo: c.titulo, ficha, task, supervisor });
   if (!url) {
-    url = gh(['pr', 'create', '--repo', ficha.repo, '--base', ficha.branch_principal, '--head', atual, '--title', `[#${id}] ${c.titulo}`, '--body', corpoPr({ id, titulo: c.titulo, ficha, task })]).stdout.trim();
+    url = ghComCorpo(['pr', 'create', '--repo', ficha.repo, '--base', ficha.branch_principal, '--head', atual, '--title', `[#${id}] ${c.titulo}`], corpo).stdout.trim();
     gh(['issue', 'comment', String(id), '--repo', ficha.repo, '--body', `PR aberto: ${url} — aguardando aprovação do analista.`]);
+  } else {
+    ghComCorpo(['pr', 'edit', url, '--repo', ficha.repo], corpo);
   }
   if (task) {
     const abs = path.join(cwd, task);
     const antes = fs.readFileSync(abs, 'utf8');
-    const depois = registrarPr(antes, url, new Date().toISOString());
+    const depois = registrarSupervisor(registrarPr(antes, url, new Date().toISOString()), supervisor);
     if (depois !== antes) {
       fs.writeFileSync(abs, depois);
       git(cwd, ['add', task]);
