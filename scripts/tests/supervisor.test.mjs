@@ -513,6 +513,31 @@ test('card-pr: recusa sem revisão; com liberação o corpo do PR e o TASK traze
   assert.equal(p.g('status', '--porcelain'), '');
 });
 
+const CLI = path.join(REPO, 'scripts', 'github-setup.mjs');
+function cli(cwd, args) {
+  const r = spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8', env: process.env });
+  return { code: r.status, json: r.stdout.trim() ? JSON.parse(r.stdout) : null, stderr: r.stderr };
+}
+
+test('CLI: review-check/record/decide de ponta a ponta; flags booleanas', async () => {
+  const p = projetoCartao();
+  fs.mkdirSync(path.join(p.dir, '.agentic-os'), { recursive: true });
+  fs.writeFileSync(path.join(p.dir, '.agentic-os/governanca.json'), JSON.stringify(ficha()));
+  p.g('add', '.agentic-os/governanca.json');
+  p.g('commit', '-qm', 'ficha');
+  cenario([ok('^issue comment', '')]);
+  const chk = cli(p.dir, ['review-check', '101']);
+  assert.equal(chk.code, 0, chk.stderr);
+  assert.equal(chk.json.ciclo, 1);
+  const arq = gravarParecer(p.dir, parecer(chk.json));
+  const rec = cli(p.dir, ['review-record', '101', '--parecer', arq]);
+  assert.equal(rec.json.nota, 10);
+  const dec = cli(p.dir, ['review-decide', '101', '--seguir', '--motivo', 'x']);
+  assert.equal(dec.code, 2);
+  assert.equal(dec.json.erro.codigo, 'PARAMETRO');
+  assert.equal(cli(p.dir, ['review-check', '101', '--seguir-errado']).json.erro.codigo, 'PARAMETRO');
+});
+
 test('exigirRevisao: rename para nome da TASK não escapa; commit inexistente → REVISAO_VENCIDA', async () => {
   const { reviewCheck, reviewRecord, exigirRevisao, lerEstado, gravarEstado } = await imp('supervisor.mjs');
   const p = projetoCartao();
