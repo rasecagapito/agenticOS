@@ -458,11 +458,25 @@ test('card-start: recusa cartão fora de A Fazer, inexistente, árvore suja e br
   assert.throws(() => cardStart(dir, fichaTesteSync(), 101), (e) => e.codigo === 'BRANCH_EXISTE');
 });
 
+// Revisão válida do Supervisor para o HEAD atual (os testes de card-pr não testam o Supervisor).
+function revisaoValida(dir, g, id = 101) {
+  const commit = g('rev-parse', 'HEAD');
+  const crit = [{ id: 'C1', texto: 'x', status: 'atendido', prova: 'ok' }];
+  const e = { id, rodada: 1, ciclo: 1, situacao: 'pronto_para_pr', pendente: null, decisoes: [],
+    historico: [{ rodada: 1, ciclo: 1, commit, nota: 10, em: 'x', criterios: crit }],
+    valida: { commit, nota: 10, tipo: 'nota_10', rodada: 1, ciclo: 1 } };
+  fs.mkdirSync(path.join(dir, '.agentic-os', 'supervisor'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.agentic-os', 'supervisor', `${id}.json`), JSON.stringify(e));
+  const gi = path.join(dir, '.git', 'info', 'exclude');
+  fs.appendFileSync(gi, '\n.agentic-os/supervisor/\n');
+}
+
 test('card-pr: push da branch, PR ligado, comentário no cartão e TASK atualizado; main intocada', async () => {
   const { cardStart, cardPr } = await imp('cartao.mjs');
   const { dir, g, shaBare } = repoComBare();
   cenario([ITEM('A Fazer'), ok('^project item-edit', '{}')]);
   cardStart(dir, fichaTesteSync(), 101);
+  revisaoValida(dir, g);
   const mainAntes = shaBare('main');
   const c = cenario([ITEM('Em andamento'), ok('^pr list', []), ok('^pr create', 'https://github.com/dono/app/pull/7\n'), ok('^issue comment', '')]);
   const r = cardPr(dir, fichaTesteSync(), 101);
@@ -477,6 +491,7 @@ test('card-pr: push da branch, PR ligado, comentário no cartão e TASK atualiza
   assert.ok(c.chamadas().some((x) => x.args[0] === 'issue' && x.args[2] === '101'));
   const task = fs.readFileSync(path.join(dir, 'docs/tasks/TASK-101-carga-de-clientes.md'), 'utf8');
   assert.match(task, /\| PR \| https:\/\/github.com\/dono\/app\/pull\/7 \|/);
+  assert.match(corpo, /## Supervisor/);
   assert.equal(g('status', '--porcelain'), '');
 });
 
@@ -485,6 +500,7 @@ test('card-pr: PR já aberto não duplica; branch errada é recusada', async () 
   const { dir, g } = repoComBare();
   cenario([ITEM('A Fazer'), ok('^project item-edit', '{}')]);
   cardStart(dir, fichaTesteSync(), 101);
+  revisaoValida(dir, g);
   const c = cenario([ITEM('Em andamento'), ok('^pr list', [{ url: 'https://github.com/dono/app/pull/7' }])]);
   assert.equal(cardPr(dir, fichaTesteSync(), 101).pr, 'https://github.com/dono/app/pull/7');
   assert.equal(c.chamadas().some((x) => x.args[1] === 'create'), false);

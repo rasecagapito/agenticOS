@@ -490,6 +490,29 @@ test('liberados chegam ao histórico e à seção do PR', async () => {
   assert.match(secaoSupervisor(e), /Segredos liberados pelo usuário: ex\.txt:1 \(chave AWS\)/);
 });
 
+test('card-pr: recusa sem revisão; com liberação o corpo do PR e o TASK trazem ⚠️', async () => {
+  const { reviewCheck, reviewRecord, reviewDecide } = await imp('supervisor.mjs');
+  const { cardPr } = await imp('cartao.mjs');
+  const p = projetoCartao();
+  const ITEM = ok('^project item-list 3', { items: [{ id: 'ITEM_101', status: 'Em andamento', content: { type: 'Issue', number: 101, title: 'Carga', repository: 'dono/app' } }] });
+  cenario([ITEM, ok('^pr list', [])]);
+  assert.throws(() => cardPr(p.dir, ficha(), 101), (e) => e.codigo === 'SEM_REVISAO');
+  cenario([ok('^issue comment', '')]);
+  for (let i = 0; i < 3; i++) {
+    const chk = reviewCheck(p.dir, ficha(), 101);
+    reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk, 'atendido', { C1: 'nao_atendido' })));
+  }
+  reviewDecide(p.dir, ficha(), 101, { seguir: true, motivo: 'prazo do cliente' });
+  const c = cenario([ITEM, ok('^pr list', []), ok('^pr create', 'https://github.com/dono/app/pull/9\n'), ok('^issue comment', '')]);
+  assert.equal(cardPr(p.dir, ficha(), 101).pr, 'https://github.com/dono/app/pull/9');
+  const criar = c.chamadas().find((x) => x.args[1] === 'create').args;
+  const corpo = criar[criar.indexOf('--body') + 1];
+  assert.match(corpo, /## Supervisor[\s\S]*⚠️ \*\*Nota 8\/10[\s\S]*Motivo: prazo do cliente/);
+  const task = fs.readFileSync(path.join(p.dir, 'docs/tasks/TASK-101-carga.md'), 'utf8');
+  assert.match(task, /## Supervisor[\s\S]*⚠️[\s\S]*## Histórico/);
+  assert.equal(p.g('status', '--porcelain'), '');
+});
+
 test('exigirRevisao: rename para nome da TASK não escapa; commit inexistente → REVISAO_VENCIDA', async () => {
   const { reviewCheck, reviewRecord, exigirRevisao, lerEstado, gravarEstado } = await imp('supervisor.mjs');
   const p = projetoCartao();
