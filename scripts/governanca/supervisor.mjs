@@ -110,3 +110,165 @@ export function checagensBase(cwd, ficha, id, { limiteMs } = {}) {
   ];
   return { commit, base, intervalo: `${base}..${commit}`, branch, liberados, resultados };
 }
+
+const STATUS = ['atendido', 'nao_atendido'];
+const agora = () => new Date().toISOString();
+const arqEstado = (cwd, id) => path.join(cwd, DIR_ESTADO, `${id}.json`);
+
+export function lerEstado(cwd, id) {
+  const p = arqEstado(cwd, id);
+  if (!fs.existsSync(p))
+    return { id: Number(id), rodada: 1, ciclo: 0, situacao: 'nova', pendente: null, historico: [], valida: null, decisoes: [] };
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch {
+    throw new ErroGov('PARAMETRO', `Estado ilegível: ${DIR_ESTADO}/${id}.json`);
+  }
+}
+
+export function gravarEstado(cwd, e) {
+  const p = arqEstado(cwd, e.id);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(e, null, 2) + '\n');
+}
+
+export function calcularNota(criterios) {
+  if (!criterios.length) return 0;
+  return Math.floor((10 * criterios.filter((c) => c.status === 'atendido').length) / criterios.length);
+}
+
+// Junta os resultados B1–B4 (só do script) com o parecer do Supervisor para os critérios G/E/C pendentes.
+export function consolidar(pendente, parecer) {
+  if (!parecer || typeof parecer !== 'object' || !Array.isArray(parecer.criterios))
+    throw new ErroGov('PARECER_INVALIDO', 'O parecer precisa ser um objeto com "commit" e "criterios".');
+  const c = String(parecer.commit || '');
+  if (c.length < 7 || !pendente.commit.startsWith(c))
+    throw new ErroGov('PARECER_INVALIDO', `Parecer do commit "${c}", revisão pendente do ${pendente.commit.slice(0, 7)}.`);
+  const porId = new Map(parecer.criterios.filter((x) => x && typeof x === 'object').map((x) => [x.id, x]));
+  const julgados = pendente.criterios.map((k) => {
+    const p = porId.get(k.id);
+    const prova = typeof p?.prova === 'string' ? p.prova.trim() : '';
+    const valido = p && STATUS.includes(p.status) && prova;
+    return { id: k.id, texto: k.texto, status: valido ? p.status : 'nao_atendido', prova: valido ? prova : p ? 'sem prova válida no parecer' : 'ausente no parecer' };
+  });
+  return [...pendente.resultados, ...julgados];
+}
+
+function comentar(ficha, id, texto) {
+  try {
+    gh(['issue', 'comment', String(id), '--repo', ficha.repo, '--body', texto]);
+    return null;
+  } catch (e) {
+    if (!(e instanceof ErroGov)) throw e;
+    return `Não consegui comentar no cartão #${id}: ${e.message}`;
+  }
+}
+
+export function reviewCheck(cwd, ficha, id, { limiteMs } = {}) {
+  const n = validarId(id);
+  const e = lerEstado(cwd, n);
+  if (e.situacao === 'aguardando_decisao') throw new ErroGov('AGUARDA_DECISAO');
+  const { proposal, criterios } = lerCriterios(cwd, n);
+  const b = checagensBase(cwd, ficha, n, { limiteMs });
+  e.pendente = { commit: b.commit, intervalo: b.intervalo, resultados: b.resultados, criterios };
+  gravarEstado(cwd, e);
+  return {
+    ok: true, id: n, rodada: e.rodada, ciclo: e.ciclo + 1, commit: b.commit, intervalo: b.intervalo, branch: b.branch,
+    proposal, base: b.resultados, criterios, liberados: b.liberados, parecer_em: `${DIR_ESTADO}/${n}-parecer.json`,
+  };
+}
+
+export function reviewRecord(cwd, ficha, id, arqParecer) {
+  const n = validarId(id);
+  const e = lerEstado(cwd, n);
+  if (e.situacao === 'aguardando_decisao') throw new ErroGov('AGUARDA_DECISAO');
+  if (!e.pendente) throw new ErroGov('PARECER_INVALIDO', 'Não há revisão pendente: rode review-check antes.');
+  const head = git(cwd, ['rev-parse', 'HEAD']).out;
+  if (head !== e.pendente.commit || !arvoreLimpa(cwd))
+    throw new ErroGov('PARECER_INVALIDO', 'O código mudou desde o review-check. Rode review-check de novo.');
+  let parecer;
+  try {
+    parecer = JSON.parse(fs.readFileSync(path.resolve(cwd, String(arqParecer || '')), 'utf8'));
+  } catch {
+    throw new ErroGov('PARECER_INVALIDO', `Parecer ilegível: ${arqParecer}`);
+  }
+  const criterios = consolidar(e.pendente, parecer);
+  const nota = calcularNota(criterios);
+  e.ciclo += 1;
+  e.historico.push({ rodada: e.rodada, ciclo: e.ciclo, commit: head, nota, em: agora(), resumo: String(parecer.resumo || ''), criterios });
+  if (nota === 10) {
+    e.situacao = 'pronto_para_pr';
+    e.valida = { commit: head, nota, tipo: 'nota_10', rodada: e.rodada, ciclo: e.ciclo };
+  } else {
+    e.situacao = e.ciclo >= CICLOS_POR_RODADA ? 'aguardando_decisao' : 'corrigir';
+    e.valida = null;
+  }
+  e.pendente = null;
+  gravarEstado(cwd, e);
+  const pendentes = criterios.filter((c) => c.status !== 'atendido');
+  const linhas = pendentes.map((c) => `- ${c.id} ${c.texto}: ${c.prova.split('\n')[0]}`);
+  const aviso = comentar(ficha, n, [`Supervisor — rodada ${e.rodada}, ciclo ${e.ciclo}: nota ${nota}/10 (commit ${head.slice(0, 7)})`, ...linhas].join('\n'));
+  const proximo = { pronto_para_pr: 'pronto_para_pr', corrigir: 'corrigir', aguardando_decisao: 'decisao_usuario' }[e.situacao];
+  return { ok: true, id: n, nota, rodada: e.rodada, ciclo: e.ciclo, proximo, pendentes, ...(aviso ? { aviso } : {}) };
+}
+
+// Só roda com o "sim" explícito do usuário no chat (o procedimento garante; o orquestrador nunca decide).
+export function reviewDecide(cwd, ficha, id, { seguir = false, novaRodada = false, motivo = '' } = {}) {
+  const n = validarId(id);
+  if (Boolean(seguir) === Boolean(novaRodada)) throw new ErroGov('PARAMETRO', 'Use --seguir ou --nova-rodada (um dos dois).');
+  if (!String(motivo).trim()) throw new ErroGov('PARAMETRO', '--motivo é obrigatório.');
+  const e = lerEstado(cwd, n);
+  if (e.situacao !== 'aguardando_decisao')
+    throw new ErroGov('PARAMETRO', `Decisão só depois da 3ª nota abaixo de 10 (situação atual: ${e.situacao}).`);
+  const ultima = e.historico.at(-1);
+  const quando = agora();
+  if (seguir) {
+    if (git(cwd, ['rev-parse', 'HEAD']).out !== ultima.commit) throw new ErroGov('REVISAO_VENCIDA');
+    e.valida = { commit: ultima.commit, nota: ultima.nota, tipo: 'liberado_pelo_usuario', motivo: motivo.trim(), em: quando, rodada: e.rodada, ciclo: e.ciclo };
+    e.situacao = 'liberado_pelo_usuario';
+  } else {
+    e.rodada += 1;
+    e.ciclo = 0;
+    e.situacao = 'corrigir';
+  }
+  e.decisoes.push({ tipo: seguir ? 'seguir' : 'nova_rodada', motivo: motivo.trim(), em: quando, commit: ultima.commit, nota: ultima.nota });
+  gravarEstado(cwd, e);
+  const txt = seguir
+    ? `Supervisor — usuário liberou seguir com nota ${ultima.nota}/10 (commit ${ultima.commit.slice(0, 7)}). Motivo: ${motivo.trim()}`
+    : `Supervisor — usuário pediu nova análise (rodada ${e.rodada}). Motivo: ${motivo.trim()}`;
+  const aviso = comentar(ficha, n, txt);
+  return { ok: true, id: n, situacao: e.situacao, rodada: e.rodada, ...(aviso ? { aviso } : {}) };
+}
+
+// Trava do card-pr: revisão válida para o commit atual (só o TASK do cartão pode ter mudado depois).
+export function exigirRevisao(cwd, id) {
+  const e = lerEstado(cwd, id);
+  if (!e.valida) throw new ErroGov('SEM_REVISAO');
+  const mudou = git(cwd, ['diff', '--name-only', e.valida.commit, 'HEAD']).out.split('\n').filter(Boolean);
+  const fora = mudou.filter((f) => !new RegExp(`^docs/tasks/TASK-${id}-[^/]+\\.md$`).test(f));
+  if (fora.length) throw new ErroGov('REVISAO_VENCIDA', `Mudou depois da revisão: ${fora.slice(0, 5).join(', ')}. Rode /cartao revisar ${id} de novo.`);
+  return e;
+}
+
+const cel = (s) => String(s).split('\n')[0].slice(0, 120).replace(/\|/g, '\\|');
+
+export function secaoSupervisor(e) {
+  const v = e.valida;
+  const h = [...e.historico].reverse().find((x) => x.commit === v.commit) || e.historico.at(-1);
+  const nao = h.criterios.filter((c) => c.status !== 'atendido').map((c) => c.id);
+  const linhas = [
+    '## Supervisor',
+    '',
+    `| Commit revisado | Rodada / ciclo | Nota |`,
+    '|---|---|---|',
+    `| ${v.commit.slice(0, 7)} | ${v.rodada} / ${v.ciclo} | ${v.nota}/10 |`,
+    '',
+  ];
+  if (v.tipo === 'liberado_pelo_usuario')
+    linhas.push(`> ⚠️ **Nota ${v.nota}/10 — liberada pelo usuário em ${v.em}.** Motivo: ${v.motivo}`, `> Não atendidos: ${nao.join(', ')}`, '');
+  const rodadas = e.decisoes.filter((d) => d.tipo === 'nova_rodada');
+  if (rodadas.length) linhas.push(`Novas análises pedidas pelo usuário: ${rodadas.map((d) => `${d.em} (${cel(d.motivo)})`).join('; ')}`, '');
+  linhas.push('| Critério | Descrição | Status | Prova |', '|---|---|---|---|');
+  for (const c of h.criterios) linhas.push(`| ${c.id} | ${cel(c.texto)} | ${c.status === 'atendido' ? '✅' : '❌'} | ${cel(c.prova)} |`);
+  return linhas.join('\n') + '\n';
+}

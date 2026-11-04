@@ -181,3 +181,135 @@ test('checagens base: sem TASK → B4 não atendido', async () => {
   const b4 = checagensBase(p.dir, ficha(), 101).resultados[3];
   assert.equal(b4.status, 'nao_atendido');
 });
+
+// Parecer de teste: todos os critérios pendentes com o status dado (ou por id).
+function parecer(chk, status = 'atendido', porId = {}) {
+  return {
+    commit: chk.commit,
+    criterios: chk.criterios.map((c) => ({ id: c.id, status: porId[c.id] || status, prova: `prova de ${c.id}` })),
+    resumo: 'teste',
+  };
+}
+function gravarParecer(dir, obj) {
+  const arq = path.join(dir, '.agentic-os', 'supervisor', '101-parecer.json');
+  fs.mkdirSync(path.dirname(arq), { recursive: true });
+  fs.writeFileSync(arq, typeof obj === 'string' ? obj : JSON.stringify(obj));
+  return arq;
+}
+
+test('nota: proporção arredondada para baixo; consolidar trata sem prova/ausente/status inválido', async () => {
+  const { calcularNota, consolidar } = await imp('supervisor.mjs');
+  const c = (n, s) => Array.from({ length: n }, () => ({ status: s }));
+  assert.equal(calcularNota([...c(10, 'atendido')]), 10);
+  assert.equal(calcularNota([...c(9, 'atendido'), ...c(1, 'nao_atendido')]), 9);
+  assert.equal(calcularNota([...c(2, 'atendido'), ...c(1, 'nao_atendido')]), 6);
+  const pend = {
+    commit: 'abcdef1234567',
+    resultados: [{ id: 'B1', texto: 't', status: 'atendido', prova: 'ok' }],
+    criterios: [{ id: 'C1', texto: 'a' }, { id: 'C2', texto: 'b' }, { id: 'C3', texto: 'c' }],
+  };
+  const r = consolidar(pend, {
+    commit: 'abcdef1',
+    criterios: [
+      { id: 'C1', status: 'atendido', prova: '   ' },
+      { id: 'C2', status: 'talvez', prova: 'x' },
+      { id: 'B1', status: 'nao_atendido', prova: 'tentou sobrescrever' },
+    ],
+  });
+  assert.deepEqual(r.map((x) => [x.id, x.status]), [['B1', 'atendido'], ['C1', 'nao_atendido'], ['C2', 'nao_atendido'], ['C3', 'nao_atendido']]);
+  assert.match(r[3].prova, /ausente/);
+  assert.throws(() => consolidar(pend, { commit: 'fff0000', criterios: [] }), (e) => e.codigo === 'PARECER_INVALIDO');
+  assert.throws(() => consolidar(pend, { commit: 'abc', criterios: [] }), (e) => e.codigo === 'PARECER_INVALIDO');
+  assert.throws(() => consolidar(pend, null), (e) => e.codigo === 'PARECER_INVALIDO');
+});
+
+test('review: check → record nota 10 → pronto_para_pr e comentário no cartão', async () => {
+  const { reviewCheck, reviewRecord, lerEstado } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  const c = cenario([ok('^issue comment', '')]);
+  const chk = reviewCheck(p.dir, ficha(), 101);
+  assert.equal(chk.ciclo, 1);
+  assert.equal(chk.rodada, 1);
+  assert.equal(chk.parecer_em, '.agentic-os/supervisor/101-parecer.json');
+  const r = reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk)));
+  assert.equal(r.nota, 10);
+  assert.equal(r.proximo, 'pronto_para_pr');
+  const e = lerEstado(p.dir, 101);
+  assert.deepEqual(e.valida, { commit: p.head(), nota: 10, tipo: 'nota_10', rodada: 1, ciclo: 1 });
+  const com = c.chamadas().find((x) => x.args[0] === 'issue');
+  assert.match(com.args[com.args.indexOf('--body') + 1], /Supervisor — rodada 1, ciclo 1: nota 10\/10/);
+  assert.equal(p.g('status', '--porcelain'), '');
+});
+
+test('review: 3 notas < 10 → decisao_usuario; check recusa; nova-rodada e seguir', async () => {
+  const { reviewCheck, reviewRecord, reviewDecide, lerEstado } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  cenario([ok('^issue comment', '')]);
+  const ruim = () => {
+    const chk = reviewCheck(p.dir, ficha(), 101);
+    return reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk, 'atendido', { C2: 'nao_atendido' })));
+  };
+  assert.equal(ruim().proximo, 'corrigir');
+  assert.equal(ruim().proximo, 'corrigir');
+  const r3 = ruim();
+  assert.equal(r3.proximo, 'decisao_usuario');
+  assert.equal(r3.nota, 8);
+  assert.deepEqual(r3.pendentes.map((x) => x.id), ['C2']);
+  assert.throws(() => reviewCheck(p.dir, ficha(), 101), (e) => e.codigo === 'AGUARDA_DECISAO');
+  assert.throws(() => reviewDecide(p.dir, ficha(), 101, { seguir: true }), (e) => e.codigo === 'PARAMETRO');
+  assert.throws(() => reviewDecide(p.dir, ficha(), 101, { seguir: true, novaRodada: true, motivo: 'x' }), (e) => e.codigo === 'PARAMETRO');
+  const nr = reviewDecide(p.dir, ficha(), 101, { novaRodada: true, motivo: 'ajustei o critério C2' });
+  assert.equal(nr.rodada, 2);
+  assert.equal(lerEstado(p.dir, 101).ciclo, 0);
+  ruim();
+  ruim();
+  ruim();
+  const s = reviewDecide(p.dir, ficha(), 101, { seguir: true, motivo: 'C2 fica para o cartão 102' });
+  assert.equal(s.situacao, 'liberado_pelo_usuario');
+  const e = lerEstado(p.dir, 101);
+  assert.equal(e.valida.tipo, 'liberado_pelo_usuario');
+  assert.equal(e.valida.nota, 8);
+  assert.equal(e.valida.motivo, 'C2 fica para o cartão 102');
+  assert.deepEqual(e.decisoes.map((d) => d.tipo), ['nova_rodada', 'seguir']);
+});
+
+test('review: record recusa parecer de outro commit, JSON ilegível e sem check', async () => {
+  const { reviewCheck, reviewRecord } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  cenario([ok('^issue comment', '')]);
+  assert.throws(() => reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, '{}')), (e) => e.codigo === 'PARECER_INVALIDO');
+  const chk = reviewCheck(p.dir, ficha(), 101);
+  assert.throws(() => reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, 'não é json')), (e) => e.codigo === 'PARECER_INVALIDO');
+  fs.writeFileSync(path.join(p.dir, 'novo.mjs'), 'x\n');
+  p.g('add', '.');
+  p.g('commit', '-qm', 'novo');
+  assert.throws(() => reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk))), (e) => e.codigo === 'PARECER_INVALIDO');
+});
+
+test('exigirRevisao: sem revisão, commit novo vence; só TASK mudou continua válida', async () => {
+  const { reviewCheck, reviewRecord, exigirRevisao } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  cenario([ok('^issue comment', '')]);
+  assert.throws(() => exigirRevisao(p.dir, 101), (e) => e.codigo === 'SEM_REVISAO');
+  const chk = reviewCheck(p.dir, ficha(), 101);
+  reviewRecord(p.dir, ficha(), 101, gravarParecer(p.dir, parecer(chk)));
+  fs.appendFileSync(path.join(p.dir, 'docs/tasks/TASK-101-carga.md'), '- nota\n');
+  p.g('commit', '-qam', 'task');
+  assert.equal(exigirRevisao(p.dir, 101).valida.nota, 10);
+  fs.writeFileSync(path.join(p.dir, 'carga.mjs'), 'export const x = 2;\n');
+  p.g('commit', '-qam', 'muda');
+  assert.throws(() => exigirRevisao(p.dir, 101), (e) => e.codigo === 'REVISAO_VENCIDA' && /carga\.mjs/.test(e.message));
+});
+
+test('secaoSupervisor: tabela; liberação mostra aviso com motivo', async () => {
+  const { secaoSupervisor } = await imp('supervisor.mjs');
+  const crit = [{ id: 'C1', texto: 'a | b', status: 'atendido', prova: 'x.mjs:1\nmais' }, { id: 'C2', texto: 'c', status: 'nao_atendido', prova: 'falta' }];
+  const base = { historico: [{ rodada: 1, ciclo: 3, commit: 'abcdef1234', nota: 5, em: '2026-11-04T10:00:00Z', criterios: crit }], decisoes: [] };
+  const s10 = secaoSupervisor({ ...base, valida: { commit: 'abcdef1234', nota: 5, tipo: 'nota_10', rodada: 1, ciclo: 3 } });
+  assert.match(s10, /^## Supervisor/m);
+  assert.match(s10, /\| C1 \| a \\\| b \| ✅ \| x\.mjs:1 \|/);
+  assert.doesNotMatch(s10, /⚠️/);
+  const lib = secaoSupervisor({ ...base, valida: { commit: 'abcdef1234', nota: 5, tipo: 'liberado_pelo_usuario', motivo: 'prazo', em: '2026-11-04T11:00:00Z', rodada: 1, ciclo: 3 } });
+  assert.match(lib, /⚠️ \*\*Nota 5\/10 — liberada pelo usuário em 2026-11-04T11:00:00Z\.\*\* Motivo: prazo/);
+  assert.match(lib, /Não atendidos: C2/);
+});
