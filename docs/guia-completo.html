@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agentic OS — Guia Completo</title>
-<meta name="description" content="Como funciona o plugin Agentic OS v1.8.7: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
+<meta name="description" content="Como funciona o plugin Agentic OS v1.9.0: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
 <style>
 :root{
   --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f0eee8; --text:#1d1c1a; --muted:#5f5b53;
@@ -107,7 +107,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
 <div class="layout">
 <nav class="toc" aria-label="Sumário">
   <div class="brand">Agentic OS</div>
-  <div class="ver">Guia completo · v1.8.7</div>
+  <div class="ver">Guia completo · v1.9.0</div>
   <div class="links">
     <div class="grp">Entender</div>
     <a href="#oque">1. O que é</a>
@@ -120,6 +120,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
     <a href="#estrutura">7. Motor de Estrutura</a>
     <a href="#roteador">8. Roteador de modelos</a>
     <a href="#painel">8b. Painel na tela</a>
+    <a href="#governanca">8c. Governança e wizard</a>
     <a href="#templates">9. Templates</a>
     <div class="grp">Usar</div>
     <a href="#instalar">10. Instalar</a>
@@ -136,7 +137,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
   <p class="lead">Um jeito de organizar os arquivos do seu projeto para que a IA (Claude, Codex, Gemini…) lembre o que já foi feito, siga regras, trabalhe com especialistas e use o modelo certo para cada tarefa.</p>
   <div class="pills">
     <span class="pill">Plugin para Claude Code e Codex</span>
-    <span class="pill">Versão 1.8.7</span>
+    <span class="pill">Versão 1.9.0</span>
     <span class="pill">Funciona em qualquer projeto</span>
     <span class="pill">Tudo opcional e por camadas</span>
   </div>
@@ -363,6 +364,32 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
   <div class="box warn"><b class="t">É uma estimativa</b>Os preços ficam numa tabela dentro do plugin e precisam de atualização quando a Anthropic mudar. O custo da recepção (Haiku) não entra, e a economia zera a cada sessão.</div>
 </section>
 
+<!-- 8c -->
+<section id="governanca">
+  <div class="kicker">Funcionalidades · opcional</div>
+  <h2>8c. Governança GitHub e wizard</h2>
+  <div class="box analogia"><b class="t">🏭 A analogia: a esteira com portas trancadas</b>
+    Cada pedido (cartão) anda numa esteira própria (uma branch). Para entrar no estoque oficial (a <code>main</code>), a porta só abre com o crachá do analista (a aprovação no GitHub), e se alguém mexer na peça depois do crachá, a porta tranca de novo.
+  </div>
+  <h3>O wizard</h3>
+  <p>Ao pedir para configurar o projeto, o <code>/agentic-os</code> agora conversa em etapas: <b>uma pergunta por tela</b>, com 2 a 4 opções (a recomendada vem primeiro), botão de voltar e de pular. Se a conversa cair, ele retoma de onde parou. Os avisos de custo aparecem logo no começo, antes de configurar qualquer coisa.</p>
+  <h3>O que a governança faz</h3>
+  <ul>
+    <li><b>Ficha do projeto</b> (<code>.agentic-os/governanca.json</code>): repositório, Project, colunas, analista(s) e ambientes. Nunca guarda senha ou chave.</li>
+    <li><b><code>/cartao &lt;ID&gt;</code>:</b> pega o cartão que está em "A Fazer", cria a branch <code>feature/{ID}-{descrição}</code> (ou <code>fix/</code>), cria o arquivo <code>docs/tasks/TASK-{ID}-{descrição}.md</code> e move o cartão para "Em andamento".</li>
+    <li><b><code>/cartao pr &lt;ID&gt;</code>:</b> envia a branch, abre o PR para a <code>main</code> citando o cartão e comenta no cartão.</li>
+    <li><b><code>main</code> protegida:</b> só entra por PR, com aprovação do analista; commit novo derruba a aprovação; vale até para administradores; sem apagar nem reescrever histórico.</li>
+    <li><b>Ambientes <code>hom</code> e <code>prd</code>:</b> o <code>prd</code> exige aprovação do analista.</li>
+  </ul>
+  <h3>O que você precisa</h3>
+  <ul>
+    <li>O <code>gh</code> (GitHub CLI) instalado e logado, com a permissão de Projects (<code>gh auth refresh -s project</code>).</li>
+    <li>O analista com <b>conta GitHub própria</b>: o GitHub não deixa quem abriu o PR aprová-lo. O wizard convida a conta para o repositório.</li>
+  </ul>
+  <div class="box warn"><b class="t">Pode custar</b>Em repositório <b>privado no plano gratuito</b> do GitHub, a trava da <code>main</code> (PR + aprovação do analista) e a aprovação do ambiente <code>prd</code> <b>não funcionam</b>: o GitHub bloqueia as duas (confirmado em teste real). O wizard avisa no início e oferece três caminhos: tornar o repositório público, assinar plano pago ou seguir com proteção parcial — sem trava na <code>main</code>, a disciplina fica só nas regras do agente (fica registrado na ficha).</div>
+  <div class="box info"><b class="t">Travas que não se desligam</b>O script nunca faz push nem merge na branch principal, nunca aprova PR, nunca apaga nada e só <b>endurece</b> a proteção: se a regra atual já for mais forte, ela é mantida. Detalhes em <code>docs/GOVERNANCA.md</code>.</div>
+</section>
+
 <!-- 9 -->
 <section id="templates">
   <div class="kicker">Funcionalidades</div>
@@ -409,7 +436,7 @@ export TYPESAFE_API_KEY=sua-chave        # macOS / Linux</code></pre>
       Na instalação, o instalador <b>testa a chave</b> e diz se está OK, recusada ou faltando.</li>
     <li><b>Pré-visualizar</b> o que vai mudar (não altera nada):
       <pre><code>node "&lt;plugin&gt;/scripts/install-router.mjs" "C:/caminho/do/projeto" --dry-run</code></pre>
-      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.8.7</code> (ou um clone do repositório).</li>
+      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.9.0</code> (ou um clone do repositório).</li>
     <li><b>Instalar:</b> o mesmo comando sem <code>--dry-run</code>.</li>
     <li><b>Reiniciar</b> o Claude Code no projeto.</li>
   </ol>
@@ -440,6 +467,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   <h3>Histórico recente</h3>
   <div class="tablewrap"><table>
     <tr><th>Versão</th><th>Principal novidade</th></tr>
+    <tr><td>1.9.0</td><td>Wizard de configuração (uma pergunta por tela) e camada opcional de Governança GitHub: cartão, branch, PR e <code>main</code> protegida com aprovação do analista.</td></tr>
     <tr><td>1.8.7</td><td>Painel 1.2.1: mesmo formato em todos os projetos, com ou sem roteador.</td></tr>
     <tr><td>1.8.6</td><td>Painel 1.2.0: a economia passa a contar subagentes em segundo plano.</td></tr>
     <tr><td>1.8.5</td><td>Correção: pedidos enviados com o Chrome conectado voltam a passar pelo Jev.</td></tr>
@@ -497,7 +525,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   </table></div>
 </section>
 
-<footer>Agentic OS v1.8.7 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
+<footer>Agentic OS v1.9.0 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
 </main>
 </div>
 <script>

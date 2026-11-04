@@ -37,6 +37,21 @@ Ativa quando o projeto declara multi-IA (existe `AGENTS.md` canônico + ponteiro
 
 ---
 
+## Camada Governança GitHub (exigida só quando opt-in ativo)
+
+Ativa quando `.agentic-os/governanca.json` existe.
+
+| # | Item exigido | Verificação |
+|---|--------------|-------------|
+| F1 | `.agentic-os/governanca.json` válido e **sem segredo** | JSON lê; `repo`, `project.owner/number`, 7 colunas, ≥1 analista, ambientes, prefixos; nenhuma chave com token/secret/senha/password/api_key |
+| F2 | `automation/procedures/cartao.md` + `.agentic-os/bin/github-setup.mjs` | Ambos presentes |
+| F3 | `.claude/commands/cartao.md` é wrapper fino | ≤ 6 linhas, aponta para o procedimento |
+| F4 | Bloco `agentic-os:governanca` em `automation/guardrails.md` | Contém as 10 proibições |
+| F5 | `docs/tasks/` existe | Pasta presente |
+| F6 | `.github/CODEOWNERS` com bloco `agentic-os:governanca` listando os analistas da ficha | Logins iguais aos da ficha |
+
+---
+
 ## Regras anti-drift invioláveis (qualquer uma → FAIL)
 
 - **D1 — Sem `commands/` na raiz** duplicando `.claude/commands/` + `automation/procedures/`.

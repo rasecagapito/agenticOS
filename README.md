@@ -36,7 +36,7 @@ projeto: `AGENTS.md`, `GEMINI.md`, `providers/registry.md`, `memory/handoff.md` 
 `automation/procedures/`. Eles não dependem de um manifesto nativo neste repositório.
 
 Depois da instalação, pedir para montar ou adaptar um projeto ao padrão Agentic OS ativa a skill
-`agentic-os` automaticamente.
+`agentic-os` automaticamente. A configuração é um wizard: uma pergunta por vez, com opções.
 
 ## Estrutura do repositório
 
@@ -49,6 +49,7 @@ Depois da instalação, pedir para montar ou adaptar um projeto ao padrão Agent
 - `template/C-claude-integrado/` — template SaaS integrado com Claude Code Superpowers
 - `template/D-multi-provedor/` — cérebro compartilhado entre várias IAs (Claude, Codex, Gemini…)
 - `template/E-roteador/` — roteador de modelos opt-in (Jev classifica → subagente Haiku/Sonnet/Opus); instalar com `scripts/install-router.mjs`. ⚠️ Exige a **sua** chave do Jev ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)): **sem ela, todos os pedidos vão para o Opus**
+- **Governança GitHub (v1.9, opt-in):** cartão → branch → PR com main protegida e aprovação do analista. Ver [docs/GOVERNANCA.md](docs/GOVERNANCA.md).
 - `docs/ROUTER.md` — **[Roteador de Modelos](docs/ROUTER.md)**: fluxo, regra de decisão, instalação e atualização
 - `plugins/agentic-os-painel/` — **[Painel](plugins/agentic-os-painel/README.md)** (plugin opcional): economia do Jev, decisões do dia e botões `/status` `/wrapup` `/handoff` ao lado do chat. Instalar: `claude plugin install agentic-os-painel@agentic-os`
 - `docs/USAGE.md` — **[Guia de Uso Completo](docs/USAGE.md)**: instalação, todos os comandos com exemplos e capítulo de handoff/orquestração
