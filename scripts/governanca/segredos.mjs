@@ -8,6 +8,9 @@ export const ARQ_PERMITIDOS = '.agentic-os/segredos-permitidos.txt';
 // Valor que é referência (variável, chamada, acesso) e não segredo literal.
 const ehReferencia = (v) => /[($[{]/.test(v) || /^[A-Za-z_]\w*\.[A-Za-z_]/.test(v);
 
+// Valor entre aspas só é referência se for interpolação de verdade (senhas com $ ou {} são segredos).
+const ehInterpolacao = (v) => /^\$\{.*\}$/.test(v) || /^\$[A-Za-z_]\w*$/.test(v) || /^\{\{.*\}\}$/.test(v) || /^%\w+%$/.test(v);
+
 const PADROES = [
   ['chave AWS', /\bAKIA[0-9A-Z]{16}\b/g],
   ['token GitHub', /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{22,}\b/g],
@@ -15,9 +18,9 @@ const PADROES = [
   ['chave privada', /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----/g],
   [
     'senha/chave literal',
-    /\b(?:[A-Za-z0-9]+_)*(?:password|passwd|senha|api_?key|secret|token)["']?\s*[:=]\s*(?:"([^"\s]{6,})"|'([^'\s]{6,})'|([^\s"',;]{6,}))/gi,
+    /(?<![A-Za-z0-9])[A-Za-z0-9_]*?(?:password|passwd|senha|api_?key|secret|token)["']?\s*[:=]\s*(?:"([^"\s]{6,})"|'([^'\s]{6,})'|([^\s"',;]{6,}))/gi,
     (m) => {
-      if (m[1] !== undefined || m[2] !== undefined) return !ehReferencia(m[1] ?? m[2]);
+      if (m[1] !== undefined || m[2] !== undefined) return !ehInterpolacao(m[1] ?? m[2]);
       // Sem aspas: só vale com dígito/símbolo e sem cara de tipo TS (string | null, Array<x>, X[]).
       const v = m[3];
       const resto = m.input.slice(m.index + m[0].length).trimStart();
@@ -66,7 +69,7 @@ export function varrerSegredos(diff, permitidos = []) {
         if (cobertos.some(([a, b]) => ini < b && fim > a)) continue;
         cobertos.push([ini, fim]);
         const hit = { arquivo, linha, tipo, trecho: mascarar(m[0]) };
-        (permitidos.some((p) => m[0].includes(p)) ? liberados : achados).push(hit);
+        (permitidos.some((p) => m[0].includes(p) || (p.includes(m[0]) && txt.includes(p))) ? liberados : achados).push(hit);
       }
     }
     linha++;

@@ -153,6 +153,48 @@ test('segredos: anotações de tipo TS sem aspas não são acusadas', async () =
     assert.equal(varrerSegredos(diffDe(p)).achados.length, 1, p);
 });
 
+test('segredos: camelCase pego; tokenizer não; aspas só são referência se interpolação real', async () => {
+  const { varrerSegredos } = await imp('segredos.mjs');
+  const pos = [
+    'const clientSecret = "abc123xyz789"',
+    'accessToken: "abc123xyz789"',
+    'userPassword="hunter2222"',
+    'pwd = "P@ss$w0rd!" // password = "P@ss$w0rd!"'.replace('pwd', 'dbPassword'),
+    "dbPassword = 'Abc{123}xyz'",
+  ];
+  for (const p of pos) assert.ok(varrerSegredos(diffDe(p)).achados.length >= 1, p);
+  const neg = [
+    'tokenizer = "abcdefghij"',
+    'password = "${DB_PASS}"',
+    'password = "$DB_PASS"',
+    'password = "{{ senha_db }}"',
+    'password = "%DB_PASS%"',
+  ];
+  for (const n of neg) assert.equal(varrerSegredos(diffDe(n)).achados.length, 0, n);
+});
+
+test('segredos: permitido mais longo que o trecho (linha inteira) libera', async () => {
+  const { varrerSegredos } = await imp('segredos.mjs');
+  const linha = 'const password = "hunter2222";';
+  const r = varrerSegredos(diffDe(linha), [linha]);
+  assert.equal(r.achados.length, 0);
+  assert.equal(r.liberados.length, 1);
+  assert.equal(varrerSegredos(diffDe(linha), ['outra coisa password = "hunter2222" maior']).achados.length, 1);
+});
+
+test('check recusa arquivo não rastreado e não ignorado; segundo check com coverage/ também', async () => {
+  const { reviewCheck, reviewRecord } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  cenario([ok('^issue comment', '')]);
+  fs.writeFileSync(path.join(p.dir, 'helper.cjs'), 'x\n');
+  assert.throws(() => reviewCheck(p.dir, ficha(), 101), (e) => e.codigo === 'ARVORE_SUJA' && /helper\.cjs/.test(e.message));
+  fs.rmSync(path.join(p.dir, 'helper.cjs'));
+  const f = ficha({ comando_testes: 'node -e "require(\'fs\').mkdirSync(\'coverage\',{recursive:true});require(\'fs\').writeFileSync(\'coverage/x.txt\',\'1\')"' });
+  const chk = reviewCheck(p.dir, f, 101);
+  assert.equal(reviewRecord(p.dir, f, 101, gravarParecer(p.dir, parecer(chk))).nota, 10);
+  assert.throws(() => reviewCheck(p.dir, f, 101), (e) => e.codigo === 'ARVORE_SUJA' && /coverage/.test(e.message));
+});
+
 test('segredos: permitido compara com o trecho achado; vários achados por linha', async () => {
   const { varrerSegredos } = await imp('segredos.mjs');
   const tok = 'gh' + 'p_' + 'a'.repeat(36);

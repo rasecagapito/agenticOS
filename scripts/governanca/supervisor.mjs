@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { ErroGov } from './erros.mjs';
 import { branchAtual, git } from './git.mjs';
 import { gh } from './gh.mjs';
-import { lerPermitidos, varrerSegredos } from './segredos.mjs';
+import { ARQ_PERMITIDOS, lerPermitidos, varrerSegredos } from './segredos.mjs';
 
 export const DIR_ESTADO = '.agentic-os/supervisor';
 export const CICLOS_POR_RODADA = 3;
@@ -112,7 +112,12 @@ export function checagensBase(cwd, ficha, id, { limiteMs, proposal } = {}) {
   const branch = branchAtual(cwd);
   if (!Object.values(ficha.prefixos_branch).some((p) => branch.startsWith(`${p}${id}-`)))
     throw new ErroGov('BRANCH_ERRADA', `A branch atual "${branch}" não é do cartão #${id}.`);
-  if (!rastreadosLimpos(cwd)) throw new ErroGov('ARVORE_SUJA');
+  const sujos = git(cwd, ['status', '--porcelain', '--untracked-files=all']).out
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => l.replace(/^\s*\S+\s+/, ''))
+    .filter((f) => !f.startsWith(`${DIR_ESTADO}/`) && f !== ARQ_PERMITIDOS);
+  if (sujos.length) throw new ErroGov('ARVORE_SUJA', `Alterações fora do commit (ignore artefatos no .gitignore): ${sujos.slice(0, 5).join(', ')}`);
   const commit = git(cwd, ['rev-parse', 'HEAD']).out;
   const { ref, base } = baseComum(cwd, ficha.branch_principal);
   const curto = (s) => s.slice(0, 7);
