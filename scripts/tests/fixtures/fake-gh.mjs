@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+// gh falso para testes: responde conforme AGENTIC_OS_GH_SCENARIO (lista de regras {re, stdout, stderr, code};
+// a primeira cujo regex casa com os argumentos unidos por espaço vence) e registra cada chamada
+// em AGENTIC_OS_GH_LOG (uma linha JSON {args, input}).
+import fs from 'node:fs';
+
+const args = process.argv.slice(2);
+const linha = args.join(' ');
+let input = '';
+if (args.includes('--input')) {
+  try {
+    input = fs.readFileSync(0, 'utf8');
+  } catch {}
+}
+if (process.env.AGENTIC_OS_GH_LOG) fs.appendFileSync(process.env.AGENTIC_OS_GH_LOG, JSON.stringify({ args, input }) + '\n');
+const regras = JSON.parse(fs.readFileSync(process.env.AGENTIC_OS_GH_SCENARIO, 'utf8'));
+const r = regras.find((x) => new RegExp(x.re).test(linha));
+if (!r) {
+  process.stderr.write(`fake-gh: sem cenário para: ${linha}\n`);
+  process.exit(1);
+}
+if (r.stdout) process.stdout.write(r.stdout);
+if (r.stderr) process.stderr.write(r.stderr);
+process.exit(r.code ?? 0);

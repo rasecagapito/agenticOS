@@ -1,3 +1,15 @@
+# Agentic OS v1.9.0
+
+- **Wizard de configuração:** `/agentic-os` configura tudo em etapas (uma pergunta por tela, opções com
+  recomendação, Voltar/Pular, retomada após queda). Avisos de custo na etapa 2. Ver `skills/agentic-os/wizard.md`.
+- **Camada F — Governança GitHub (opt-in):** ficha `.agentic-os/governanca.json`; `/cartao <ID>` cria a
+  branch `feature|fix/{ID}-{desc}` e `docs/tasks/TASK-{ID}-{desc}.md`; `/cartao pr <ID>` abre PR ligado;
+  `main` protegida com revisão obrigatória do analista (CODEOWNERS), Environments `hom`/`prd`.
+  Script `scripts/github-setup.mjs` (detect/apply/card-start/card-pr, `--dry-run`, JSON) e instalador
+  `scripts/install-governanca.mjs`. Travas fixas: sem push/merge na principal, sem aprovar PR, proteção
+  só endurece. CI `governanca-check`. Docs: `docs/GOVERNANCA.md`.
+- Conformidade: itens F1–F6.
+
 # Agentic OS v1.8.7 (painel 1.2.1)
 
 **Painel igual em todos os projetos.** Antes, num projeto sem o roteador o painel mostrava só o consumo e os

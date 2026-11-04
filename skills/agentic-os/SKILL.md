@@ -91,8 +91,7 @@ abaixo é o **gate humano**; a criação é o **Agente B**; e no fim **A re-audi
 [`docs/CONFORMANCE-SPEC.md`](../../docs/CONFORMANCE-SPEC.md) até `PASS` (máx. 3 ciclos).
 
 Confirmar com usuário antes de executar: "Vou criar X arquivos novos. Nenhum arquivo existente será tocado. Posso avançar?"
-Se o roteador de modelos estiver no plano, a mesma confirmação traz o aviso da Fase de descoberta (pergunta 5):
-sem chave do Jev, todos os pedidos vão para o Opus.
+A confirmação é a etapa 14 (Resumo) do [wizard](wizard.md); os avisos de custo já foram dados na etapa 2.
 
 Critério de sucesso (EXISTENTE): itens necessários aplicados, **zero** arquivos pré-existentes
 movidos/apagados/renomeados sem aprovação, integridade intacta, poder do plugin presente. Remover um
@@ -181,17 +180,12 @@ Neste caso, as mudanças são prefixadas (`changes/<modulo>-<feature>/`) e cada 
 declara `## Módulo: <nome>`. Ver `docs/CHANGE-WORKFLOW.md` seção "Módulos / Domínios".
 É opt-in — projetos pequenos mantêm `context/` flat.
 
-### Fase de descoberta (antes de criar arquivos)
+### Fase de descoberta = Wizard (antes de criar arquivos)
 
-Perguntar ao usuário (uma de cada vez se necessário):
-1. Qual o tipo de projeto? (SaaS / n8n / conteúdo / consultoria / outro)
-2. Qual o stack tecnológico principal?
-3. Quem são os usuários/audiência?
-4. Qual o objetivo principal do agente neste projeto?
-5. Quer o **Roteador de Modelos** (opt-in, Claude Code)? Antes da resposta, avisar com estas palavras:
-   "O roteador depende de uma chave **sua** do Jev (https://console.typesafe.ai/keys). **Sem a chave, todos
-   os pedidos vão para o Opus**, o modelo mais caro. Você já tem a chave?" Sem chave → oferecer: configurar
-   agora, instalar com `fallback_sem_chave: "intermediario"` (Sonnet) ou não instalar o roteador.
+Toda configuração (Modo A ou B, camadas opcionais, reconfiguração) segue o **wizard**:
+[`wizard.md`](wizard.md) — uma pergunta por tela, com opções e recomendação, até o resumo final.
+Os avisos de custo (roteador sem chave do Jev → tudo no Opus; governança em repo privado pode exigir
+plano pago do GitHub) vêm **na etapa 2, antes de qualquer configuração**.
 
 Usar as respostas para popular os arquivos com conteúdo real — não placeholders genéricos.
 
@@ -305,6 +299,9 @@ Instruções para Claude:
 1. Determinar nome kebab-case (clarificar se ambíguo).
 2. Verificar ponte de brainstorming em `docs/superpowers/specs/` — se há spec do tema, pré-preencher artefatos (referenciar, não duplicar).
 3. Criar `changes/<nome>/` com `proposal.md` + `tasks.md` (+ `design.md` se não-trivial).
+- **Governança ativa** (`.agentic-os/governanca.json` existe): perguntar o número do cartão; nome da
+  mudança = `<ID>-<desc>`; incluir `## Cartão: #<ID>` no `proposal.md`. Preferir `/cartao <ID>`, que
+  chama este fluxo e cria a branch.
 - **Projeto modular**: se `context/` tem subpastas, detectar projeto modular. Se o nome da
   mudança não começa por um módulo conhecido, perguntar qual módulo. Prefixar o nome
   (`<modulo>-<feature>`) e incluir `## Módulo: <nome>` no `proposal.md`.
@@ -531,6 +528,15 @@ testa a chave; sem chave/recusada, o hook avisa 1x por sessão e usa `fallback_s
 **Painel (plugin opcional `agentic-os-painel`)**: painel ao lado do chat com a economia do roteador (gasto real ×
 tudo no Opus, a partir do `usage` de cada subagente), as decisões do dia e botões `/status`, `/wrapup`, `/handoff`.
 Instalar: `claude plugin install agentic-os-painel@agentic-os`; reabrir: `/painel`. Fonte: `plugins/agentic-os-painel/`.
+
+## Camada Governança GitHub (opt-in, camada F)
+
+Cartão no GitHub Project → branch `feature|fix/{ID}-{desc}` → PR ligado → `main` protegida com revisão
+obrigatória do analista + Environments `hom`/`prd`. Configurada pelas etapas 7–13 do [wizard](wizard.md).
+Instalar: `node <plugin>/scripts/install-governanca.mjs <projeto> --ficha-json <arquivo>` e depois
+`node .agentic-os/bin/github-setup.mjs apply` no projeto. Uso diário: `/cartao <ID>` e `/cartao pr <ID>`
+(`automation/procedures/cartao.md`). Travas: o agente nunca faz push/merge na principal, nunca aprova PR e
+nunca afrouxa proteção. Detalhes: `docs/GOVERNANCA.md`.
 
 ---
 
