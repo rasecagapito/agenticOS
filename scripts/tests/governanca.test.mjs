@@ -54,6 +54,7 @@ test('gh: classifica falhas em códigos', async () => {
   assert.equal(cod('Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)'), 'PLANO_SEM_PROTECAO');
   assert.equal(cod('error connecting to api.github.com: could not resolve host'), 'REDE');
   assert.equal(cod('HTTP 422: Validation Failed'), 'GH_FALHOU');
+  assert.equal(cod('gh: Failed to create the environment protection rule. Please ensure the billing plan supports the required reviewers protection rule. (HTTP 422)'), 'PLANO_SEM_PROTECAO');
 });
 
 test('gh: executável ausente → GH_AUSENTE', async () => {
@@ -152,7 +153,7 @@ test('colunas: faltantes ignoram acento/caixa; mescla preserva existentes; ids p
   assert.deepEqual(faltam, ['Backlog', 'Em validação', 'Aprovado', 'Concluído', 'Bloqueado']);
   const m = opcoesMescladas(opcoes, faltam);
   assert.equal(m.length, 8);
-  assert.deepEqual(m[1], { name: 'a fazer', color: 'BLUE', description: 'd' });
+  assert.deepEqual(m[1], { id: 'o2', name: 'a fazer', color: 'BLUE', description: 'd' }); // id preserva o status dos cartões
   assert.equal(m[7].name, 'Bloqueado');
   const ids = mapearIds(opcoes, COLUNAS_PADRAO);
   assert.equal(ids.a_fazer, 'o2');

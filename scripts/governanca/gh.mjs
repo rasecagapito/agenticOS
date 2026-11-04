@@ -28,7 +28,7 @@ export function classificar({ stdout = '', stderr = '' }, args = []) {
   const t = `${stderr}\n${stdout}`;
   if (/not logged in|gh auth login/i.test(t)) return new ErroGov('GH_DESLOGADO');
   if (/INSUFFICIENT_SCOPES|required scopes?.*project|missing required scope/i.test(t)) return new ErroGov('SEM_ESCOPO_PROJECT');
-  if (/Upgrade to GitHub Pro|make this repository public/i.test(t)) return new ErroGov('PLANO_SEM_PROTECAO');
+  if (/Upgrade to GitHub Pro|make this repository public|billing plan supports/i.test(t)) return new ErroGov('PLANO_SEM_PROTECAO');
   if (/could not resolve host|no such host|dial tcp|connection refused|EAI_AGAIN|ECONNRESET|i\/o timeout|HTTP 50\d/i.test(t)) return new ErroGov('REDE');
   return new ErroGov('GH_FALHOU', `gh ${args.join(' ')} → ${t.trim().slice(0, 300)}`);
 }

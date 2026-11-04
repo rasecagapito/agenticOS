@@ -21,10 +21,11 @@ export function colunasFaltantes(opcoes, colunas) {
   return Object.values(colunas).filter((n) => !tem.has(norm(n)));
 }
 
-// A API substitui a lista inteira: as existentes vão primeiro, com cor e descrição originais.
+// A API substitui a lista inteira: as existentes vão primeiro, com id (sem id o GitHub recria a opção e
+// os cartões perdem o status — confirmado no teste real), cor e descrição originais.
 export function opcoesMescladas(opcoes, faltantes) {
   return [
-    ...opcoes.map((o) => ({ name: o.name, color: o.color || 'GRAY', description: o.description || '' })),
+    ...opcoes.map((o) => ({ ...(o.id ? { id: o.id } : {}), name: o.name, color: o.color || 'GRAY', description: o.description || '' })),
     ...faltantes.map((name) => ({ name, color: 'GRAY', description: '' })),
   ];
 }
