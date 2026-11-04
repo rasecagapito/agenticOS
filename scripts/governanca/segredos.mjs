@@ -16,7 +16,13 @@ const PADROES = [
   [
     'senha/chave literal',
     /\b(?:[A-Za-z0-9]+_)*(?:password|passwd|senha|api_?key|secret|token)["']?\s*[:=]\s*(?:"([^"\s]{6,})"|'([^'\s]{6,})'|([^\s"',;]{6,}))/gi,
-    (m) => !ehReferencia(m[1] ?? m[2] ?? m[3] ?? ''),
+    (m) => {
+      if (m[1] !== undefined || m[2] !== undefined) return !ehReferencia(m[1] ?? m[2]);
+      // Sem aspas: só vale com dígito/símbolo e sem cara de tipo TS (string | null, Array<x>, X[]).
+      const v = m[3];
+      const resto = m.input.slice(m.index + m[0].length).trimStart();
+      return /[^A-Za-z]/.test(v) && !/[<>|]/.test(v) && !ehReferencia(v) && !/^[|<[]/.test(resto);
+    },
   ],
 ];
 

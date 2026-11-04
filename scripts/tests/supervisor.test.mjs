@@ -145,6 +145,14 @@ test('segredos: senha/chave literal com prefixo, JSON, .env e YAML; referências
   for (const n of negativos) assert.equal(varrerSegredos(diffDe(n)).achados.length, 0, n);
 });
 
+test('segredos: anotações de tipo TS sem aspas não são acusadas', async () => {
+  const { varrerSegredos } = await imp('segredos.mjs');
+  for (const t of ['password: string', 'token: string | null', 'secret?: Buffer', 'apiKey: ApiKey', 'token: string[]', 'secret: Buffer<any>'])
+    assert.equal(varrerSegredos(diffDe(t)).achados.length, 0, t);
+  for (const p of ['API_KEY=abcdef123456', 'password: hunter2222', 'senha = "segredo123"'])
+    assert.equal(varrerSegredos(diffDe(p)).achados.length, 1, p);
+});
+
 test('segredos: permitido compara com o trecho achado; vários achados por linha', async () => {
   const { varrerSegredos } = await imp('segredos.mjs');
   const tok = 'gh' + 'p_' + 'a'.repeat(36);
