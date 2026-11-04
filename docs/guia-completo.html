@@ -386,7 +386,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
     <li>O <code>gh</code> (GitHub CLI) instalado e logado, com a permissão de Projects (<code>gh auth refresh -s project</code>).</li>
     <li>O analista com <b>conta GitHub própria</b>: o GitHub não deixa quem abriu o PR aprová-lo. O wizard convida a conta para o repositório.</li>
   </ul>
-  <div class="box warn"><b class="t">Pode custar</b>Em repositório <b>privado</b>, a proteção da <code>main</code> e a aprovação de ambiente podem exigir plano pago do GitHub. O wizard testa e, se o plano não permitir, oferece três caminhos: tornar o repositório público, subir de plano ou seguir com proteção parcial (fica registrado na ficha).</div>
+  <div class="box warn"><b class="t">Pode custar</b>Em repositório <b>privado no plano gratuito</b> do GitHub, a trava da <code>main</code> (PR + aprovação do analista) e a aprovação do ambiente <code>prd</code> <b>não funcionam</b>: o GitHub bloqueia as duas (confirmado em teste real). O wizard avisa no início e oferece três caminhos: tornar o repositório público, assinar plano pago ou seguir com proteção parcial — sem trava na <code>main</code>, a disciplina fica só nas regras do agente (fica registrado na ficha).</div>
   <div class="box info"><b class="t">Travas que não se desligam</b>O script nunca faz push nem merge na branch principal, nunca aprova PR, nunca apaga nada e só <b>endurece</b> a proteção: se a regra atual já for mais forte, ela é mantida. Detalhes em <code>docs/GOVERNANCA.md</code>.</div>
 </section>
 

@@ -22,9 +22,10 @@ Próximas partes: Supervisor (nota 0–10), HOM + assinatura, publicação PRD.
 - `gh` instalado e logado com permissão `project` (`gh auth refresh -s project`).
 - Analista com **conta GitHub própria** (o GitHub não deixa quem abriu o PR aprová-lo) e acesso de escrita
   ao repo (o wizard convida).
-- **Custo:** em repo privado, proteção de branch e revisores de ambiente podem exigir plano pago do GitHub.
-  O wizard testa e, se o plano não permitir, oferece: tornar público, subir de plano ou proteção parcial
-  (registrada na ficha em `protecao_aplicada`).
+- **Custo / plano do GitHub:** em repositório **privado no plano gratuito**, a trava da `main` (PR + aprovação
+  do analista) e a aprovação do ambiente `prd` **não funcionam** — o GitHub bloqueia ambos (confirmado em teste
+  real). Opções: tornar o repositório público, assinar plano pago (Pro/Team), ou seguir com **proteção parcial**
+  (sem trava na `main`; a disciplina fica só nas regras do agente), registrada na ficha em `protecao_aplicada`.
 
 ## Travas (não há opção para desligar)
 
