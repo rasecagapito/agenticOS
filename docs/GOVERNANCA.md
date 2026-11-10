@@ -112,7 +112,7 @@ de cada etapa, padrão 30). Credenciais **nunca** vão na ficha: só em variáve
 
 ### `/cartao assinatura <ID>` — ler a decisão do analista
 
-O plugin **só lê** (GET) as reviews do PR; nunca escreve em review nem faz merge (travado no `gh`).
+O plugin **só lê** (GET) as reviews do PR; nunca escreve em review (travado no `gh`). O merge é só pelo `/cartao merge`.
 
 - Vale a **última review de cada analista da ficha** (Approve ou Request changes); comentário simples e review
   descartada não valem; a review da **conta do agente não vale**.
@@ -224,8 +224,9 @@ credencial só naquele comando). `detect` e `apply` rodam com a conta do usuári
 2. Gerar um *fine-grained token* restrito ao repo e pô-lo numa variável de ambiente (padrão `AGENTIC_OS_GH_TOKEN`;
    outro nome vai em `token_env`). Nunca cole o token no chat.
 
-**Permissões mínimas:** Contents, Pull requests, Issues e Deployments (leitura e escrita), Metadata (leitura) e
-Projects (leitura e escrita).
+**Permissões mínimas:** Contents, Pull requests, Issues e Deployments (leitura e escrita), Metadata, Checks e
+Commit statuses (leitura) e Projects (leitura e escrita). Sem Checks/Commit statuses, o `/cartao merge` pode não
+enxergar os checks do PR e tratá-los como "sem checks configurados".
 
 **Trava `IDENTIDADE_IGUAL_ANALISTA`.** Em `card-hom` e `card-sign`, se o login do agente estiver em `analistas` e
 a aprovação pelo chat estiver desligada, o comando para. Saídas: configurar `identidade_agente` (`token` ou
@@ -339,5 +340,6 @@ Supervisor:
 | HOM_FALHOU | Ver a etapa e o log em `.agentic-os/hom/<ID>.log`, corrigir e repetir |
 | ASSINATURA_DE_OUTRO_COMMIT | Pedir ao analista a aprovação do commit atual no PR |
 | IDENTIDADE_IGUAL_ANALISTA / TOKEN_AUSENTE / APP_CHAVE_INVALIDA / APP_NAO_INSTALADO / CHAT_DESLIGADO / JA_HA_REVIEW | Ver a seção "Identidade do agente" |
+| CARTAO_FORA_DE_APROVADO / SEM_ASSINATURA / ASSINATURA_REPROVADA / CHECKS_PENDENTES / PR_CONFLITO / MERGE_RECUSADO / CONFIRMACAO_CHAT | Ver a seção "Merge (Parte 4a)" |
 | BRANCH_EXISTE | `git switch <branch>` para retomar |
 | REDE | Repetir (seguro) |
