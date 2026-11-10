@@ -66,6 +66,11 @@ function ficha(extra = {}) {
     colunas: { backlog: 'Backlog', a_fazer: 'A Fazer', em_andamento: 'Em andamento', em_validacao: 'Em validação', aprovado: 'Aprovado', concluido: 'Concluído', bloqueado: 'Bloqueado' },
     colunas_ids: { a_fazer: 'o2', em_andamento: 'o3', em_validacao: 'o4', aprovado: 'o5' },
     analistas: ['analista'], ambientes: { hom: 'hom', prd: 'prd' }, aprovacao_pelo_chat: false,
+    prefixos_branch: { feature: 'feature/', fix: 'fix/' },
+    aceitar_protecao_parcial: false, protecao_aplicada: null,
+    comando_testes: 'node -e "process.exit(0)"',
+    deploy_hom: 'node -e "process.exit(0)"',
+    migracao_hom: null, testes_hom: null, url_hom: 'https://hom.exemplo.com', limite_hom_min: 30,
     ...extra,
   };
 }
@@ -268,6 +273,22 @@ test('card-merge: árvore suja não troca de branch (aviso); token do agente no 
   assert.ok(r.avisos.includes('ARVORE_SUJA'));
   assert.equal(p.g('branch', '--show-current'), 'feature/101-carga');
   assert.equal(c.chamadas().find((x) => x.args[1] === 'merge').gh_token, 'tok-agente');
+});
+
+const CLI = path.join(REPO, 'scripts', 'github-setup.mjs');
+function cli(cwd, args) {
+  const r = spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8', env: process.env });
+  return { code: r.status, json: r.stdout.trim() ? JSON.parse(r.stdout) : null, stderr: r.stderr };
+}
+
+test('CLI: card-merge e --confirmo-merge-chat', async () => {
+  const p = projeto();
+  fs.writeFileSync(path.join(p.dir, '.agentic-os/governanca.json'), JSON.stringify(ficha({ aprovacao_pelo_chat: true })));
+  cenario([ITEM('Em validação'), USER]);
+  const r = cli(p.dir, ['card-merge', '101', '--confirmo-merge-chat']);
+  assert.equal(r.code, 2, r.stderr);
+  assert.equal(r.json.erro.codigo, 'CARTAO_FORA_DE_APROVADO');
+  assert.equal(cli(p.dir, ['card-merge', '101', '--confirmo-merge']).json.erro.codigo, 'PARAMETRO');
 });
 
 test('card-merge: nunca apaga a branch principal', async () => {
