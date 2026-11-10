@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agentic OS — Guia Completo</title>
-<meta name="description" content="Como funciona o plugin Agentic OS v1.11.0: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
+<meta name="description" content="Como funciona o plugin Agentic OS v1.12.0: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
 <style>
 :root{
   --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f0eee8; --text:#1d1c1a; --muted:#5f5b53;
@@ -107,7 +107,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
 <div class="layout">
 <nav class="toc" aria-label="Sumário">
   <div class="brand">Agentic OS</div>
-  <div class="ver">Guia completo · v1.11.0</div>
+  <div class="ver">Guia completo · v1.12.0</div>
   <div class="links">
     <div class="grp">Entender</div>
     <a href="#oque">1. O que é</a>
@@ -137,7 +137,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
   <p class="lead">Um jeito de organizar os arquivos do seu projeto para que a IA (Claude, Codex, Gemini…) lembre o que já foi feito, siga regras, trabalhe com especialistas e use o modelo certo para cada tarefa.</p>
   <div class="pills">
     <span class="pill">Plugin para Claude Code e Codex</span>
-    <span class="pill">Versão 1.11.0</span>
+    <span class="pill">Versão 1.12.0</span>
     <span class="pill">Funciona em qualquer projeto</span>
     <span class="pill">Tudo opcional e por camadas</span>
   </div>
@@ -400,7 +400,8 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
     <li><b>O que o analista faz:</b> abre o PR e escolhe <b>Approve</b> (aprova) ou <b>Request changes</b> (reprova, explicando o que falhou).</li>
     <li><b><code>/cartao assinatura &lt;ID&gt;</code>:</b> lê a review do analista (a última de cada analista; a conta do agente não vale; precisa ser do commit publicado). Aprovado: a assinatura entra no corpo do PR e o cartão vai para "Aprovado". Reprovado: o motivo vai para o arquivo TASK e o cartão volta para "Em andamento", para corrigir e passar de novo por revisar, pr e hom.</li>
     <li><b>Se outro cartão tomar o HOM</b> antes da assinatura, a homologação pendente deixa de valer: é preciso rodar <code>/cartao hom</code> de novo.</li>
-    <li><b>Limite do plano gratuito:</b> em repositório privado no plano gratuito, o GitHub registra a review mas <b>não obriga</b> o merge a esperar por ela. A próxima parte fará o plugin exigir a assinatura no merge; até lá, um merge manual pela interface continua possível.</li>
+    <li><b>Limite do plano gratuito:</b> em repositório privado no plano gratuito, o GitHub registra a review mas <b>não obriga</b> o merge a esperar por ela. O <code>/cartao merge</code> exige a assinatura; um merge manual pela interface continua possível.</li>
+    <li><b><code>/cartao merge &lt;ID&gt;</code>:</b> integra na <code>main</code> como um cartório, que só registra depois de conferir a assinatura na hora. O plugin relê a review do analista no GitHub (não confia na cópia local), confere que ela é do último commit do PR, que os checks passaram e que não há conflito. O merge é em squash, com a assinatura na mensagem do commit; a branch do cartão é apagada e a issue é fechada. Se a assinatura foi pelo chat, o merge só acontece quando você disser, por iniciativa própria, que quer integrar. O cartão fica em "Aprovado"; a publicação em PRD vem depois.</li>
   </ul>
   <h3>Identidade do agente</h3>
   <p>Pense em um <b>crachá próprio para o agente</b>. Se o agente usa o seu crachá, o GitHub não deixa você aprovar o que "você mesmo" abriu, e uma aprovação sua poderia ter sido dada pelo agente. Com crachá próprio, o analista assina com o dele e a portaria (o GitHub) sabe distinguir os dois.</p>
@@ -466,7 +467,7 @@ export TYPESAFE_API_KEY=sua-chave        # macOS / Linux</code></pre>
       Na instalação, o instalador <b>testa a chave</b> e diz se está OK, recusada ou faltando.</li>
     <li><b>Pré-visualizar</b> o que vai mudar (não altera nada):
       <pre><code>node "&lt;plugin&gt;/scripts/install-router.mjs" "C:/caminho/do/projeto" --dry-run</code></pre>
-      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.11.0</code> (ou um clone do repositório).</li>
+      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.12.0</code> (ou um clone do repositório).</li>
     <li><b>Instalar:</b> o mesmo comando sem <code>--dry-run</code>.</li>
     <li><b>Reiniciar</b> o Claude Code no projeto.</li>
   </ol>
@@ -497,6 +498,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   <h3>Histórico recente</h3>
   <div class="tablewrap"><table>
     <tr><th>Versão</th><th>Principal novidade</th></tr>
+    <tr><td>1.12.0</td><td>Merge exigindo a assinatura: <code>/cartao merge</code> relê a review do analista e só integra o commit assinado (squash com a assinatura na mensagem).</td></tr>
     <tr><td>1.11.0</td><td>HOM e assinatura: <code>/cartao hom</code> publica o commit revisado no HOM (um cartão por vez) e <code>/cartao assinatura</code> lê o Approve ou Request changes do analista no PR e registra.</td></tr>
     <tr><td>1.10.0</td><td>Supervisor: <code>/cartao revisar</code> dá nota de 0 a 10 com prova; o PR só abre com nota 10 ou liberação do usuário (aviso ⚠️ no PR).</td></tr>
     <tr><td>1.9.0</td><td>Wizard de configuração (uma pergunta por tela) e camada opcional de Governança GitHub: cartão, branch, PR e <code>main</code> protegida com aprovação do analista.</td></tr>
@@ -557,7 +559,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   </table></div>
 </section>
 
-<footer>Agentic OS v1.11.0 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
+<footer>Agentic OS v1.12.0 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
 </main>
 </div>
 <script>

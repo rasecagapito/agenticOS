@@ -1,3 +1,18 @@
+# Agentic OS v1.12.0
+
+- **Merge exigindo a assinatura (Parte 4a da governança):** `/cartao merge <ID>` integra o PR na principal só
+  com a assinatura válida do commit atual. Relê as reviews no GitHub na hora (não confia no estado local),
+  confere cartão em "Aprovado", PR aberto, último commit = commit assinado, checks e conflito.
+- Squash com `--match-head-commit` e o bloco da assinatura na mensagem do commit (o TASK não muda: um commit
+  novo descartaria a aprovação). Tipo chat exige um "sim" novo do usuário (`--confirmo-merge-chat`).
+- Branch remota do cartão apagada (nunca a principal), issue fechada pelo `Closes #ID`, comentário na issue,
+  cópia local volta à principal se limpa. O cartão fica em "Aprovado" (PRD vem na 4b). Efeitos idempotentes.
+- Trava reescrita: `gh pr merge` só pelo `card-merge`. Guardrail 14. Conformidade F11. 7 erros novos
+  (`CARTAO_FORA_DE_APROVADO`, `SEM_ASSINATURA`, `ASSINATURA_REPROVADA`, `CHECKS_PENDENTES`, `PR_CONFLITO`,
+  `MERGE_RECUSADO`, `CONFIRMACAO_CHAT`).
+- Limites: merge manual pela interface do GitHub continua possível em repo privado no plano gratuito; o merge
+  após review real ainda não foi verificado no GitHub real (só GitHub simulado).
+
 # Agentic OS v1.11.0
 
 - **HOM e assinatura (Parte 3 da governança):** `/cartao hom <ID>` publica o commit revisado pelo Supervisor

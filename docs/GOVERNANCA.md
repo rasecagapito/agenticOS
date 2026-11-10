@@ -4,7 +4,7 @@
 > (branch). Para entrar no estoque oficial (`main`), a porta só abre com o crachá do analista
 > (aprovação no GitHub) — e se alguém mexer na peça depois do crachá, a porta tranca de novo.
 
-## O que faz (Partes 0 a 3)
+## O que faz (Partes 0 a 4a)
 
 1. **Wizard** (`/agentic-os`): pergunta tudo em etapas e configura o projeto.
 2. **Ficha** `.agentic-os/governanca.json`: repo, Project, colunas, analista(s), ambientes. Sem segredo.
@@ -23,7 +23,9 @@
 9. **Identidade do agente**: o agente age no GitHub com conta própria (token ou GitHub App) para o dono do
    projeto poder ser o analista — veja a seção "Identidade do agente".
 
-Próxima parte: publicação PRD (e o merge exigir a assinatura).
+10. **`/cartao merge <ID>`**: integra na `main` só com a assinatura válida do commit atual — veja "Merge (Parte 4a)".
+
+Próxima parte: publicação PRD (4b).
 
 ## Supervisor (Parte 2)
 
@@ -127,9 +129,64 @@ O plugin **só lê** (GET) as reviews do PR; nunca escreve em review nem faz mer
   interrompido no meio, rodar de novo completa o que faltou sem duplicar nada.
 
 **Limite honesto:** o registro da assinatura é real (review no GitHub + cópia no PR), mas em repositório
-**privado no plano gratuito** o GitHub **não obriga** o merge a esperar essa aprovação. A Parte 4 vai exigir a
-assinatura no merge feito pelo plugin; até lá, um merge manual pela interface do GitHub continua possível.
+**privado no plano gratuito** o GitHub **não obriga** o merge a esperar essa aprovação. O `/cartao merge`
+exige a assinatura; um merge manual pela interface do GitHub continua possível.
 O estado local (`.agentic-os/hom/`) é registro, não cadeado.
+
+## Merge (Parte 4a)
+
+> Analogia: o cartório. Ele só registra a escritura depois de conferir a assinatura na hora, no próprio
+> documento; uma cópia guardada na gaveta não basta, e se o documento mudou depois de assinado, não registra.
+
+`/cartao merge <ID>` → `node .agentic-os/bin/github-setup.mjs card-merge <ID> [--confirmo-merge-chat]`. Roda com a
+identidade do agente (mesma trava `IDENTIDADE_IGUAL_ANALISTA` do `card-sign`).
+
+**Pré-condições, nesta ordem**
+1. Cartão existe e está em "Aprovado" (`CARTAO_FORA_DE_APROVADO`).
+2. O estado local tem a assinatura aprovada (`SEM_ASSINATURA`); assinatura pelo chat pendente → retomar `card-sign`.
+3. PR aberto, não draft, com base na principal (`SEM_PR`). PR já integrado → só completa o que faltou (abaixo).
+4. O último commit do PR é o commit assinado (`ASSINATURA_DE_OUTRO_COMMIT`).
+5. Prova da assinatura, conforme o Tipo:
+   - **Review no GitHub:** o script **relê** as reviews na hora; não confia no estado local. Última review do
+     analista pedindo mudanças → `ASSINATURA_REPROVADA`; sem aprovação do commit atual → `SEM_ASSINATURA`. O Tipo
+     (com ou sem ⚠️ `gh local = analista`) é recalculado.
+   - **Chat:** nenhuma review do analista pode pedir mudanças no commit atual; o corpo do PR precisa ter a seção
+     "## Assinatura" com Tipo chat; e o usuário precisa confirmar o merge por iniciativa própria
+     (`--confirmo-merge-chat`; sem ele, `CONFIRMACAO_CHAT`). Com `aprovacao_pelo_chat: false` → `CHAT_DESLIGADO`.
+6. Checks do PR sem pendente nem falho (`CHECKS_PENDENTES`, com a lista). Sem checks configurados, segue.
+7. PR sem conflito (`PR_CONFLITO`; se o GitHub ainda está calculando, lê de novo após 3 s).
+
+**O merge.** Squash com `--match-head-commit <sha assinado>`: se alguém empurrar um commit entre a conferência e o
+merge, o GitHub recusa. A mensagem do squash leva o bloco da assinatura (e o ⚠️ quando o Tipo não é "review no
+GitHub") e `Closes #ID`. A assinatura vai na mensagem, não no TASK: um commit novo na branch descartaria a
+aprovação. A branch remota do cartão é apagada (nunca a principal); a issue é fechada pelo `Closes #ID`; a issue
+recebe um comentário com o sha do squash; se a cópia local estiver limpa, volta para a principal e faz
+`git pull --ff-only` (suja → não mexe e avisa `ARVORE_SUJA`). **O cartão fica em "Aprovado"**: a publicação PRD
+vem na Parte 4b.
+
+**Idempotência.** Cada efeito é marcado no estado local. Rodar de novo depois de uma falha no meio completa só o
+que faltou, sem duplicar comentário; PR já integrado não chama o merge de novo (`ja_integrado`).
+
+**Limites honestos**
+- Em repo privado no plano gratuito, um merge manual pela interface do GitHub continua possível; o plugin não
+  impede, só não o faz.
+- Tipo chat não tem prova do GitHub, e o corpo do PR pode ser editado por quem tem acesso. O ⚠️ fica na mensagem
+  do squash.
+- Com a proteção ativa (repo público ou plano pago), assinatura só pelo chat não satisfaz a aprovação exigida: o
+  GitHub recusa e o comando devolve `MERGE_RECUSADO`.
+- O merge foi testado com um GitHub simulado; o merge após review real ainda não foi verificado no GitHub real.
+
+**Erros novos**
+
+| Código | Como resolver |
+|---|---|
+| CARTAO_FORA_DE_APROVADO | Concluir `/cartao assinatura` com aprovação |
+| SEM_ASSINATURA | Rodar `/cartao assinatura` depois da decisão do analista |
+| ASSINATURA_REPROVADA | Corrigir → `/cartao revisar` → `pr` → `hom` → `assinatura` |
+| CHECKS_PENDENTES | Esperar o CI ou corrigir |
+| PR_CONFLITO | Atualizar a branch (o commit novo exige revisar, HOM e assinar de novo) |
+| MERGE_RECUSADO | Ler o motivo; conferir a proteção da branch e a permissão do token/App (`contents: write`) |
+| CONFIRMACAO_CHAT | O usuário confirma o merge por iniciativa própria; só então `--confirmo-merge-chat` |
 
 ## Identidade do agente
 
@@ -210,6 +267,10 @@ conta do agente (ou use o modo `app`).
 - No modo `app`, o JWT de vida curta (cerca de 10 minutos) aparece na linha de comando do `gh` enquanto o token de
   instalação é obtido; fica visível a outros processos do mesmo usuário do sistema operacional.
 
+## Atualizando de 1.11
+
+A ficha não muda. Reinstalar com `install-governanca` traz o procedimento `/cartao merge` e o guardrail 14.
+
 ## Atualizando de 1.10
 
 Ficha antiga (sem `identidade_agente` e `aprovacao_pelo_chat`) é tratada como `modo: nenhuma` e chat desligado:
@@ -229,8 +290,8 @@ Os arquivos de governança do projeto (procedimento do `/cartao` e guardrail 13)
 
 ## Travas (não há opção para desligar)
 
-O script nunca faz push ou merge na branch principal, nunca aprova PR, nunca apaga nada e só **endurece**
-a proteção (se a regra atual for mais forte, mantém a atual).
+O script nunca faz push na branch principal, só faz merge pelo `card-merge` (assinatura válida do commit
+atual), nunca aprova PR, não apaga nada além da branch do cartão já integrada e só **endurece** a proteção (se a regra atual for mais forte, mantém a atual).
 
 ## CODEOWNERS
 
@@ -240,7 +301,7 @@ continuam acima, mas para arquivos cobertos por `*` o analista passa a ser o don
 
 ## Comandos do script
 
-`node .agentic-os/bin/github-setup.mjs <detect|apply|card-start|card-pr|card-hom|card-sign> [--dry-run]` — saída JSON;
+`node .agentic-os/bin/github-setup.mjs <detect|apply|card-start|card-pr|card-hom|card-sign|card-merge> [--dry-run]` — saída JSON;
 erro conhecido sai com código 2 e `erro.codigo` + `erro.como_resolver` (e `erro.extra`, quando houver, como
 os campos do `HOM_FALHOU`).
 
@@ -250,6 +311,10 @@ HOM e assinatura:
 - `card-sign <ID>` — lê a review do analista e registra.
 - `card-sign <ID> --pelo-chat --resultado aprovado|reprovado --frase "<texto do usuário>"` — registra a decisão declarada
   no chat (só com `aprovacao_pelo_chat: true`; prova fraca).
+
+Merge:
+- `card-merge <ID> [--confirmo-merge-chat]` — integra na principal com a assinatura válida do commit atual;
+  `--confirmo-merge-chat` (assinatura pelo chat) só com o "sim" do usuário.
 
 Supervisor:
 - `review-check <ID>` — mede B1–B4 e lista os critérios G/E/C.
