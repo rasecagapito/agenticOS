@@ -132,3 +132,147 @@ test('corpoSquash: bloco da assinatura, aviso por Tipo e Closes', async () => {
   assert.match(corpoSquash({ ...ASSIN, tipo: 'review no GitHub ⚠️ gh local = analista' }, 101), /⚠️ O gh desta máquina estava logado como analista/);
   assert.match(corpoSquash({ ...ASSIN, tipo: 'chat, sem prova do GitHub' }, 101), /⚠️ Assinatura declarada no chat, sem prova do GitHub\./);
 });
+
+// Projeto com origin (bare) e branch do cartão; estado HOM com assinatura aprovada.
+function projeto(estadoExtra = {}) {
+  const bare = fs.mkdtempSync(path.join(TMP, 'bare-'));
+  spawnSync('git', ['init', '-q', '--bare', '-b', 'main', bare]);
+  const dir = fs.mkdtempSync(path.join(TMP, 'proj-'));
+  const g = (...a) => {
+    const r = spawnSync('git', a, { cwd: dir, encoding: 'utf8' });
+    if (r.status) throw new Error(r.stderr);
+    return r.stdout.trim();
+  };
+  g('init', '-q', '-b', 'main');
+  fs.writeFileSync(path.join(dir, 'README.md'), 'x\n');
+  fs.writeFileSync(path.join(dir, '.gitignore'), '.agentic-os/hom/\n');
+  g('add', '.');
+  g('commit', '-qm', 'init');
+  g('remote', 'add', 'origin', bare);
+  g('push', '-q', 'origin', 'main');
+  g('switch', '-q', '-c', 'feature/101-carga');
+  fs.writeFileSync(path.join(dir, 'carga.txt'), 'y\n');
+  g('add', '.');
+  g('commit', '-qm', 'feat: carga');
+  const estado = (extra = {}) => {
+    fs.mkdirSync(path.join(dir, '.agentic-os', 'hom'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.agentic-os/hom/101.json'), JSON.stringify({ ...E, ...estadoExtra, ...extra }));
+  };
+  estado();
+  const lerEstado = () => JSON.parse(fs.readFileSync(path.join(dir, '.agentic-os/hom/101.json'), 'utf8'));
+  return { dir, g, estado, lerEstado, mainBare: () => spawnSync('git', ['rev-parse', 'main'], { cwd: bare, encoding: 'utf8' }).stdout.trim() };
+}
+const ITEM = (status = 'Aprovado') => ok('^project item-list 3', { items: [{ id: 'ITEM_101', status, content: { type: 'Issue', number: 101, title: 'Carga', repository: 'dono/app' } }] });
+const PRV = (extra) => ok('^pr view https://github.com/dono/app/pull/7 --repo dono/app --json number,', PRDADOS(extra));
+const SHA = ok('--json mergeCommit$', { mergeCommit: { oid: 'abc1234def' } });
+const CHECKS = ok('^pr checks', [{ name: 'ci', bucket: 'pass' }]);
+const MERGE = ok('^pr merge', '');
+const DEL = ok('^api -X DELETE repos/dono/app/git/refs/heads/feature/101-carga$', '');
+const COMENT = ok('^issue comment 101', '');
+const tudo = (lista, extra = {}) => [ITEM(), PRV(extra), SHA, USER, REVIEWS(lista), CHECKS, MERGE, DEL, COMENT];
+const APROVA = [rv('analista', 'APPROVED', 's2', '2026-11-04T11:00:00Z')];
+
+test('card-merge: review válida → squash com assinatura, apaga branch remota, comenta, volta à main; idempotente', async () => {
+  const { cardMerge } = await imp('merge.mjs');
+  const p = projeto();
+  const antes = p.mainBare();
+  const c = cenario(tudo(APROVA));
+  const r = cardMerge(p.dir, ficha(), 101, { esperaMs: 0 });
+  assert.deepEqual([r.ok, r.situacao, r.sha_squash, r.tipo], [true, 'integrado', 'abc1234def', 'review no GitHub']);
+  const m = c.chamadas().find((x) => x.args[0] === 'pr' && x.args[1] === 'merge');
+  assert.equal(m.args[m.args.indexOf('--match-head-commit') + 1], 's2');
+  assert.equal(m.args[m.args.indexOf('--subject') + 1], 'Carga (#7)');
+  assert.match(m.body_file, /## Assinatura[\s\S]*\| Analista \| analista \|[\s\S]*Closes #101/);
+  assert.ok(c.chamadas().some((x) => x.args.join(' ') === 'api -X DELETE repos/dono/app/git/refs/heads/feature/101-carga'));
+  assert.match(c.chamadas().find((x) => x.args[0] === 'issue').args.join(' '), /Integrado na main .*squash abc1234.*review no GitHub/);
+  assert.equal(c.chamadas().some((x) => x.args[1] === 'item-edit'), false); // cartão fica em Aprovado
+  assert.equal(p.g('branch', '--show-current'), 'main');
+  assert.equal(p.mainBare(), antes); // nenhum push na principal
+  const st = p.lerEstado();
+  assert.equal(st.merge.sha, 'abc1234def');
+  assert.equal(st.merge_pendente, undefined);
+  const c2 = cenario([]);
+  assert.equal(cardMerge(p.dir, ficha(), 101).situacao, 'ja_integrado');
+  assert.equal(c2.chamadas().length, 0);
+});
+
+test('card-merge: pré-condições', async () => {
+  const { cardMerge } = await imp('merge.mjs');
+  const p = projeto();
+  const erro = (regras, codigo, fic = ficha(), o = { esperaMs: 0 }) => {
+    cenario(regras);
+    assert.throws(() => cardMerge(p.dir, fic, 101, o), (e) => e.codigo === codigo, codigo);
+  };
+  erro([ITEM('Em validação')], 'CARTAO_FORA_DE_APROVADO');
+  p.estado({ assinatura: null });
+  erro([ITEM()], 'SEM_ASSINATURA');
+  p.estado({ assinatura_pendente: { tipo: 'chat, sem prova do GitHub' } });
+  erro([ITEM()], 'PARAMETRO');
+  p.estado();
+  erro([ITEM(), PRV({ state: 'CLOSED' })], 'SEM_PR');
+  erro([ITEM(), PRV({ isDraft: true })], 'SEM_PR');
+  erro([ITEM(), PRV({ baseRefName: 'dev' })], 'SEM_PR');
+  erro([ITEM(), PRV({ headRefOid: 's3' })], 'ASSINATURA_DE_OUTRO_COMMIT');
+  erro([ITEM(), PRV(), USER, REVIEWS([])], 'SEM_ASSINATURA');
+  erro([ITEM(), PRV(), USER, REVIEWS(APROVA), ok('^pr checks', [{ name: 'ci', bucket: 'fail' }])], 'CHECKS_PENDENTES');
+  erro([ITEM(), PRV({ mergeable: 'CONFLICTING' }), USER, REVIEWS(APROVA), CHECKS], 'PR_CONFLITO');
+  erro([ITEM(), PRV(), USER, REVIEWS(APROVA), CHECKS, { re: '^pr merge', stderr: 'GraphQL: Head branch was modified. Review and try the merge again. token=tok-x', code: 1 }], 'MERGE_RECUSADO');
+  assert.equal(p.lerEstado().merge, undefined);
+});
+
+test('card-merge: Tipo chat exige --confirmo-merge-chat; com ele integra com aviso', async () => {
+  const { cardMerge } = await imp('merge.mjs');
+  const chat = { ...ASSIN, tipo: 'chat, sem prova do GitHub', analista: 'analista (declarado)' };
+  const p = projeto({ assinatura: chat });
+  const fc = ficha({ aprovacao_pelo_chat: true });
+  const corpo = 'x\n## Assinatura\n| Tipo | chat, sem prova do GitHub |';
+  cenario(tudo([], { body: corpo }));
+  assert.throws(() => cardMerge(p.dir, fc, 101, { esperaMs: 0 }), (e) => e.codigo === 'CONFIRMACAO_CHAT');
+  const c = cenario(tudo([], { body: corpo }));
+  const r = cardMerge(p.dir, fc, 101, { esperaMs: 0, confirmoMergeChat: true });
+  assert.equal(r.tipo, 'chat, sem prova do GitHub');
+  assert.match(c.chamadas().find((x) => x.args[1] === 'merge').body_file, /⚠️ Assinatura declarada no chat, sem prova do GitHub\./);
+});
+
+test('card-merge: PR já integrado completa efeitos sem chamar merge; retry após falha no comentário não duplica', async () => {
+  const { cardMerge } = await imp('merge.mjs');
+  const p = projeto();
+  const c = cenario([ITEM(), PRV({ state: 'MERGED' }), SHA, DEL, COMENT]);
+  const r = cardMerge(p.dir, ficha(), 101);
+  assert.deepEqual([r.situacao, r.sha_squash], ['ja_integrado', 'abc1234def']);
+  assert.equal(c.chamadas().some((x) => x.args[1] === 'merge'), false);
+
+  const q = projeto();
+  cenario([...tudo(APROVA).filter((x) => x !== COMENT), { re: '^issue comment', stderr: 'HTTP 502', code: 1 }]);
+  assert.throws(() => cardMerge(q.dir, ficha(), 101, { esperaMs: 0 }), (e) => e.codigo === 'REDE');
+  assert.equal(q.lerEstado().merge_pendente.efeitos.merge, true);
+  const c3 = cenario([SHA, DEL, COMENT]);
+  assert.equal(cardMerge(q.dir, ficha(), 101).situacao, 'integrado');
+  assert.equal(c3.chamadas().some((x) => x.args[1] === 'merge'), false);
+  assert.equal(c3.chamadas().filter((x) => x.args[0] === 'issue').length, 1);
+});
+
+test('card-merge: árvore suja não troca de branch (aviso); token do agente no merge', async () => {
+  const { cardMerge } = await imp('merge.mjs');
+  const { usarTokenAgente } = await imp('gh.mjs');
+  const p = projeto();
+  fs.writeFileSync(path.join(p.dir, 'rascunho.txt'), 'z');
+  const c = cenario(tudo(APROVA));
+  usarTokenAgente('tok-agente');
+  let r;
+  try {
+    r = cardMerge(p.dir, ficha(), 101, { esperaMs: 0 });
+  } finally {
+    usarTokenAgente(null);
+  }
+  assert.ok(r.avisos.includes('ARVORE_SUJA'));
+  assert.equal(p.g('branch', '--show-current'), 'feature/101-carga');
+  assert.equal(c.chamadas().find((x) => x.args[1] === 'merge').gh_token, 'tok-agente');
+});
+
+test('card-merge: nunca apaga a branch principal', async () => {
+  const { cardMerge } = await imp('merge.mjs');
+  const p = projeto({ branch: 'main' });
+  cenario([ITEM(), PRV({ state: 'MERGED', headRefName: 'main' }), SHA, COMENT]);
+  assert.throws(() => cardMerge(p.dir, ficha(), 101), (e) => e.codigo === 'TRAVA');
+});
