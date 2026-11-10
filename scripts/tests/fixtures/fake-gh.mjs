@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // gh falso para testes: responde conforme AGENTIC_OS_GH_SCENARIO (lista de regras {re, stdout, stderr, code};
 // a primeira cujo regex casa com os argumentos unidos por espaço vence) e registra cada chamada
-// em AGENTIC_OS_GH_LOG (uma linha JSON {args, input}).
+// em AGENTIC_OS_GH_LOG (uma linha JSON {args, input, body_file, gh_token}); regra com "token" casa só esse GH_TOKEN.
 import fs from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -20,9 +20,11 @@ if (bf >= 0) {
     body_file = fs.readFileSync(args[bf + 1], 'utf8');
   } catch {}
 }
-if (process.env.AGENTIC_OS_GH_LOG) fs.appendFileSync(process.env.AGENTIC_OS_GH_LOG, JSON.stringify({ args, input, body_file }) + '\n');
+if (process.env.AGENTIC_OS_GH_LOG)
+  fs.appendFileSync(process.env.AGENTIC_OS_GH_LOG, JSON.stringify({ args, input, body_file, gh_token: process.env.GH_TOKEN || null }) + '\n');
 const regras = JSON.parse(fs.readFileSync(process.env.AGENTIC_OS_GH_SCENARIO, 'utf8'));
-const r = regras.find((x) => new RegExp(x.re).test(linha));
+// Regra com "token" só casa quando o GH_TOKEN do processo é esse (simula contas diferentes).
+const r = regras.find((x) => new RegExp(x.re).test(linha) && (x.token === undefined || x.token === (process.env.GH_TOKEN || null)));
 if (!r) {
   process.stderr.write(`fake-gh: sem cenário para: ${linha}\n`);
   process.exit(1);

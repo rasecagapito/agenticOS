@@ -1,0 +1,26 @@
+# Donos que podem aparecer no repo do plugin. NUNCA acrescente login/org de cliente ou de outra pessoa:
+# troque o nome no arquivo por um fictício. Permitidos: autor do plugin, caminhos genéricos do GitHub,
+# projetos públicos de terceiros citados como referência, nomes fictícios dos testes.
+rasecagapito
+users
+orgs
+settings
+apps
+login
+features
+marketplace
+cli
+anthropics
+dono
+d
+acme
+ana
+analista
+agente
+robo
+outra
+novo
+o
+login-do-analista
+# projeto público citado como referência (OpenSpec)
+fission-ai
