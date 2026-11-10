@@ -2,9 +2,11 @@
 // AGENTIC_OS_GH_BIN troca o executável (ex.: simular gh ausente). Nunca imprime token.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { ErroGov } from './erros.mjs';
 
-// Trava fixa: o plugin nunca escreve em reviews nem faz merge/close/review de PR (só o analista assina).
+// Trava fixa: gh() nunca escreve em reviews nem faz merge/close/review de PR; o único merge é ghMerge (card-merge).
 const MUTACOES_PR = /addPullRequestReview|submitPullRequestReview|updatePullRequestReview|dismissPullRequestReview|deletePullRequestReview|mergePullRequest|enablePullRequestAutoMerge|enqueuePullRequest|closePullRequest|mergeBranch/i;
 
 function metodoDe(args) {
@@ -69,8 +71,13 @@ export function usarTokenAgente(token, { expiraEm = 0, renovador = null } = {}) 
 }
 export const tokenAgenteAtual = () => tokenAgente;
 
-export function gh(args, { input, permitirFalha = false, token } = {}) {
-  verificarChamada(args, input);
+export function gh(args, opts = {}) {
+  verificarChamada(args, opts.input);
+  return rodarGh(args, opts);
+}
+
+// Execução sem a trava: só gh() (que trava antes) e ghMerge() (merge validado pelo card-merge) chamam.
+function rodarGh(args, { input, permitirFalha = false, token } = {}) {
   if (token === undefined && tokenAgente && renovar && expira && expira - Date.now() < 5 * 60000) {
     const n = renovar();
     tokenAgente = n.token;
@@ -91,6 +98,19 @@ export function gh(args, { input, permitirFalha = false, token } = {}) {
   const saida = { code: r.status ?? 1, stdout: r.stdout || '', stderr: esconder(r.stderr || '') };
   if (saida.code !== 0 && !permitirFalha) throw classificar({ ...saida, stdout: esconder(saida.stdout) }, args.map(esconder));
   return saida;
+}
+
+// Única forma de merge do plugin (card-merge, depois de reconferir a assinatura): squash e só se o
+// último commit do PR ainda for o assinado (--match-head-commit). Não apaga branch (feito à parte).
+export function ghMerge({ repo, url, sha, titulo, corpo }) {
+  if (!repo || !url || !sha || !titulo) throw new ErroGov('PARAMETRO', 'ghMerge exige repo, url, sha e titulo.');
+  const arq = path.join(os.tmpdir(), `agentic-os-merge-${process.pid}-${Date.now()}.md`);
+  fs.writeFileSync(arq, corpo || '');
+  try {
+    return rodarGh(['pr', 'merge', url, '--repo', repo, '--squash', '--match-head-commit', sha, '--subject', titulo, '--body-file', arq]);
+  } finally {
+    fs.rmSync(arq, { force: true });
+  }
 }
 
 export function ghJson(args, opts) {
