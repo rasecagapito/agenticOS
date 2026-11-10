@@ -1,3 +1,23 @@
+# Agentic OS v1.11.0
+
+- **HOM e assinatura (Parte 3 da governança):** `/cartao hom <ID>` publica o commit revisado pelo Supervisor
+  no HOM com os comandos da ficha (`deploy_hom`, `migracao_hom` só com o "sim", `testes_hom`, `url_hom`),
+  um cartão por vez (fila por GitHub Deployments, furar só com "sim" + motivo), log local fora do git, cartão
+  em "Em validação" e instruções ao analista no PR. `/cartao assinatura <ID>` **lê** a review do analista
+  (Approve/Request changes, última por analista, do commit publicado, depois do deploy; conta do agente não
+  vale): aprovado → assinatura no corpo do PR e cartão em "Aprovado"; reprovado → motivo no TASK e cartão em
+  "Em andamento". Nada é commitado depois do deploy (não descarta a aprovação).
+- Trava fixa: o plugin nunca escreve em reviews nem faz `pr review|merge|close`. Guardrail 12. Conformidade F9.
+- Wizard: etapa HOM. Limite: em repo privado no plano gratuito o GitHub não obriga o merge a esperar a assinatura.
+- **Identidade do agente:** `identidade_agente` na ficha — `token` (conta-robô, token em variável de ambiente) ou
+  `app` (GitHub App; o plugin gera o token de 1 h com a chave privada, sem dependências). PRs e pushes saem como o
+  agente, e o dono do projeto pode ser o analista. Token só em memória; nunca em ficha, log ou `.git/config`.
+- Sem identidade separada, `card-hom` e `card-sign` param com `IDENTIDADE_IGUAL_ANALISTA`. Opt-in
+  `aprovacao_pelo_chat`: `card-sign <ID> --pelo-chat` registra a declaração do usuário como "chat, sem prova do
+  GitHub" (review no PR vence: `JA_HA_REVIEW`). Guardrail 13. Conformidade F10. `detect` mostra agente × analistas.
+- Atualizando de 1.10: ficha antiga = `modo: nenhuma`; nada muda até configurar.
+- Limite: a identidade do agente tem só testes automáticos (GitHub simulado); ainda não foi verificada contra o GitHub real.
+
 # Agentic OS v1.10.0
 
 - **Supervisor (Parte 2 da governança):** `/cartao revisar <ID>` — subagente `supervisor` independente

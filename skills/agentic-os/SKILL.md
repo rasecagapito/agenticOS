@@ -91,7 +91,7 @@ abaixo é o **gate humano**; a criação é o **Agente B**; e no fim **A re-audi
 [`docs/CONFORMANCE-SPEC.md`](../../docs/CONFORMANCE-SPEC.md) até `PASS` (máx. 3 ciclos).
 
 Confirmar com usuário antes de executar: "Vou criar X arquivos novos. Nenhum arquivo existente será tocado. Posso avançar?"
-A confirmação é a etapa 14 (Resumo) do [wizard](wizard.md); os avisos de custo já foram dados na etapa 2.
+A confirmação é a etapa 16 (Resumo) do [wizard](wizard.md); os avisos de custo já foram dados na etapa 2.
 
 Critério de sucesso (EXISTENTE): itens necessários aplicados, **zero** arquivos pré-existentes
 movidos/apagados/renomeados sem aprovação, integridade intacta, poder do plugin presente. Remover um
@@ -532,12 +532,14 @@ Instalar: `claude plugin install agentic-os-painel@agentic-os`; reabrir: `/paine
 ## Camada Governança GitHub (opt-in, camada F)
 
 Cartão no GitHub Project → branch `feature|fix/{ID}-{desc}` → PR ligado → `main` protegida com revisão
-obrigatória do analista + Environments `hom`/`prd`. Configurada pelas etapas 7–13 do [wizard](wizard.md).
+obrigatória do analista + Environments `hom`/`prd`. Configurada pelas etapas 7–15 do [wizard](wizard.md).
 Instalar: `node <plugin>/scripts/install-governanca.mjs <projeto> --ficha-json <arquivo>` e depois
 `node .agentic-os/bin/github-setup.mjs apply` no projeto. Uso diário: `/cartao <ID>` e `/cartao pr <ID>`
 (`automation/procedures/cartao.md`). Travas: o agente nunca faz push/merge na principal, nunca aprova PR e
 nunca afrouxa proteção. Detalhes: `docs/GOVERNANCA.md`.
 `/cartao revisar <ID>`: Supervisor independente (Opus fixo) dá nota 0–10 com prova; PR só com 10 ou liberação do usuário. Ver `docs/GOVERNANCA.md`.
+`/cartao hom <ID>` publica o commit revisado no HOM (fila por GitHub Deployments); `/cartao assinatura <ID>` lê a review do analista no PR (Approve/Request changes) e registra. Ver `docs/GOVERNANCA.md`.
+Identidade do agente (`identidade_agente`: token de conta-robô ou GitHub App) para o dono do projeto poder ser o analista; sem ela, a assinatura bloqueia, salvo `aprovacao_pelo_chat` (prova fraca, registrada). Ver `docs/GOVERNANCA.md`.
 
 ---
 

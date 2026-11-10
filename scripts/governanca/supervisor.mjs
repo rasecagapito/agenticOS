@@ -1,10 +1,9 @@
 // Supervisor (Parte 2 da governança): critérios, checagens objetivas B1–B4, nota e estado da revisão.
 // O script mede B1–B4 e calcula a nota; o subagente `supervisor` só julga G/E/C com prova; exceções = usuário.
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { ErroGov } from './erros.mjs';
+import { executar } from './executar.mjs';
 import { branchAtual, git } from './git.mjs';
 import { gh } from './gh.mjs';
 import { ARQ_PERMITIDOS, lerPermitidos, varrerSegredos } from './segredos.mjs';
@@ -12,8 +11,6 @@ import { ARQ_PERMITIDOS, lerPermitidos, varrerSegredos } from './segredos.mjs';
 export const DIR_ESTADO = '.agentic-os/supervisor';
 export const CICLOS_POR_RODADA = 3;
 const LIMITE_TESTES_MS = 10 * 60 * 1000;
-const RUNNER = fileURLToPath(new URL('./rodar-comando.mjs', import.meta.url));
-const MARCADOR_TEMPO = '__AGENTIC_OS_TEMPO_ESGOTADO__';
 // Só arquivos rastreados contam: o que o commit revisado não contém (ex.: coverage/) não trava o fluxo.
 const rastreadosLimpos = (cwd) => git(cwd, ['status', '--porcelain', '--untracked-files=no']).out === '';
 export const formatarLimite = (ms) => (ms >= 60000 ? `${Math.round(ms / 60000)} min` : `${Math.max(1, Math.round(ms / 1000))} s`);
@@ -86,18 +83,12 @@ export function lerCriterios(cwd, id) {
 
 export function rodarTestes(cwd, comando, { limiteMs = LIMITE_TESTES_MS } = {}) {
   if (!comando) return nao('comando de testes não configurado (comando_testes na ficha)');
-  const r = spawnSync(process.execPath, [RUNNER, comando, String(limiteMs)], {
-    cwd, encoding: 'utf8', timeout: limiteMs + 30000, maxBuffer: 64 * 1024 * 1024,
-  });
-  if (r.error) {
-    if (r.error.code === 'ETIMEDOUT') return nao(`tempo esgotado (${formatarLimite(limiteMs)}): ${comando}`);
-    return nao(`falha ao executar os testes (${r.error.code || 'erro'}): ${r.error.message}`);
-  }
-  const bruta = `${r.stdout || ''}${r.stderr || ''}`;
-  if (bruta.includes(MARCADOR_TEMPO)) return nao(`tempo esgotado (${formatarLimite(limiteMs)}): ${comando}`);
-  const saida = bruta.trim().split('\n').slice(-40).join('\n');
-  const prova = `${comando} → saída ${r.status}${saida ? `\n${saida}` : ''}`;
-  return r.status === 0 ? at(prova) : nao(prova);
+  const r = executar(cwd, comando, limiteMs);
+  if (r.tempo_esgotado) return nao(`tempo esgotado (${formatarLimite(limiteMs)}): ${comando}`);
+  if (r.erro) return nao(`falha ao executar os testes (${r.erroCodigo}): ${r.erro}`);
+  const saida = r.saida.split('\n').slice(-40).join('\n');
+  const prova = `${comando} → saída ${r.codigo}${saida ? `\n${saida}` : ''}`;
+  return r.codigo === 0 ? at(prova) : nao(prova);
 }
 
 export function baseComum(cwd, principal) {
@@ -108,15 +99,20 @@ export function baseComum(cwd, principal) {
   throw new ErroGov('GIT_FALHOU', `Sem base comum com ${principal}.`);
 }
 
+// Alterações rastreadas ou arquivos novos não ignorados, exceto o estado local do plugin (e prefixos extras).
+export function arquivosSujos(cwd, prefixosExtras = []) {
+  return git(cwd, ['status', '--porcelain', '--untracked-files=all']).out
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => l.replace(/^\s*\S+\s+/, ''))
+    .filter((f) => !f.startsWith(`${DIR_ESTADO}/`) && !f.startsWith('.agentic-os/hom/') && f !== ARQ_PERMITIDOS && !prefixosExtras.some((p) => f.startsWith(p)));
+}
+
 export function checagensBase(cwd, ficha, id, { limiteMs, proposal } = {}) {
   const branch = branchAtual(cwd);
   if (!Object.values(ficha.prefixos_branch).some((p) => branch.startsWith(`${p}${id}-`)))
     throw new ErroGov('BRANCH_ERRADA', `A branch atual "${branch}" não é do cartão #${id}.`);
-  const sujos = git(cwd, ['status', '--porcelain', '--untracked-files=all']).out
-    .split('\n')
-    .filter(Boolean)
-    .map((l) => l.replace(/^\s*\S+\s+/, ''))
-    .filter((f) => !f.startsWith(`${DIR_ESTADO}/`) && f !== ARQ_PERMITIDOS);
+  const sujos = arquivosSujos(cwd);
   if (sujos.length) throw new ErroGov('ARVORE_SUJA', `Alterações fora do commit (ignore artefatos no .gitignore): ${sujos.slice(0, 5).join(', ')}`);
   const commit = git(cwd, ['rev-parse', 'HEAD']).out;
   const { ref, base } = baseComum(cwd, ficha.branch_principal);

@@ -1,6 +1,8 @@
 // Leitura do estado. Nunca escreve nada (nem local, nem no GitHub).
 import { classificar, gh, ghJson } from './gh.mjs';
+import { ErroGov } from './erros.mjs';
 import { ehRepo, git, remotoOrigin } from './git.mjs';
+import { ativarIdentidade, desativarIdentidade, identidadeDe } from './identidade.mjs';
 
 export function lerProtecao(repo, branch) {
   const s = gh(['api', `repos/${repo}/branches/${branch}/protection`], { permitirFalha: true });
@@ -39,16 +41,37 @@ export function statusDoProject(owner, number) {
   return { campo_status_id: st.id, opcoes: d?.data?.node?.options || [] };
 }
 
-export function checarAnalista(repo, login, loginAgente) {
-  if (String(login).toLowerCase() === String(loginAgente).toLowerCase()) return { login, erro: 'ANALISTA_IGUAL_AGENTE' };
+export function checarAnalista(repo, login, loginAgente, { permitirIgual = false } = {}) {
+  const igual = String(login).toLowerCase() === String(loginAgente).toLowerCase();
+  if (igual && !permitirIgual) return { login, erro: 'ANALISTA_IGUAL_AGENTE' };
   const u = gh(['api', `users/${login}`], { permitirFalha: true });
   if (u.code !== 0) return { login, erro: 'ANALISTA_INEXISTENTE' };
   const id = JSON.parse(u.stdout).id;
   const colaborador = repo ? gh(['api', `repos/${repo}/collaborators/${login}`], { permitirFalha: true }).code === 0 : false;
-  return { login, id, colaborador };
+  return { login, id, colaborador, ...(igual ? { igual_agente: true } : {}) };
 }
 
-export function detect(cwd, { owner, project, analistas = [] } = {}) {
+// Quem age como agente neste projeto. Falha de identidade vira aviso (o wizard mostra e orienta).
+export function lerIdentidade(parcial, r) {
+  const ia = identidadeDe(parcial);
+  const out = { modo: ia.modo, login_agente: ia.modo === 'nenhuma' ? r.login : null, login_gh_local: r.login, conflito: false, avisos: [] };
+  const analistas = (parcial?.analistas || []).map((a) => String(a).toLowerCase());
+  if (ia.modo !== 'nenhuma') {
+    try {
+      out.login_agente = ativarIdentidade({ ...parcial, repo: parcial?.repo || r.repo, identidade_agente: ia }).login;
+    } catch (e) {
+      if (!(e instanceof ErroGov)) throw e;
+      out.avisos.push(e.codigo);
+    } finally {
+      desativarIdentidade();
+    }
+    if (analistas.includes(String(r.login).toLowerCase())) out.avisos.push('GH_LOCAL_E_ANALISTA');
+  }
+  out.conflito = !!out.login_agente && analistas.includes(String(out.login_agente).toLowerCase());
+  return out;
+}
+
+export function detect(cwd, { owner, project, analistas = [], parcial = null } = {}) {
   const r = { git: ehRepo(cwd), repo: null, avisos: [] };
   r.login = ghJson(['api', 'user']).login;
   if (!r.git) r.avisos.push('NAO_E_GIT');
@@ -73,6 +96,8 @@ export function detect(cwd, { owner, project, analistas = [] } = {}) {
     id: p.id,
   }));
   if (project) r.status_project = statusDoProject(r.owner, project);
-  r.analistas = analistas.map((l) => checarAnalista(r.repo, l, r.login));
+  r.identidade = lerIdentidade(parcial, r);
+  const agente = r.identidade.login_agente || r.login;
+  r.analistas = analistas.map((l) => checarAnalista(r.repo, l, agente, { permitirIgual: parcial?.aprovacao_pelo_chat === true }));
   return r;
 }

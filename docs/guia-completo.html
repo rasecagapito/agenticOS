@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agentic OS — Guia Completo</title>
-<meta name="description" content="Como funciona o plugin Agentic OS v1.10.0: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
+<meta name="description" content="Como funciona o plugin Agentic OS v1.11.0: camadas, comandos, multi-provedor, roteador de modelos com Jev, instalação e atualização.">
 <style>
 :root{
   --bg:#f7f6f2; --surface:#ffffff; --surface-2:#f0eee8; --text:#1d1c1a; --muted:#5f5b53;
@@ -107,7 +107,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
 <div class="layout">
 <nav class="toc" aria-label="Sumário">
   <div class="brand">Agentic OS</div>
-  <div class="ver">Guia completo · v1.10.0</div>
+  <div class="ver">Guia completo · v1.11.0</div>
   <div class="links">
     <div class="grp">Entender</div>
     <a href="#oque">1. O que é</a>
@@ -137,7 +137,7 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
   <p class="lead">Um jeito de organizar os arquivos do seu projeto para que a IA (Claude, Codex, Gemini…) lembre o que já foi feito, siga regras, trabalhe com especialistas e use o modelo certo para cada tarefa.</p>
   <div class="pills">
     <span class="pill">Plugin para Claude Code e Codex</span>
-    <span class="pill">Versão 1.10.0</span>
+    <span class="pill">Versão 1.11.0</span>
     <span class="pill">Funciona em qualquer projeto</span>
     <span class="pill">Tudo opcional e por camadas</span>
   </div>
@@ -391,6 +391,26 @@ footer{color:var(--muted);font-size:13.5px;text-align:center;margin-top:30px}
     <li><b>A nota vale para um commit.</b> Mexeu no código depois, precisa revisar de novo.</li>
     <li><b>Dica:</b> se aparecer erro de "árvore suja", commite o que faz parte do cartão ou ponha pastas geradas pelos testes (como <code>coverage/</code>) no <code>.gitignore</code>.</li>
   </ul>
+  <h3>Homologação e assinatura</h3>
+  <p>Pense no <b>gerente de obra e no dono da obra</b>. O gerente (o agente) coloca a peça pronta na sala de demonstração (o ambiente HOM), <b>um cliente por vez</b>, e avisa o dono (o analista). Quem diz "aprovado" ou "refaça" é só o dono, por escrito no PR. O gerente apenas lê e anota; nunca assina por ele.</p>
+  <ul>
+    <li><b>Antes de tudo:</b> a ficha ganha os comandos do HOM (<code>deploy_hom</code>, <code>migracao_hom</code>, <code>testes_hom</code>) e o link (<code>url_hom</code>). Senhas e chaves nunca ficam na ficha.</li>
+    <li><b><code>/cartao hom &lt;ID&gt;</code>:</b> publica no HOM o commit que o Supervisor revisou. Se o HOM está com outro cartão, ele avisa e espera; furar a fila só com o seu "sim" e um motivo. Migração de banco também só roda com o seu "sim". Se não houver comando de deploy, é manual: você publica e confirma. Arquivo novo não ignorado trava o comando, para o HOM nunca receber algo diferente do que foi revisado.</li>
+    <li><b>Depois de publicar:</b> o cartão vai para "Em validação" e o PR recebe um comentário com o link do HOM e a lista do que testar. Nada mais é commitado na branch (um commit novo derrubaria a aprovação).</li>
+    <li><b>O que o analista faz:</b> abre o PR e escolhe <b>Approve</b> (aprova) ou <b>Request changes</b> (reprova, explicando o que falhou).</li>
+    <li><b><code>/cartao assinatura &lt;ID&gt;</code>:</b> lê a review do analista (a última de cada analista; a conta do agente não vale; precisa ser do commit publicado). Aprovado: a assinatura entra no corpo do PR e o cartão vai para "Aprovado". Reprovado: o motivo vai para o arquivo TASK e o cartão volta para "Em andamento", para corrigir e passar de novo por revisar, pr e hom.</li>
+    <li><b>Se outro cartão tomar o HOM</b> antes da assinatura, a homologação pendente deixa de valer: é preciso rodar <code>/cartao hom</code> de novo.</li>
+    <li><b>Limite do plano gratuito:</b> em repositório privado no plano gratuito, o GitHub registra a review mas <b>não obriga</b> o merge a esperar por ela. A próxima parte fará o plugin exigir a assinatura no merge; até lá, um merge manual pela interface continua possível.</li>
+  </ul>
+  <h3>Identidade do agente</h3>
+  <p>Pense em um <b>crachá próprio para o agente</b>. Se o agente usa o seu crachá, o GitHub não deixa você aprovar o que "você mesmo" abriu, e uma aprovação sua poderia ter sido dada pelo agente. Com crachá próprio, o analista assina com o dele e a portaria (o GitHub) sabe distinguir os dois.</p>
+  <ul>
+    <li><b>Três modos</b> (por projeto, na ficha): <b>nenhuma</b> (o agente usa o login do <code>gh</code>, como antes), <b>token</b> (uma conta-robô com token numa variável de ambiente) e <b>app</b> (um GitHub App: o plugin gera o token de 1 hora com a chave privada). O segredo nunca fica na ficha nem no git; a ficha guarda só o nome da variável.</li>
+    <li><b>Sem crachá separado,</b> o <code>/cartao hom</code> e o <code>/cartao assinatura</code> param se o agente for um dos analistas (<code>IDENTIDADE_IGUAL_ANALISTA</code>).</li>
+    <li><b>Aprovação pelo chat (opcional):</b> um "livro de visitas". Registra a frase do usuário como "chat, sem prova do GitHub": é <b>prova fraca</b>, porque ninguém garante quem escreveu. Se já existe uma review no PR, ela vence.</li>
+    <li><b>Dica:</b> deixe o <code>gh</code> da máquina logado só com a conta do agente; se estiver logado como analista, a assinatura sai com o aviso ⚠️.</li>
+    <li><b>Limites:</b> testado só com um GitHub simulado, ainda não no real; em modo token ou app, prefira um Project de organização, porque esses tokens podem não escrever em Project de conta pessoal.</li>
+  </ul>
   <h3>O que você precisa</h3>
   <ul>
     <li>O <code>gh</code> (GitHub CLI) instalado e logado, com a permissão de Projects (<code>gh auth refresh -s project</code>).</li>
@@ -446,7 +466,7 @@ export TYPESAFE_API_KEY=sua-chave        # macOS / Linux</code></pre>
       Na instalação, o instalador <b>testa a chave</b> e diz se está OK, recusada ou faltando.</li>
     <li><b>Pré-visualizar</b> o que vai mudar (não altera nada):
       <pre><code>node "&lt;plugin&gt;/scripts/install-router.mjs" "C:/caminho/do/projeto" --dry-run</code></pre>
-      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.10.0</code> (ou um clone do repositório).</li>
+      <code>&lt;plugin&gt;</code> é a pasta do plugin instalado, ex.: <code>C:/Users/&lt;você&gt;/.claude/plugins/cache/agentic-os/agentic-os/1.11.0</code> (ou um clone do repositório).</li>
     <li><b>Instalar:</b> o mesmo comando sem <code>--dry-run</code>.</li>
     <li><b>Reiniciar</b> o Claude Code no projeto.</li>
   </ol>
@@ -477,6 +497,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   <h3>Histórico recente</h3>
   <div class="tablewrap"><table>
     <tr><th>Versão</th><th>Principal novidade</th></tr>
+    <tr><td>1.11.0</td><td>HOM e assinatura: <code>/cartao hom</code> publica o commit revisado no HOM (um cartão por vez) e <code>/cartao assinatura</code> lê o Approve ou Request changes do analista no PR e registra.</td></tr>
     <tr><td>1.10.0</td><td>Supervisor: <code>/cartao revisar</code> dá nota de 0 a 10 com prova; o PR só abre com nota 10 ou liberação do usuário (aviso ⚠️ no PR).</td></tr>
     <tr><td>1.9.0</td><td>Wizard de configuração (uma pergunta por tela) e camada opcional de Governança GitHub: cartão, branch, PR e <code>main</code> protegida com aprovação do analista.</td></tr>
     <tr><td>1.8.7</td><td>Painel 1.2.1: mesmo formato em todos os projetos, com ou sem roteador.</td></tr>
@@ -536,7 +557,7 @@ claude plugin update agentic-os@agentic-os</code></pre>
   </table></div>
 </section>
 
-<footer>Agentic OS v1.10.0 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
+<footer>Agentic OS v1.11.0 · Fonte: <code>docs/guia-completo.html</code> no repositório <a href="https://github.com/rasecagapito/agenticOS">rasecagapito/agenticOS</a> · Detalhes técnicos: <code>docs/USAGE.md</code>, <code>docs/ROUTER.md</code>, <code>docs/MULTI-PROVIDER.md</code></footer>
 </main>
 </div>
 <script>
