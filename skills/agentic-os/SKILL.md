@@ -535,10 +535,11 @@ Cartão no GitHub Project → branch `feature|fix/{ID}-{desc}` → PR ligado →
 obrigatória do analista + Environments `hom`/`prd`. Configurada pelas etapas 7–15 do [wizard](wizard.md).
 Instalar: `node <plugin>/scripts/install-governanca.mjs <projeto> --ficha-json <arquivo>` e depois
 `node .agentic-os/bin/github-setup.mjs apply` no projeto. Uso diário: `/cartao <ID>` e `/cartao pr <ID>`
-(`automation/procedures/cartao.md`). Travas: o agente nunca faz push/merge na principal, nunca aprova PR e
-nunca afrouxa proteção. Detalhes: `docs/GOVERNANCA.md`.
+(`automation/procedures/cartao.md`). Travas: o agente nunca faz push na principal, só integra pelo `/cartao merge`,
+nunca aprova PR e nunca afrouxa proteção. Detalhes: `docs/GOVERNANCA.md`.
 `/cartao revisar <ID>`: Supervisor independente (Opus fixo) dá nota 0–10 com prova; PR só com 10 ou liberação do usuário. Ver `docs/GOVERNANCA.md`.
 `/cartao hom <ID>` publica o commit revisado no HOM (fila por GitHub Deployments); `/cartao assinatura <ID>` lê a review do analista no PR (Approve/Request changes) e registra. Ver `docs/GOVERNANCA.md`.
+`/cartao merge <ID>` integra na principal só com a assinatura válida do commit atual (relê as reviews; squash com `--match-head-commit`; Tipo chat exige "sim" novo do usuário). Ver `docs/GOVERNANCA.md`.
 Identidade do agente (`identidade_agente`: token de conta-robô ou GitHub App) para o dono do projeto poder ser o analista; sem ela, a assinatura bloqueia, salvo `aprovacao_pelo_chat` (prova fraca, registrada). Ver `docs/GOVERNANCA.md`.
 
 ---

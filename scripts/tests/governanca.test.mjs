@@ -636,6 +636,8 @@ test('install: cria ficha, script, procedimento, comando, blocos; idempotente', 
   assert.match(ler('automation/procedures/cartao.md'), /## `\/cartao assinatura <ID>`/);
   assert.match(ler('automation/guardrails.md'), /12\. /);
   assert.match(ler('automation/guardrails.md'), /13\. /);
+  assert.match(ler('automation/guardrails.md'), /14\. Integrar PR fora do `\/cartao merge`/);
+  assert.match(ler('automation/procedures/cartao.md'), /## `\/cartao merge <ID>`/);
   assert.match(ler('automation/procedures/cartao.md'), /--pelo-chat/);
   assert.match(ler('automation/procedures/cartao.md'), /IDENTIDADE_IGUAL_ANALISTA/);
   const antes = ['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler);

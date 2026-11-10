@@ -43,6 +43,13 @@ export const ERROS = {
   GH_LOCAL_E_ANALISTA:
     'O gh desta máquina está logado com a conta de um analista: o agente consegue agir como ele. Deixe o gh logado só com a conta do agente ou use o modo app.',
   REMOTO_SSH: 'Com identidade do agente, o origin (fetch e push) precisa ser https em github.com: git remote set-url origin https://github.com/<dono>/<repo>.git e, se houver URL de push separada, git remote set-url --push origin https://github.com/<dono>/<repo>.git',
+  CARTAO_FORA_DE_APROVADO: 'O merge só vale para cartão em "Aprovado". Conclua /cartao assinatura <ID> com a aprovação do analista.',
+  SEM_ASSINATURA: 'Não há aprovação válida do analista para o commit atual. Rode /cartao assinatura <ID> depois da decisão dele.',
+  ASSINATURA_REPROVADA: 'A última review do analista pede mudanças. Corrija e siga: /cartao revisar → /cartao pr → /cartao hom.',
+  CHECKS_PENDENTES: 'Há check obrigatório (CI) pendente ou com falha. Espere terminar ou corrija e rode de novo.',
+  PR_CONFLITO: 'O GitHub diz que o PR não pode ser integrado (conflito ou branch atrás). Atualize a branch; o commit novo exige revisar, hom e assinatura de novo.',
+  MERGE_RECUSADO: 'O GitHub recusou o merge. Leia o motivo: proteção da branch, permissão do token/App (contents: write) ou commit novo no PR.',
+  CONFIRMACAO_CHAT: 'A assinatura foi pelo chat (sem prova do GitHub). O merge exige um "sim" novo do usuário, escrito por iniciativa dele (--confirmo-merge-chat).',
 };
 
 export class ErroGov extends Error {

@@ -76,7 +76,7 @@ Nunca edite `.agentic-os/supervisor/`. Falso alarme de segredo: só o usuário p
 1. `node .agentic-os/bin/github-setup.mjs card-sign <ID>`.
 2. Conforme `situacao`:
    - `aguardando_analista` → diga que ainda não há review válida do analista no PR.
-   - `aprovado` → cartão em "Aprovado"; a assinatura está no corpo do PR. Próximo passo: Parte 4 (merge/PRD).
+   - `aprovado` → cartão em "Aprovado"; a assinatura está no corpo do PR. Próximo passo: `/cartao merge <ID>`.
    - `reprovado` → passe os `pontos` ao executor (`/worker`); ele corrige e commita **junto com o TASK já
      atualizado**; depois `/cartao revisar <ID>` → `/cartao pr <ID>` → `/cartao hom <ID>`.
    - `ASSINATURA_DE_OUTRO_COMMIT` → peça ao analista aprovar a versão atual no PR.
@@ -90,6 +90,26 @@ Nunca edite `.agentic-os/supervisor/`. Falso alarme de segredo: só o usuário p
 
 Nunca aprove, reprove, comente como analista nem registre review por ele. Nunca pergunte "posso aprovar?".
 
+## `/cartao merge <ID>` — integrar na branch principal
+
+1. `node .agentic-os/bin/github-setup.mjs card-merge <ID>`.
+2. O script relê as reviews no GitHub e só integra se a assinatura vale para o último commit do PR. Merge em
+   squash com a assinatura na mensagem do commit; a branch remota é apagada; a issue é fechada pelo
+   `Closes #ID`; o cartão **fica em "Aprovado"** (a publicação PRD vem depois). O TASK não muda.
+3. Conforme o resultado:
+   - `integrado` → mostre o `sha_squash` e o Tipo. Se `avisos` tiver `ARVORE_SUJA`, diga que a cópia local ficou
+     na branch do cartão (há arquivo não commitado); `GIT_FALHOU`, que a volta para a principal falhou.
+   - `ja_integrado` → nada a fazer.
+   - `CONFIRMACAO_CHAT` → a assinatura foi pelo chat. Explique que não há prova do GitHub e que o merge exige
+     um "sim" dele. Só rode com `--confirmo-merge-chat` quando ele escrever, por iniciativa própria, que quer
+     integrar; nunca pergunte "posso integrar?" para colher um sim.
+   - `ASSINATURA_REPROVADA` → igual ao `reprovado` do `/cartao assinatura`.
+   - `ASSINATURA_DE_OUTRO_COMMIT`, `SEM_ASSINATURA` → peça a aprovação do commit atual e rode
+     `/cartao assinatura <ID>`.
+   - `CHECKS_PENDENTES` → mostre os checks; espere o CI ou corrija.
+   - `PR_CONFLITO` → atualize a branch; o commit novo exige `/cartao revisar` → `pr` → `hom` → `assinatura`.
+   - `MERGE_RECUSADO` → mostre o motivo (proteção da branch, permissão do token/App).
+
 ## `/cartao` sem argumento
 
 Liste os cartões em "A Fazer" e "Em andamento":
@@ -97,5 +117,5 @@ Liste os cartões em "A Fazer" e "Em andamento":
 
 ## Proibido (ver `automation/guardrails.md`)
 
-Push ou merge na branch principal; aprovar PR (próprio ou alheio); alterar regras de proteção do GitHub
+Push na branch principal; merge fora do `/cartao merge`; aprovar PR (próprio ou alheio); alterar regras de proteção do GitHub
 para contornar aprovação; assinar ou simular aprovação em nome do analista.

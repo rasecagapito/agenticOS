@@ -17,7 +17,7 @@ export const TIPO_CHAT = 'chat, sem prova do GitHub';
 
 // Com identidade separada, o gh local logado como analista ainda permitiria ao agente aprovar por ele:
 // a assinatura vale, mas registra o risco (decisão do usuário: registrar, não bloquear).
-function tipoDaReview(ficha) {
+export function tipoDaReview(ficha) {
   if (modoAtivo() === 'nenhuma') return TIPO_REVIEW;
   const r = gh(['api', 'user'], { token: '', permitirFalha: true });
   if (r.code !== 0) return TIPO_REVIEW;
@@ -74,7 +74,7 @@ export function textoAssinatura(reg) {
   ].join('\n');
 }
 
-function lerReviews(ficha, e) {
+export function lerReviews(ficha, e) {
   const paginas = ghJson(['api', '--paginate', '--slurp', `repos/${ficha.repo}/pulls/${e.pr.number}/reviews?per_page=100`]) || [];
   return [paginas].flat(2);
 }

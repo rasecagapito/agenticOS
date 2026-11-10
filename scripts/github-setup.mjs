@@ -11,9 +11,10 @@
 //   node github-setup.mjs review-decide <ID> (--seguir | --nova-rodada) --motivo "texto"   ← só com o "sim" do usuário
 //   node github-setup.mjs card-hom <ID> [--furar-fila --motivo "..."] [--migracao-autorizada] [--confirmo-comando] [--publicado-manual] [--dry-run]
 //   node github-setup.mjs card-sign <ID> [--pelo-chat --resultado aprovado|reprovado --frase "texto literal do usuário"]   ← chat só se a ficha permitir
+//   node github-setup.mjs card-merge <ID> [--confirmo-merge-chat]   ← confirmação só com o "sim" do usuário (assinatura pelo chat)
 //   (flags de autorização --furar-fila, --migracao-autorizada, --confirmo-comando, --publicado-manual: só com o "sim" do usuário)
 // Identidade: card-* e review-* rodam como o agente (ficha.identidade_agente); detect e apply, como o usuário.
-// Travas fixas: nunca push/merge na branch principal, nunca aprova PR, proteção só endurece.
+// Travas fixas: nunca push na branch principal; merge só pelo card-merge (assinatura válida do commit atual); nunca aprova PR; proteção só endurece.
 import { aplicar } from './governanca/apply.mjs';
 import { cardPr, cardStart } from './governanca/cartao.mjs';
 import { detect } from './governanca/detect.mjs';
@@ -23,19 +24,20 @@ import { exigirRemotoHttps } from './governanca/git.mjs';
 import { ARQ_FICHA, gravarFicha, lerFicha, lerFichaParcial } from './governanca/ficha.mjs';
 import { cardSign } from './governanca/assinatura.mjs';
 import { cardHom } from './governanca/hom.mjs';
+import { cardMerge } from './governanca/merge.mjs';
 import { reviewCheck, reviewDecide, reviewRecord } from './governanca/supervisor.mjs';
 
 const FLAGS = ['dry-run', 'owner', 'project', 'analista', 'ficha', 'tipo', 'desc', 'parecer', 'motivo', 'resultado', 'frase'];
 const BOOLEANAS = {
   '--dry-run': 'dryRun', '--seguir': 'seguir', '--nova-rodada': 'novaRodada',
   '--furar-fila': 'furarFila', '--migracao-autorizada': 'migracaoAutorizada', '--confirmo-comando': 'confirmoComando', '--publicado-manual': 'publicadoManual',
-  '--pelo-chat': 'peloChat',
+  '--pelo-chat': 'peloChat', '--confirmo-merge-chat': 'confirmoMergeChat',
 };
 
 function opcoes(argv) {
   const o = {
     _: [], analista: [], dryRun: false, seguir: false, novaRodada: false,
-    furarFila: false, migracaoAutorizada: false, confirmoComando: false, publicadoManual: false, peloChat: false,
+    furarFila: false, migracaoAutorizada: false, confirmoComando: false, publicadoManual: false, peloChat: false, confirmoMergeChat: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -87,8 +89,10 @@ function rodar(argv, cwd) {
       });
     case 'card-sign':
       return cardSign(cwd, comoAgente({ separar: true }), o._[0], { peloChat: o.peloChat, resultado: o.resultado, frase: o.frase });
+    case 'card-merge':
+      return cardMerge(cwd, comoAgente({ separar: true }), o._[0], { confirmoMergeChat: o.confirmoMergeChat });
     default:
-      throw new ErroGov('PARAMETRO', `Subcomando desconhecido: ${sub ?? '(nenhum)'}. Use detect | apply | card-start | card-pr | review-check | review-record | review-decide | card-hom | card-sign.`);
+      throw new ErroGov('PARAMETRO', `Subcomando desconhecido: ${sub ?? '(nenhum)'}. Use detect | apply | card-start | card-pr | review-check | review-record | review-decide | card-hom | card-sign | card-merge.`);
   }
 }
 
