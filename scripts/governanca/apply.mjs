@@ -135,7 +135,7 @@ export function executar(acoes, ficha, { dryRun = false } = {}) {
 }
 
 export function aplicar(cwd, ficha, { dryRun = false } = {}) {
-  const estado = detect(cwd, { owner: ficha.project.owner, project: ficha.project.number, analistas: ficha.analistas });
+  const estado = detect(cwd, { owner: ficha.project.owner, project: ficha.project.number, analistas: ficha.analistas, parcial: ficha });
   if (!estado.repo) throw new ErroGov('SEM_REMOTO');
   if (estado.repo.toLowerCase() !== ficha.repo.toLowerCase())
     throw new ErroGov('FICHA_INVALIDA', `A ficha aponta ${ficha.repo}, mas o origin é ${estado.repo}.`);

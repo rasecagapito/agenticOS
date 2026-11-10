@@ -51,7 +51,44 @@ Nunca edite `.agentic-os/supervisor/`. Falso alarme de segredo: só o usuário p
 2. `node .agentic-os/bin/github-setup.mjs card-pr <ID> --dry-run` → mostre as ações.
 3. `node .agentic-os/bin/github-setup.mjs card-pr <ID>` → push da branch, PR para a principal com
    `Cartão #<ID>`, comentário no cartão, PR registrado no TASK.
-4. Diga ao usuário: o merge depende da **aprovação do analista no GitHub**. Você não aprova nem faz merge.
+4. Diga ao usuário: próximo passo é `/cartao hom <ID>`. Você não aprova nem faz merge.
+
+## `/cartao hom <ID>` — publicar no HOM
+
+1. `node .agentic-os/bin/github-setup.mjs card-hom <ID> --dry-run` → mostre as ações.
+   - `HOM_OCUPADO` → diga qual cartão ocupa o HOM. Pergunte se espera ou fura a fila; furar só com o "sim" e
+     um motivo (`--furar-fila --motivo "..."`).
+   - `MIGRACAO_NAO_AUTORIZADA` → mostre o comando de migração e pergunte. Com o "sim": `--migracao-autorizada`.
+   - `COMANDO_SUSPEITO_PRD` → um comando de HOM cita produção. Mostre e pergunte. Com o "sim": `--confirmo-comando`.
+   - `IDENTIDADE_IGUAL_ANALISTA` → o agente usa a conta de um analista. Mostre o `como_resolver` (configurar
+     `identidade_agente` ou ligar `aprovacao_pelo_chat` pelo wizard). Não contorne.
+2. `node .agentic-os/bin/github-setup.mjs card-hom <ID> [flags autorizadas]`.
+   - `modo: manual` → peça ao usuário publicar o commit `sha` no HOM; com a confirmação dele:
+     `card-hom <ID> --publicado-manual`. No 2º passo repita as **mesmas flags autorizadas** do 1º
+     (`--furar-fila --motivo "..."`, `--migracao-autorizada`, `--confirmo-comando`).
+   - `HOM_FALHOU` → mostre a etapa e as linhas finais; o log completo está em `.agentic-os/hom/<ID>.log`.
+     Falha de migração: avise que o banco HOM pode estar pela metade. Não tente desfazer sozinho.
+3. Sucesso: cartão em "Em validação"; o PR recebeu as instruções ao analista. Diga ao usuário que o analista
+   deve abrir o PR e fazer **Approve** ou **Request changes**. Não faça commit nesta branch até a assinatura.
+
+## `/cartao assinatura <ID>` — ler a decisão do analista
+
+1. `node .agentic-os/bin/github-setup.mjs card-sign <ID>`.
+2. Conforme `situacao`:
+   - `aguardando_analista` → diga que ainda não há review válida do analista no PR.
+   - `aprovado` → cartão em "Aprovado"; a assinatura está no corpo do PR. Próximo passo: Parte 4 (merge/PRD).
+   - `reprovado` → passe os `pontos` ao executor (`/worker`); ele corrige e commita **junto com o TASK já
+     atualizado**; depois `/cartao revisar <ID>` → `/cartao pr <ID>` → `/cartao hom <ID>`.
+   - `ASSINATURA_DE_OUTRO_COMMIT` → peça ao analista aprovar a versão atual no PR.
+   - `IDENTIDADE_IGUAL_ANALISTA` → igual ao `/cartao hom`.
+3. **Aprovação pelo chat** — só se a ficha tem `aprovacao_pelo_chat: true`. Quando o usuário escrever, por
+   iniciativa própria, que aprova ou reprova o cartão, rode
+   `node .agentic-os/bin/github-setup.mjs card-sign <ID> --pelo-chat --resultado aprovado|reprovado --frase "<frase literal>"`.
+   - `JA_HA_REVIEW` → há review do analista no PR para este commit; rode sem `--pelo-chat`.
+   - `CHAT_DESLIGADO` → explique que a aprovação pelo chat está desligada nesta ficha.
+   - O registro diz "chat, sem prova do GitHub". Avise o usuário disso.
+
+Nunca aprove, reprove, comente como analista nem registre review por ele. Nunca pergunte "posso aprovar?".
 
 ## `/cartao` sem argumento
 

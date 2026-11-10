@@ -77,7 +77,7 @@ export function instalar(dest, ficha, { dryRun = false } = {}) {
   const hash = (s) => `# ${s}`;
   const donos = ficha.analistas.map((l) => `@${l}`).join(' ');
   escrever('.github/CODEOWNERS', upsertBloco(ler('.github/CODEOWNERS'), 'governanca', `* ${donos}`, hash));
-  escrever('.gitignore', upsertBloco(ler('.gitignore'), 'governanca', '.agentic-os/wizard-estado.json\n.agentic-os/supervisor/', hash));
+  escrever('.gitignore', upsertBloco(ler('.gitignore'), 'governanca', '.agentic-os/wizard-estado.json\n.agentic-os/supervisor/\n.agentic-os/hom/', hash));
   return { ok: true, dry_run: dryRun, plano };
 }
 

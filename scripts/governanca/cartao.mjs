@@ -7,7 +7,7 @@ import { ErroGov } from './erros.mjs';
 import { gh, ghJson } from './gh.mjs';
 import { arvoreLimpa, branchAtual, branchExiste, git, pushBranch } from './git.mjs';
 import { caminhoTask, nomeBranch, slug } from './nomes.mjs';
-import { exigirRevisao, secaoSupervisor } from './supervisor.mjs';
+import { arquivosSujos, exigirRevisao, secaoSupervisor } from './supervisor.mjs';
 
 export function acharCartao(ficha, id) {
   const { owner, number } = ficha.project;
@@ -94,20 +94,42 @@ export function corpoPr({ id, titulo, ficha, task, supervisor }) {
     .join('\n');
 }
 
-// Insere ou troca a seção "## Supervisor" do TASK (antes de "## Histórico", se houver).
-export function registrarSupervisor(original, secao) {
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Insere ou troca a seção "## <titulo>" (antes de "## Histórico", se houver). Preserva CRLF.
+export function registrarSecao(original, titulo, secao) {
   const crlf = original.includes('\r\n');
   const texto = original.replace(/\r\n/g, '\n');
   const s = secao.replace(/\r\n/g, '\n').trimEnd() + '\n';
+  const t = escRe(titulo);
   let r;
-  if (/^## Supervisor$/m.test(texto)) r = texto.replace(/^## Supervisor\n[\s\S]*?(?=^## |(?![\s\S]))/m, () => `${s}\n`);
-  else if (/^## Histórico$/m.test(texto)) r = texto.replace(/^## Histórico$/m, () => `${s}\n## Histórico`);
+  if (new RegExp(`^## ${t}$`, 'm').test(texto)) r = texto.replace(new RegExp(`^## ${t}\\n[\\s\\S]*?(?=^## |(?![\\s\\S]))`, 'm'), () => `${s}\n`);
+  else if (titulo !== 'Histórico' && /^## Histórico$/m.test(texto)) r = texto.replace(/^## Histórico$/m, () => `${s}\n## Histórico`);
   else r = texto.trimEnd() + `\n\n${s}`;
   return crlf ? r.replace(/\n/g, '\r\n') : r;
 }
 
+export const registrarSupervisor = (original, secao) => registrarSecao(original, 'Supervisor', secao);
+
+// Acrescenta uma linha ao fim da seção "## <titulo>" (cria a seção se faltar). Preserva CRLF.
+export function anexarNaSecao(original, titulo, linha) {
+  const crlf = original.includes('\r\n');
+  const texto = original.replace(/\r\n/g, '\n');
+  const re = new RegExp(`(^## ${escRe(titulo)}\\n[\\s\\S]*?)(\\n*)(?=^## |(?![\\s\\S]))`, 'm');
+  const r = re.test(texto)
+    ? texto.replace(re, (_, corpo) => `${corpo.trimEnd()}\n${linha}\n\n`).replace(/\n{3,}$/, '\n')
+    : registrarSecao(texto, titulo, `## ${titulo}\n\n${linha}`);
+  const fim = r.endsWith('\n') ? r : `${r}\n`;
+  return crlf ? fim.replace(/\n/g, '\r\n') : fim;
+}
+
+export function prAberto(ficha, branch) {
+  const l = ghJson(['pr', 'list', '--repo', ficha.repo, '--head', branch, '--state', 'open', '--json', 'number,url']) || [];
+  return l[0] || null;
+}
+
 // Corpo longo vai por arquivo temporário (--body-file), apagado em seguida.
-function ghComCorpo(args, corpo) {
+export function ghComCorpo(args, corpo) {
   const arq = path.join(os.tmpdir(), `agentic-os-pr-${process.pid}-${Date.now()}.md`);
   fs.writeFileSync(arq, corpo);
   try {
@@ -127,24 +149,25 @@ export function cardPr(cwd, ficha, id, { dryRun = false } = {}) {
   const atual = branchAtual(cwd);
   if (!Object.values(ficha.prefixos_branch).some((p) => atual.startsWith(`${p}${id}-`)))
     throw new ErroGov('BRANCH_ERRADA', `A branch atual "${atual}" não é do cartão #${id}.`);
-  if (!arvoreLimpa(cwd)) throw new ErroGov('ARVORE_SUJA');
+  const sujos = arquivosSujos(cwd);
+  if (sujos.length) throw new ErroGov('ARVORE_SUJA', `Alterações fora do commit (ignore artefatos no .gitignore): ${sujos.slice(0, 5).join(', ')}`);
   const supervisor = secaoSupervisor(exigirRevisao(cwd, Number(id)));
   const c = acharCartao(ficha, id);
   const dirTasks = path.join(cwd, 'docs', 'tasks');
   const nome = fs.existsSync(dirTasks) ? fs.readdirSync(dirTasks).find((f) => f.startsWith(`TASK-${id}-`)) : null;
   const task = nome ? `docs/tasks/${nome}` : null;
-  const existente = ghJson(['pr', 'list', '--repo', ficha.repo, '--head', atual, '--state', 'open', '--json', 'url']) || [];
+  const existente = prAberto(ficha, atual);
   const acoes = [
     'exigir revisão do Supervisor (nota 10 ou liberação do usuário)',
     `git push -u origin ${atual}`,
-    existente.length ? `PR já aberto: ${existente[0].url}` : `gh pr create --base ${ficha.branch_principal} --head ${atual}`,
-    existente.length ? `atualizar corpo do PR ${existente[0].url}` : 'corpo do PR com a seção Supervisor',
-    existente.length ? 'cartão já comentado' : `comentar o link do PR no cartão #${id}`,
+    existente ? `PR já aberto: ${existente.url}` : `gh pr create --base ${ficha.branch_principal} --head ${atual}`,
+    existente ? `atualizar corpo do PR ${existente.url}` : 'corpo do PR com a seção Supervisor',
+    existente ? 'cartão já comentado' : `comentar o link do PR no cartão #${id}`,
     task ? `registrar o PR em ${task}` : 'sem TASK para registrar',
   ];
   if (dryRun) return { ok: true, dry_run: true, branch: atual, acoes };
   pushBranch(cwd, atual, ficha.branch_principal);
-  let url = existente[0]?.url;
+  let url = existente?.url;
   const corpo = corpoPr({ id, titulo: c.titulo, ficha, task, supervisor });
   if (!url) {
     url = ghComCorpo(['pr', 'create', '--repo', ficha.repo, '--base', ficha.branch_principal, '--head', atual, '--title', `[#${id}] ${c.titulo}`], corpo).stdout.trim();

@@ -22,6 +22,7 @@ Object.assign(process.env, {
   GIT_COMMITTER_EMAIL: 't@t',
   GIT_CONFIG_NOSYSTEM: '1',
 });
+delete process.env.GH_TOKEN;
 
 // Cenário do gh falso. Devolve leitor das chamadas e as variáveis para subprocessos.
 function cenario(regras) {
@@ -274,6 +275,27 @@ test('detect: lê git, repo, proteção, ambientes, Projects, Status e analistas
   assert.deepEqual(r.analistas[0], { login: 'analista', id: 42, colaborador: true });
   assert.equal(r.analistas[1].erro, 'ANALISTA_IGUAL_AGENTE');
   assert.equal(r.analistas[2].erro, 'ANALISTA_INEXISTENTE');
+});
+
+test('detect: identidade do agente (token), conflito e aviso do gh local; chat libera analista = agente', async () => {
+  const { detect } = await imp('detect.mjs');
+  const { dir } = repoGit();
+  const extra = [ok('^api users/agente$', { id: 7, login: 'agente' }), ok('^api repos/dono/app/collaborators/agente$', '')];
+  process.env.TESTE_TOKEN_DETECT = 'tok_d';
+  cenario([{ ...ok('^api user$', { login: 'robo' }), token: 'tok_d' }, ...extra, ...BASE]);
+  const tok = { analistas: ['agente'], identidade_agente: { modo: 'token', token_env: 'TESTE_TOKEN_DETECT' } };
+  const r = detect(dir, { project: 3, analistas: ['agente'], parcial: tok });
+  assert.deepEqual([r.identidade.modo, r.identidade.login_agente, r.identidade.login_gh_local, r.identidade.conflito], ['token', 'robo', 'agente', false]);
+  assert.deepEqual(r.identidade.avisos, ['GH_LOCAL_E_ANALISTA']);
+  assert.deepEqual(r.analistas[0], { login: 'agente', id: 7, colaborador: true });
+  delete process.env.TESTE_TOKEN_DETECT;
+  cenario([...extra, ...BASE]);
+  const r2 = detect(dir, { project: 3, analistas: ['agente'], parcial: { analistas: ['agente'], aprovacao_pelo_chat: true } });
+  assert.deepEqual([r2.identidade.modo, r2.identidade.login_agente, r2.identidade.conflito], ['nenhuma', 'agente', true]);
+  assert.deepEqual(r2.analistas[0], { login: 'agente', id: 7, colaborador: true, igual_agente: true });
+  assert.equal(detect(dir, { project: 3, analistas: ['agente'], parcial: { analistas: ['agente'] } }).analistas[0].erro, 'ANALISTA_IGUAL_AGENTE');
+  assert.ok(detect(dir, { project: 3, parcial: tok }).identidade.avisos.includes('TOKEN_AUSENTE'));
+  assert.equal(detect(dir, { project: 3 }).identidade.modo, 'nenhuma');
 });
 
 test('detect: pasta sem git e repo sem remoto viram avisos', async () => {
@@ -609,6 +631,13 @@ test('install: cria ficha, script, procedimento, comando, blocos; idempotente', 
   assert.match(ler('.gitignore'), /^\.agentic-os\/supervisor\/$/m);
   assert.match(ler('automation/procedures/cartao.md'), /## `\/cartao revisar <ID>`/);
   assert.match(ler('automation/guardrails.md'), /11\. Escrever o parecer do Supervisor/);
+  assert.match(ler('.gitignore'), /^\.agentic-os\/hom\/$/m);
+  assert.match(ler('automation/procedures/cartao.md'), /## `\/cartao hom <ID>`/);
+  assert.match(ler('automation/procedures/cartao.md'), /## `\/cartao assinatura <ID>`/);
+  assert.match(ler('automation/guardrails.md'), /12\. /);
+  assert.match(ler('automation/guardrails.md'), /13\. /);
+  assert.match(ler('automation/procedures/cartao.md'), /--pelo-chat/);
+  assert.match(ler('automation/procedures/cartao.md'), /IDENTIDADE_IGUAL_ANALISTA/);
   const antes = ['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler);
   assert.equal(instalar(dir, f).status, 0);
   assert.deepEqual(['automation/guardrails.md', '.github/CODEOWNERS', '.gitignore'].map(ler), antes);

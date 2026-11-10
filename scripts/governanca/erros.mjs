@@ -13,7 +13,7 @@ export const ERROS = {
   FICHA_INVALIDA: 'Rode o wizard (/agentic-os) para recriar .agentic-os/governanca.json.',
   PARAMETRO: 'Parâmetro inválido. Veja o uso no topo de github-setup.mjs.',
   ANALISTA_IGUAL_AGENTE:
-    'O analista precisa de uma conta GitHub diferente da usada pelo agente: o GitHub não deixa quem abriu o PR aprová-lo.',
+    'O analista precisa ser outra conta GitHub que a do agente (o GitHub não deixa quem abriu o PR aprová-lo). Configure identidade_agente (conta-robô ou GitHub App) ou ligue aprovacao_pelo_chat no wizard.',
   ANALISTA_INEXISTENTE: 'Login do GitHub não encontrado. Confira a grafia.',
   CARTAO_INEXISTENTE: 'O cartão precisa ser uma issue do repositório adicionada ao Project (rascunho não serve: converta em issue).',
   CARTAO_FORA_DE_A_FAZER: 'Mova o cartão para "A Fazer" no Project.',
@@ -26,12 +26,30 @@ export const ERROS = {
   AGUARDA_DECISAO: '3ª nota abaixo de 10: pergunte ao usuário se segue com a nota atual ou faz nova análise (review-decide).',
   SEM_REVISAO: 'Rode /cartao revisar <ID> antes de abrir o PR.',
   REVISAO_VENCIDA: 'Houve commit depois da revisão. Rode /cartao revisar <ID> de novo.',
+  SEM_PR: 'Rode /cartao pr <ID> antes.',
+  HOM_OCUPADO: 'O HOM está com outro cartão em validação. Espere a assinatura dele ou fure a fila com o "sim" do usuário (--furar-fila --motivo).',
+  MIGRACAO_NAO_AUTORIZADA: 'Mostre o comando de migração ao usuário e peça o "sim" (--migracao-autorizada).',
+  COMANDO_SUSPEITO_PRD: 'Um comando de HOM cita produção. Confira com o usuário antes de seguir (--confirmo-comando).',
+  SEM_HOM: 'Rode /cartao hom <ID> antes.',
+  HOM_FALHOU: 'Uma etapa do HOM falhou. Veja a etapa e o log em .agentic-os/hom/<ID>.log, corrija e rode de novo.',
+  ASSINATURA_DE_OUTRO_COMMIT: 'O analista aprovou uma versão anterior. Peça a aprovação do commit atual no PR.',
+  IDENTIDADE_IGUAL_ANALISTA:
+    'O agente usa a mesma conta GitHub de um analista: a aprovação dessa conta não prova nada. Saídas: (1) configurar identidade_agente (token de uma conta-robô ou GitHub App) pelo wizard; (2) ligar aprovacao_pelo_chat na ficha (prova fraca, registrada como tal).',
+  TOKEN_AUSENTE: 'Defina a variável de ambiente com o token do agente (nome em identidade_agente.token_env), no sistema ou num .env fora do git.',
+  APP_CHAVE_INVALIDA: 'Confira a variável com o caminho da chave privada (.pem) do GitHub App (identidade_agente.chave_privada_env), o app_id e, se preciso, gere a chave de novo.',
+  APP_NAO_INSTALADO: 'Instale o GitHub App no repositório (Settings da conta/org → GitHub Apps → Configure → acesso ao repo).',
+  CHAT_DESLIGADO: 'A aprovação pelo chat está desligada (aprovacao_pelo_chat: false). Use a review no PR ou ligue pelo wizard.',
+  JA_HA_REVIEW: 'Já há review do analista no PR para este commit: ela vale mais que o chat. Rode card-sign <ID> sem --pelo-chat.',
+  GH_LOCAL_E_ANALISTA:
+    'O gh desta máquina está logado com a conta de um analista: o agente consegue agir como ele. Deixe o gh logado só com a conta do agente ou use o modo app.',
+  REMOTO_SSH: 'Com identidade do agente, o origin (fetch e push) precisa ser https em github.com: git remote set-url origin https://github.com/<dono>/<repo>.git e, se houver URL de push separada, git remote set-url --push origin https://github.com/<dono>/<repo>.git',
 };
 
 export class ErroGov extends Error {
-  constructor(codigo, detalhe) {
+  constructor(codigo, detalhe, extra) {
     super(detalhe || ERROS[codigo] || codigo);
     this.codigo = codigo;
     this.como_resolver = ERROS[codigo] || '';
+    if (extra) this.extra = extra;
   }
 }
