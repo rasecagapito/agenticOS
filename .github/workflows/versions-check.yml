@@ -1,0 +1,30 @@
+name: versions-check
+
+on:
+  push:
+    paths:
+      - ".claude-plugin/**"
+      - ".codex-plugin/**"
+      - "plugins/agentic-os-painel/**"
+      - "package.json"
+      - "docs/guia-completo.html"
+      - "scripts/check-versions.mjs"
+  pull_request:
+    paths:
+      - ".claude-plugin/**"
+      - ".codex-plugin/**"
+      - "plugins/agentic-os-painel/**"
+      - "package.json"
+      - "docs/guia-completo.html"
+      - "scripts/check-versions.mjs"
+
+jobs:
+  check-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verificar sincronia de versões e estrutura do painel
+        run: node scripts/check-versions.mjs && node -e "const fs=require('fs'); for (const p of ['plugins/agentic-os-painel/.claude-plugin/plugin.json','plugins/agentic-os-painel/hooks/hooks.json']) JSON.parse(fs.readFileSync(p,'utf8'))"

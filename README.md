@@ -49,9 +49,10 @@ Depois da instalação, pedir para montar ou adaptar um projeto ao padrão Agent
 - `template/C-claude-integrado/` — template SaaS integrado com Claude Code Superpowers
 - `template/D-multi-provedor/` — cérebro compartilhado entre várias IAs (Claude, Codex, Gemini…)
 - `template/E-roteador/` — roteador de modelos opt-in (Jev classifica → subagente Haiku/Sonnet/Opus); instalar com `scripts/install-router.mjs`. ⚠️ Exige a **sua** chave do Jev ([console.typesafe.ai/keys](https://console.typesafe.ai/keys)): **sem ela, todos os pedidos vão para o Opus**
-- **Governança GitHub (v1.9, opt-in):** cartão → branch → `/cartao revisar` (Supervisor, nota 0–10, v1.10) → PR → `/cartao hom` (publica no HOM, um cartão por vez, v1.11) → o analista faz Approve ou Request changes no PR → `/cartao assinatura` registra → `/cartao merge` integra só com a assinatura válida do commit atual (v1.12), com a `main` protegida e a aprovação do analista; identidade própria do agente (App/robô) ou aprovação pelo chat (prova fraca). Ver [docs/GOVERNANCA.md](docs/GOVERNANCA.md).
+- **Governança GitHub (v2.0, opt-in):** cartão → branch → `/cartao revisar` (Supervisor 0–10 + paridade B5) → PR → `/cartao hom` → aprovação do analista → `/cartao assinatura` → `/cartao merge` → `/cartao prd` → `/versao publicar`. Suporta execução autônoma em lote (`/cartao tocar <IDs>`), controle de Sprints (`/sprint`) e `/governanca-update`. Ver [docs/GOVERNANCA.md](docs/GOVERNANCA.md).
 - `docs/ROUTER.md` — **[Roteador de Modelos](docs/ROUTER.md)**: fluxo, regra de decisão, instalação e atualização
-- `plugins/agentic-os-painel/` — **[Painel](plugins/agentic-os-painel/README.md)** (plugin opcional): economia do Jev, decisões do dia e botões `/status` `/wrapup` `/handoff` ao lado do chat. Instalar: `claude plugin install agentic-os-painel@agentic-os`
+- `plugins/agentic-os-painel/` — **[Painel](plugins/agentic-os-painel/README.md)** (plugin opcional `v1.3.0`): economia do Jev por sessão, decisões do dia, resumo de governança, alerta de chave e botões `/status` `/wrapup` `/handoff` `/cartao`. Instalar: `claude plugin install agentic-os-painel@agentic-os`
+- `scripts/paridade.mjs` + `template/paridade/` — **[Motor de Paridade](template/F-governanca/automation/procedures/paridade.md)**: oracle testing (`casos.csv` + comparadores Node/Python → `diff.json` zerado) e gate automático B5 no Supervisor.
 - `docs/USAGE.md` — **[Guia de Uso Completo](docs/USAGE.md)**: instalação, todos os comandos com exemplos e capítulo de handoff/orquestração
 - `docs/guia-completo.html` — **[Guia Completo](docs/guia-completo.html)**: como o plugin funciona, todas as funcionalidades (incl. roteador com Jev), instalar e atualizar — didático, abrir no navegador
 - `docs/guia-visual.html` — **[Manual Visual](docs/guia-visual.html)**: guia interativo (abrir no navegador) — didático, com fluxos e diagramas
@@ -98,6 +99,10 @@ Detalhes em **[docs/CHANGE-WORKFLOW.md](docs/CHANGE-WORKFLOW.md)**.
 | `/conform` | Auditar/corrigir conformidade via loop Agente A/B |
 | `/handoff` | Ler/gravar o estado vivo multi-provedor |
 | `/structure` | Montar/auditar a estrutura da aplicação (Motor de Estrutura) |
+| `/cartao` | Fluxo completo de cartão (`revisar`, `pr`, `hom`, `assinatura`, `merge`, `prd`, `tocar`) |
+| `/versao` | Fechar e publicar releases SemVer quando todos os cartões concluírem |
+| `/sprint` | Planejar e preencher campos de sprint no GitHub Project (com aprovação) |
+| `/paridade` | Rodar comparação oráculo (`casos.csv` → `diff.json` zerado) |
 
 Em projetos multi-provedor com **Orquestração** ativa, o humano é o gate final: executores só
 trabalham até ao `Limite aprovado` do handoff (lotes de 3–5 tarefas). Detalhes em

@@ -1,3 +1,18 @@
+# Agentic OS v2.0.0 (painel 1.3.0)
+
+- **Governança PRD (Parte 4b — `/cartao prd <ID>`):** fecha o ciclo pós-merge na `main`: exige `--confirmo-prd` (e `--migracao-autorizada` se houver `migracao_prd`), cria GitHub Deployment `prd`, grava log local fora do git em `.agentic-os/prd/<ID>.log`, move o cartão para `Concluído` e fecha a issue explicitamente (removido `Closes #ID` do squash de `card-merge`, substituído por `Ref #ID`).
+- **Controle de Versões no GitHub (`#6` — `/versao verificar` e `/versao publicar`):** fecha `v1.0.0` somente quando todos os cartões do escopo estão em `Concluído` (`Backlog` ignorado por padrão) e sugere/publica novas versões SemVer (`fix/` → patch, `feature/` → minor, `--major`) com tag anotada e GitHub Release na principal após confirmação explícita.
+- **Motor de Paridade (`#7` — `/paridade` e critério objetivo `B5`):** `scripts/paridade.mjs` + templates Node e Python (`template/paridade/`) para comparação oráculo (`casos.csv` + `config.json` → `diff.json` agrupado por tipo); regra emitida `paridade` para Cursor/Copilot/Claude e verificação automática `B5` no Supervisor.
+- **Controle de Sprints no Project (`#8` — `/sprint`):** valida e preenche `Funcionalidade` (`"A definir"` + sugestões), `Camada` (5 valores fixos, bloqueia multi-camada sem quebra), `Tamanho` (`1/2/3/5/8`, bloqueia `8` na sprint e exige `Estimativa: X pontos, porque ...` no corpo da issue), `Iteração` (~30 pts/sprint, `Concluído` só recebe `Funcionalidade` + `Camada`), sempre exibindo tabela para aprovação (`--confirmo-sprint`). Suporte nativo a **5 colunas Scrum** ou **7 colunas**.
+- **Execução autônoma em lote (`#9` — `/cartao tocar <ID1> [ID2 ...]`):** `card-queue` e `card-block` tocam 1 ou mais cartões do início ao fim até PR + Supervisor 10/10 (+ HOM automático no 1º elegível), registrando `BLOQUEIO:` em falhas sem travar os próximos cartões, parando uma vez só no final para validação e merge.
+- **Comando `/governanca-update`:** atualiza `.agentic-os/bin/` e procedimentos da camada F preservando a ficha local.
+- **Segurança, robustez e Painel `1.3.0`:**
+  - JWT do GitHub App trocado via `fetch` + stdin (`scripts/governanca/http-sync.mjs`), nunca exposto em `argv`.
+  - Escalonamento do roteador isolado por sessão (`--sessao`), rotação automática de `decisions.jsonl` acima de 2 MiB, `parseOverride` seguro contra regex/NFD e `runStateCommand` com limpeza síncrona de árvore de processos no timeout.
+  - Compatibilidade Multi-Provedor + Roteador mantendo `CLAUDE.md` como ponteiro fino (`@.claude/router/CLAUDE.router.md`).
+  - Painel `1.3.0`: cache de transcripts por `agent_id`, economia com Jev da sessão atual, `usd()` para negativos pequenos, bloco de Governança e alerta visual quando a chave do Jev falha.
+- **Portabilidade Windows, CI e perfis extras:** `emit-rules.mjs`, `check-rules-sync.mjs`, `build-skill.mjs`, `check-skill-sync.mjs`, `check-versions.mjs`, `package.json` zero-deps, perfis `node-api` e `python-fastapi`, matriz Windows + Linux no CI e remoção do PDF grande do `main`.
+
 # Agentic OS v1.12.0
 
 - **Merge exigindo a assinatura (Parte 4a da governança):** `/cartao merge <ID>` integra o PR na principal só

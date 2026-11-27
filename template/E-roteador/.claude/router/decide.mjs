@@ -19,14 +19,17 @@ export function tierIndex(tiers, ref) {
   return tiers.findIndex((t) => strip(t.id) === r || strip(t.agent) === r);
 }
 
+const escRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // Override explícito do usuário: "nivel:avancado <pedido>".
 // Retorna { tierIndex, prompt } ou null.
 export function parseOverride(prompt, tiers, prefix = 'nivel:') {
-  const m = strip(prompt.trimStart()).match(new RegExp('^' + prefix + '([a-z]+)\\b'));
+  const nfc = String(prompt || '').trimStart().normalize('NFC');
+  const m = strip(nfc).match(new RegExp('^' + escRe(strip(prefix)) + '([a-z]+)\\b'));
   if (!m) return null;
   const i = tiers.findIndex((t) => strip(t.id) === m[1] || strip(t.agent) === m[1]);
   if (i === -1) return null;
-  const rest = prompt.trimStart().slice(prefix.length + m[1].length).trimStart();
+  const rest = nfc.slice(m[0].length).trimStart();
   return { tierIndex: i, prompt: rest };
 }
 

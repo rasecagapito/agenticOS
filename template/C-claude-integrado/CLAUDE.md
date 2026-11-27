@@ -58,10 +58,11 @@
 | Comando | Ação |
 |---------|------|
 | /propose [nome] | Criar mudança estruturada em changes/ |
+| /worker [nome] | Ativar especialista para executar a mudança ativa |
 | /wrapup | Consolidar sessão + arquivar mudança ativa |
 | /status  | Estado: features, bugs, próximo passo |
-| /review  | Code review do diff atual |
-| /plan [feature] | Planejar implementação de feature |
+| /conform | Auditar/corrigir conformidade (loop A/B) |
+| /structure | Auditar/montar estrutura da aplicação |
 
 ## Estado do Projeto
 - **Fase**: [MVP / BETA / PRODUÇÃO]

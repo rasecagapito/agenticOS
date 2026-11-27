@@ -1,5 +1,5 @@
 // Utilitários de I/O do roteador (config, log, resumo do projeto).
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 export const ROUTER_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const PROJECT_DIR = path.resolve(ROUTER_DIR, '..', '..');
 export const LOG_FILE = path.join(ROUTER_DIR, 'decisions.jsonl');
+export const LOG_MAX_BYTES = 2 * 1024 * 1024;
+export const LOG_KEEP_BYTES = 1024 * 1024;
 
 export function loadConfig() {
   try {
@@ -16,9 +18,45 @@ export function loadConfig() {
   }
 }
 
-export function appendLog(entry) {
+export function readTailLines(file = LOG_FILE, maxBytes = 65536) {
   try {
-    fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + '\n', 'utf8');
+    const fd = fs.openSync(file, 'r');
+    try {
+      const size = fs.fstatSync(fd).size;
+      if (size === 0) return [];
+      const len = Math.min(size, maxBytes);
+      const buf = Buffer.alloc(len);
+      fs.readSync(fd, buf, 0, len, size - len);
+      const txt = buf.toString('utf8');
+      const lines = txt.split('\n');
+      if (len < size) lines.shift(); // descarta linha parcial no início do buffer
+      return lines.filter((l) => l.trim());
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return [];
+  }
+}
+
+export function rotateLogIfNeeded(file = LOG_FILE, maxBytes = LOG_MAX_BYTES, keepBytes = LOG_KEEP_BYTES) {
+  try {
+    const stat = fs.statSync(file);
+    if (stat.size <= maxBytes) return false;
+    const kept = readTailLines(file, keepBytes).join('\n');
+    const tmp = `${file}.tmp-${process.pid}`;
+    fs.writeFileSync(tmp, kept ? kept + '\n' : '', 'utf8');
+    fs.renameSync(tmp, file);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function appendLog(entry, file = LOG_FILE) {
+  try {
+    rotateLogIfNeeded(file);
+    fs.appendFileSync(file, JSON.stringify(entry) + '\n', 'utf8');
   } catch {
     /* log nunca derruba o fluxo */
   }
@@ -26,55 +64,35 @@ export function appendLog(entry) {
 
 // Última linha válida do log (lê só o fim do arquivo).
 export function lastLog(file = LOG_FILE) {
-  try {
-    const fd = fs.openSync(file, 'r');
-    const size = fs.fstatSync(fd).size;
-    const len = Math.min(size, 8192);
-    const buf = Buffer.alloc(len);
-    fs.readSync(fd, buf, 0, len, size - len);
-    fs.closeSync(fd);
-    const lines = buf.toString('utf8').trim().split('\n').reverse();
-    for (const l of lines) {
-      try {
-        return JSON.parse(l);
-      } catch {
-        /* linha cortada no início do buffer */
-      }
+  const lines = readTailLines(file, 8192).reverse();
+  for (const l of lines) {
+    try {
+      return JSON.parse(l);
+    } catch {
+      /* linha inválida */
     }
-  } catch {
-    /* sem log ainda */
   }
   return null;
 }
 
-// Pedido anterior da mesma sessão + subagente efetivo (considera escalonamento posterior).
+// Pedido anterior da mesma sessão + subagente efetivo (considera escalonamento apenas da mesma sessão).
 // Dá contexto ao classificador para respostas curtas ("sim", "pode seguir").
 export function previousDecision(sessao, file = LOG_FILE) {
   if (!sessao) return null;
-  try {
-    const fd = fs.openSync(file, 'r');
-    const size = fs.fstatSync(fd).size;
-    const len = Math.min(size, 32768);
-    const buf = Buffer.alloc(len);
-    fs.readSync(fd, buf, 0, len, size - len);
-    fs.closeSync(fd);
-    let escalado = null;
-    for (const l of buf.toString('utf8').trim().split('\n').reverse()) {
-      let e;
-      try {
-        e = JSON.parse(l);
-      } catch {
-        continue;
-      }
-      if (e.tipo === 'escalonamento' && !escalado) escalado = e.subagente;
-      if (e.tipo === 'decisao' && e.sessao === sessao && e.origem !== 'envelope') {
-        const a = { subagente: escalado || e.subagente };
-        if (e.preview) a.pedido = e.preview;
-        return a;
-      }
+  let escalado = null;
+  for (const l of readTailLines(file, 65536).reverse()) {
+    let e;
+    try {
+      e = JSON.parse(l);
+    } catch {
+      continue;
     }
-  } catch {
-    /* sem log */
+    if (e.tipo === 'escalonamento' && !escalado && (!e.sessao || e.sessao === sessao)) escalado = e.subagente;
+    if (e.tipo === 'decisao' && e.sessao === sessao && e.origem !== 'envelope') {
+      const a = { subagente: escalado || e.subagente };
+      if (e.preview) a.pedido = e.preview;
+      return a;
+    }
   }
   return null;
 }
@@ -82,23 +100,13 @@ export function previousDecision(sessao, file = LOG_FILE) {
 // true se esta sessão já recebeu o aviso de chave do Jev (evita repetir a cada mensagem).
 export function keyWarnedThisSession(sessao, file = LOG_FILE) {
   if (!sessao) return false;
-  try {
-    const fd = fs.openSync(file, 'r');
-    const size = fs.fstatSync(fd).size;
-    const len = Math.min(size, 65536);
-    const buf = Buffer.alloc(len);
-    fs.readSync(fd, buf, 0, len, size - len);
-    fs.closeSync(fd);
-    for (const l of buf.toString('utf8').split('\n')) {
-      if (!l.includes('"aviso_chave":true')) continue;
-      try {
-        if (JSON.parse(l).sessao === sessao) return true;
-      } catch {
-        /* linha cortada */
-      }
+  for (const l of readTailLines(file, 262144)) {
+    if (!l.includes('"aviso_chave":true')) continue;
+    try {
+      if (JSON.parse(l).sessao === sessao) return true;
+    } catch {
+      /* linha inválida */
     }
-  } catch {
-    /* sem log */
   }
   return false;
 }
@@ -155,20 +163,27 @@ export function runStateCommand(sc, cwd = PROJECT_DIR) {
       }
       resolve(r);
     };
+    const win = process.platform === 'win32';
     const timer = setTimeout(() => {
       try {
-        // shell:true → no Windows o comando roda sob cmd.exe; mata a árvore inteira
-        if (process.platform === 'win32' && child?.pid) {
-          spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true }).unref();
-        } else child?.kill();
+        // No Windows, taskkill síncrono garante que o diretório/processos filhos sejam liberados antes de resolver.
+        if (win && child?.pid) {
+          spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+        } else if (child?.pid) {
+          process.kill(-child.pid, 'SIGKILL');
+        }
       } catch {
-        /* ignore */
+        try {
+          child?.kill('SIGKILL');
+        } catch {
+          /* ignore */
+        }
       }
       child?.unref?.();
       finish({ erro: `timeout ${ms}ms` });
     }, ms);
     try {
-      child = spawn(sc.cmd, { cwd, shell: true, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+      child = spawn(sc.cmd, { cwd, shell: true, detached: !win, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (e) {
       return finish({ erro: e.message });
     }

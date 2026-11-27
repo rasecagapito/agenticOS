@@ -24,7 +24,7 @@ export const lerPr = (ficha, url, campos = CAMPOS_PR) => ghJson(['pr', 'view', u
 
 export function corpoSquash(reg, n) {
   const aviso = AVISO_TIPO[reg.tipo];
-  return ['## Assinatura', '', textoAssinatura(reg), '', ...(aviso ? [`⚠️ ${aviso}`, ''] : []), `Closes #${n}`, ''].join('\n');
+  return ['## Assinatura', '', textoAssinatura(reg), '', ...(aviso ? [`⚠️ ${aviso}`, ''] : []), `Ref #${n}`, ''].join('\n');
 }
 
 // Devolve o Tipo efetivo. Sempre relê as reviews: reprovação vence; review aprovando o commit atual vale mais
@@ -57,7 +57,7 @@ export function exigirChecks(ficha, pr) {
 
 export function exigirIntegravel(ficha, pr, esperaMs = 3000) {
   let m = pr.mergeable;
-  if (m === 'UNKNOWN') {
+  for (let i = 0; i < 2 && m === 'UNKNOWN'; i++) {
     esperar(esperaMs);
     m = lerPr(ficha, pr.url, 'mergeable').mergeable;
   }
@@ -114,8 +114,10 @@ export function cardMerge(cwd, ficha, id, o = {}) {
     return { ok: true, situacao: 'ja_integrado', pr: e.merge.pr, sha_squash: e.merge.sha, tipo: e.merge.tipo, avisos: [] };
   if (e?.merge_pendente?.efeitos?.merge) return concluir(cwd, ficha, n, e, e.merge_pendente, 'integrado');
   const cartao = acharCartao(ficha, n);
-  if (norm(cartao.status) !== norm(ficha.colunas.aprovado))
-    throw new ErroGov('CARTAO_FORA_DE_APROVADO', `Cartão #${n} está em "${cartao.status || '(sem coluna)'}"; o merge exige "${ficha.colunas.aprovado}".`);
+  const statusOk = ficha.colunas?.aprovado ? norm(ficha.colunas.aprovado) : norm(ficha.colunas.em_validacao);
+  const esperado = ficha.colunas?.aprovado || ficha.colunas.em_validacao;
+  if (norm(cartao.status) !== statusOk)
+    throw new ErroGov('CARTAO_FORA_DE_APROVADO', `Cartão #${n} está em "${cartao.status || '(sem coluna)'}"; o merge exige "${esperado}".`);
   if (e?.assinatura_pendente) throw new ErroGov('PARAMETRO', `Há uma assinatura interrompida; rode /cartao assinatura ${n} de novo antes do merge.`);
   const a = e?.assinatura;
   if (!a || a.resultado !== 'aprovado') throw new ErroGov('SEM_ASSINATURA');

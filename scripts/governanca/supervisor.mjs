@@ -7,6 +7,7 @@ import { executar } from './executar.mjs';
 import { branchAtual, git } from './git.mjs';
 import { gh } from './gh.mjs';
 import { ARQ_PERMITIDOS, lerPermitidos, varrerSegredos } from './segredos.mjs';
+import { executarParidade, validarDiff } from '../paridade.mjs';
 
 export const DIR_ESTADO = '.agentic-os/supervisor';
 export const CICLOS_POR_RODADA = 3;
@@ -108,6 +109,39 @@ export function arquivosSujos(cwd, prefixosExtras = []) {
     .filter((f) => !f.startsWith(`${DIR_ESTADO}/`) && !f.startsWith('.agentic-os/hom/') && f !== ARQ_PERMITIDOS && !prefixosExtras.some((p) => f.startsWith(p)));
 }
 
+export function alvoParidade(cwd, ficha, proposal) {
+  if (proposal) {
+    const abs = path.join(cwd, proposal);
+    if (fs.existsSync(abs)) {
+      const m = fs.readFileSync(abs, 'utf8').match(/^##\s+Paridade:\s*(.+?)\s*$/im);
+      if (m) return path.join(ficha.paridade_dir || 'paridade', m[1].trim());
+    }
+  }
+  return null;
+}
+
+export function checarParidade(cwd, ficha, proposal, { limiteMs = LIMITE_TESTES_MS } = {}) {
+  const alvo = alvoParidade(cwd, ficha, proposal);
+  if (!ficha.comando_paridade && !alvo) return null;
+  if (ficha.comando_paridade) {
+    const r = executar(cwd, ficha.comando_paridade, limiteMs);
+    if (!r.ok) return nao(`comando de paridade falhou (${r.tempo_esgotado ? 'tempo esgotado' : `saída ${r.codigo}`}): ${r.saida.split('\n').slice(-10).join('\n')}`);
+    if (!alvo) return at(`paridade ok: ${ficha.comando_paridade}`);
+  }
+  try {
+    if (alvo && !ficha.comando_paridade && fs.existsSync(path.join(cwd, alvo, 'config.json'))) {
+      const res = executarParidade(alvo, cwd);
+      return res.total_diferencas === 0
+        ? at(`paridade 0 diferenças (${res.casos_ok}/${res.casos_total}) em ${alvo}`)
+        : nao(`${res.total_diferencas} diferença(s) aberta(s) em ${alvo}/diff.json`);
+    }
+    const v = validarDiff(alvo, cwd);
+    return v.ok ? at(`paridade 0 diferenças (${v.diff.casos_ok}/${v.diff.casos_total}) em ${alvo}`) : nao(v.motivo);
+  } catch (e) {
+    return nao(`paridade inválida em ${alvo}: ${e.message}`);
+  }
+}
+
 export function checagensBase(cwd, ficha, id, { limiteMs, proposal } = {}) {
   const branch = branchAtual(cwd);
   if (!Object.values(ficha.prefixos_branch).some((p) => branch.startsWith(`${p}${id}-`)))
@@ -127,11 +161,13 @@ export function checagensBase(cwd, ficha, id, { limiteMs, proposal } = {}) {
   const b3 = frente > 0 ? at(`branch ${branch}; ${frente} commit(s) à frente de ${ref} (base ${curto(base)})`) : nao(`nenhum commit na branch ${branch} à frente de ${ref}`);
   const task = acharTask(cwd, id);
   const b4 = task ? at(proposal ? `${task}; ${proposal}` : task) : nao(`docs/tasks/TASK-${id}-*.md não encontrado`);
+  const b5 = checarParidade(cwd, ficha, proposal, { limiteMs });
   const resultados = [
     { id: 'B1', texto: 'Testes do projeto passam', ...b1 },
     { id: 'B2', texto: 'Nenhum segredo no diff da branch', ...b2 },
     { id: 'B3', texto: 'Trabalho na branch do cartão; principal intocada', ...b3 },
     { id: 'B4', texto: 'TASK do cartão existe', ...b4 },
+    ...(b5 ? [{ id: 'B5', texto: 'Paridade com versão de referência (diff.json zerado)', ...b5 }] : []),
   ];
   return { commit, base, intervalo: `${base}..${commit}`, branch, liberados, resultados };
 }

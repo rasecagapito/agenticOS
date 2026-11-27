@@ -44,8 +44,9 @@ Requer um Claude Code com suporte a mods (hooks de função, 2.1.3xx ou mais nov
   menos o custo estimado do Jev, é a economia.
 - **Decisões de hoje**: quantos pedidos foram para cada subagente, lidas de `.claude/router/decisions.jsonl`
   (o registro do roteador). Avisos internos do Claude Code não contam. Sem o roteador, mostra 0 e avisa.
-- **Botões**: rodam `/status`, `/wrapup` e `/handoff` como se você tivesse digitado. Usam o comando próprio do
+- **Botões**: rodam `/status`, `/wrapup`, `/handoff` (e `/cartao` quando há governança ativa) como se você tivesse digitado. Usam o comando próprio do
   projeto se existir; senão, a skill do plugin (`/agentic-os:agentic-os /status`).
+- **Governança e chave do Jev**: quando `.agentic-os/governanca.json` existe, mostra repositório, branch principal e Project; quando a chave do Jev falha, exibe alerta.
 
 O layout é o mesmo em todo projeto. Sem o roteador instalado, as seções continuam lá e dizem por que estão vazias.
 

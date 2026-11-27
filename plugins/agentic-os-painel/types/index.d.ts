@@ -3,6 +3,9 @@ export type Run = {
   id: string
   agent: string
   path: string
+  real?: number
+  opus?: number
+  semDados?: boolean
 }
 
 /** Consumo da sessão como o /cost o soma (US$) e o uso do contexto (%), atualizado pelo session.measure. */

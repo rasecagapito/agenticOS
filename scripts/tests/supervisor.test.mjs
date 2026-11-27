@@ -608,3 +608,31 @@ test('exigirRevisao: rename para nome da TASK não escapa; commit inexistente �
   gravarEstado(p.dir, e);
   assert.throws(() => exigirRevisao(p.dir, 101), (x) => x.codigo === 'REVISAO_VENCIDA' && /não existe mais/.test(x.message));
 });
+
+test('B5 paridade: proposal com ## Paridade exige diff.json zerado no check', async () => {
+  const { checagensBase } = await imp('supervisor.mjs');
+  const p = projetoCartao();
+  fs.mkdirSync(path.join(p.dir, 'paridade', 'vendas'), { recursive: true });
+  fs.writeFileSync(path.join(p.dir, 'paridade/vendas/casos.csv'), 'id\n1\n2\n');
+  fs.writeFileSync(
+    path.join(p.dir, 'paridade/vendas/diff.json'),
+    JSON.stringify({ alvo: 'vendas', casos_total: 2, casos_ok: 1, total_diferencas: 1, grupos: [{ tipo: 'divergencia_campo', ocorrencias: 1 }] }),
+  );
+  fs.appendFileSync(path.join(p.dir, 'changes/101-carga/proposal.md'), '\n## Paridade: vendas\n');
+  p.g('add', '.');
+  p.g('commit', '-qm', 'paridade');
+  const r1 = checagensBase(p.dir, ficha(), 101, { proposal: 'changes/101-carga/proposal.md' });
+  const b5a = r1.resultados.find((x) => x.id === 'B5');
+  assert.equal(b5a.status, 'nao_atendido');
+  assert.match(b5a.prova, /1 diferença/);
+
+  fs.writeFileSync(
+    path.join(p.dir, 'paridade/vendas/diff.json'),
+    JSON.stringify({ alvo: 'vendas', casos_total: 2, casos_ok: 2, total_diferencas: 0, grupos: [] }),
+  );
+  p.g('add', '.');
+  p.g('commit', '-qm', 'paridade ok');
+  const r2 = checagensBase(p.dir, ficha(), 101, { proposal: 'changes/101-carga/proposal.md' });
+  const b5b = r2.resultados.find((x) => x.id === 'B5');
+  assert.equal(b5b.status, 'atendido');
+});

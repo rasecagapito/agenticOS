@@ -104,7 +104,9 @@ function aplicarAprovacao(cwd, ficha, n, e, base, pendente) {
     const atual = ghJson(['pr', 'view', e.pr.url, '--repo', ficha.repo, '--json', 'body'])?.body || '';
     ghComCorpo(['pr', 'edit', e.pr.url, '--repo', ficha.repo], registrarSecao(atual, 'Assinatura', `## Assinatura\n\n${textoAssinatura(pend)}`));
   });
-  feito('mover', () => moverCartao(ficha, cartao.itemId, 'aprovado'));
+  feito('mover', () => {
+    if (ficha.colunas?.aprovado && ficha.colunas_ids?.aprovado) moverCartao(ficha, cartao.itemId, 'aprovado');
+  });
   feito('comentario', () =>
     gh(['issue', 'comment', String(n), '--repo', ficha.repo, '--body', `Homologação aprovada por ${quemDe(pend)} em ${pend.em} (commit ${curto}). Evidência: ${pend.evidencia}`]));
   feito('status', () => marcarStatus(ficha, e.deploy_id, 'inactive', { descricao: `Cartão #${n} aprovado` }));

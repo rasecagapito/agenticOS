@@ -81,7 +81,7 @@ export function quemOcupa(ficha, id) {
 }
 
 export function comandosSuspeitos(ficha) {
-  const nomes = [...new Set(['prd', ficha.ambientes?.prd].filter(Boolean).map((s) => escRe(String(s))))];
+  const nomes = [...new Set(['prd', 'prod', 'production', 'producao', ficha.ambientes?.prd].filter(Boolean).map((s) => escRe(String(s))))];
   const re = new RegExp(`(^|[^A-Za-z0-9])(${nomes.join('|')})([^A-Za-z0-9]|$)`, 'i');
   return ['deploy_hom', 'migracao_hom', 'testes_hom'].filter((k) => ficha[k] && re.test(ficha[k]));
 }

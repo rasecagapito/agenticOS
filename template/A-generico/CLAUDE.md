@@ -36,9 +36,11 @@ Carregar apenas os módulos necessários para a tarefa:
 | Comando | Ação |
 |---------|------|
 | /propose [nome] | Criar mudança estruturada em changes/ |
+| /worker [nome] | Ativar especialista para executar a mudança ativa |
 | /wrapup | Consolidar aprendizados + arquivar mudança ativa |
 | /status  | Resumo do estado atual do projeto |
-| /contexto [módulo] | Carregar módulo específico de /context |
+| /conform | Auditar/corrigir conformidade (loop A/B) |
+| /structure | Auditar/montar estrutura da aplicação |
 
 ## Estado do Projeto
 - **Fase atual**: [DESCOBERTA / DESENVOLVIMENTO / PRODUÇÃO]

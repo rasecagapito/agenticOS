@@ -17,5 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Verificar sincronia das regras de estrutura (DS1)
-        run: bash scripts/check-rules-sync.sh
+        run: node scripts/check-rules-sync.mjs

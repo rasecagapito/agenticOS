@@ -4,27 +4,35 @@ on:
   push:
     paths:
       - "template/F-governanca/**"
+      - "template/paridade/**"
       - "scripts/github-setup.mjs"
       - "scripts/install-governanca.mjs"
+      - "scripts/paridade.mjs"
+      - "scripts/check-governanca.sh"
       - "scripts/governanca/**"
-      - "scripts/tests/governanca.test.mjs"
-      - "scripts/tests/fixtures/fake-gh.mjs"
+      - "scripts/tests/**"
   pull_request:
     paths:
       - "template/F-governanca/**"
+      - "template/paridade/**"
       - "scripts/github-setup.mjs"
       - "scripts/install-governanca.mjs"
+      - "scripts/paridade.mjs"
+      - "scripts/check-governanca.sh"
       - "scripts/governanca/**"
-      - "scripts/tests/governanca.test.mjs"
-      - "scripts/tests/fixtures/fake-gh.mjs"
+      - "scripts/tests/**"
 
 jobs:
   check-governanca:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Testes da governança GitHub (camada F)
-        run: bash scripts/check-governanca.sh
+      - name: Testes da governança GitHub, PRD, versões, paridade e sprints
+        run: node --test scripts/tests/governanca.test.mjs scripts/tests/supervisor.test.mjs scripts/tests/hom.test.mjs scripts/tests/identidade.test.mjs scripts/tests/merge.test.mjs scripts/tests/prd.test.mjs scripts/tests/versao.test.mjs scripts/tests/paridade.test.mjs scripts/tests/sprint.test.mjs scripts/tests/nomes-reais.test.mjs

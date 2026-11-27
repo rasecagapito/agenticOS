@@ -309,7 +309,7 @@ Adicionar a .claude/settings.json — pedir confirmação ao usuário:
           {
             "type": "command",
             "shell": "powershell",
-            "command": "$date = Get-Date; $fileName = $date.ToString('yyyy-MM-dd-HH') + '-sessao.md'; $content = '# Sessao ' + $date.ToString('yyyy-MM-dd HH:mm') + \"`n`nSessao encerrada. Executar /wrapup para consolidar.\"; $dir = Join-Path $PSScriptRoot '../memory/history'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Set-Content -Path (Join-Path $dir $fileName) -Value $content -Encoding UTF8"
+            "command": "$date = Get-Date; $fileName = $date.ToString('yyyy-MM-dd-HHmm') + '-sessao.md'; $content = '# Sessao ' + $date.ToString('yyyy-MM-dd HH:mm') + \"`n`nSessao encerrada. Executar /wrapup para consolidar.\"; $dir = Join-Path $env:CLAUDE_PROJECT_DIR 'memory/history'; if (!(Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }; Set-Content -Path (Join-Path $dir $fileName) -Value $content -Encoding UTF8"
           }
         ]
       }

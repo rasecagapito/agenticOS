@@ -54,13 +54,25 @@ Ativa quando `.agentic-os/governanca.json` existe.
 | F9 | `.gitignore` com `.agentic-os/hom/` e procedimento com `/cartao hom` e `/cartao assinatura` | Ambos presentes |
 | F10 | Ficha com `identidade_agente` válido ou ausente e nenhum segredo nela (só nomes de variáveis) | `validarFicha` sem erros |
 | F11 | Procedimento `cartao.md` com a seção `/cartao merge` | seção presente |
+| F12 | Controle de versões (`/versao`), PRD (`/cartao prd`), Sprints (`/sprint`) e Paridade (`/paridade` + B5) | `automation/procedures/{versao,sprint,paridade}.md` e `.claude/commands/` presentes; guardrails 15–18 |
+
+## Camada Roteador de Modelos (exigida só quando opt-in ativo)
+
+Ativa quando `.claude/router/config.json` existe.
+
+| # | Item exigido | Verificação |
+|---|---|---|
+| E1 | `.claude/router/{config.json,route.mjs,decide.mjs,lib.mjs,emit-agents.mjs,log-escalation.mjs}` presentes | Arquivos presentes |
+| E2 | Agentes `.claude/agents/{rapido,padrao,profundo}.md` sincronizados com `agent-body.md` + `config.json` | `emit-agents.mjs --check` |
+| E3 | `automation/procedures/route.md` + bloco `agentic-os:router` em `CLAUDE.md` (em multi-provedor, `@.claude/router/CLAUDE.router.md` preservando ponteiro fino D2) | Ambos presentes sem violar D2 |
+| E4 | `.gitignore` inclui `.claude/router/decisions.jsonl` | Linha presente |
 
 ---
 
 ## Regras anti-drift invioláveis (qualquer uma → FAIL)
 
 - **D1 — Sem `commands/` na raiz** duplicando `.claude/commands/` + `automation/procedures/`.
-  Três fontes da mesma lógica = drift garantido. (Erro real observado em `.projeto1`.)
+  Três fontes da mesma lógica = drift garantido. (Erro real observado em projeto piloto.)
 - **D2 — Ponteiro nunca duplica o cérebro.** `CLAUDE.md`/`GEMINI.md` só apontam; conteúdo vive no canônico.
 - **D3 — Handoff nunca copia a lista de tarefas.** O cursor é derivado; `tasks.md` é a única verdade do progresso.
 - **D4 — `evaluation.json` reflete os provedores reais**, não só um (ex.: `platform: "Codex"` sozinho num projeto multi-IA = drift).

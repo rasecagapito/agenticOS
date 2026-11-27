@@ -533,14 +533,15 @@ Instalar: `claude plugin install agentic-os-painel@agentic-os`; reabrir: `/paine
 
 Cartão no GitHub Project → branch `feature|fix/{ID}-{desc}` → PR ligado → `main` protegida com revisão
 obrigatória do analista + Environments `hom`/`prd`. Configurada pelas etapas 7–15 do [wizard](wizard.md).
+Suporta **5 colunas Scrum** (`Backlog`, `A Fazer`, `Em andamento`, `Em validação`, `Concluído`) ou **7 colunas** (incl. `Aprovado`, `Bloqueado`).
 Instalar: `node <plugin>/scripts/install-governanca.mjs <projeto> --ficha-json <arquivo>` e depois
-`node .agentic-os/bin/github-setup.mjs apply` no projeto. Uso diário: `/cartao <ID>` e `/cartao pr <ID>`
-(`automation/procedures/cartao.md`). Travas: o agente nunca faz push na principal, só integra pelo `/cartao merge`,
-nunca aprova PR e nunca afrouxa proteção. Detalhes: `docs/GOVERNANCA.md`.
-`/cartao revisar <ID>`: Supervisor independente (Opus fixo) dá nota 0–10 com prova; PR só com 10 ou liberação do usuário. Ver `docs/GOVERNANCA.md`.
-`/cartao hom <ID>` publica o commit revisado no HOM (fila por GitHub Deployments); `/cartao assinatura <ID>` lê a review do analista no PR (Approve/Request changes) e registra. Ver `docs/GOVERNANCA.md`.
-`/cartao merge <ID>` integra na principal só com a assinatura válida do commit atual (relê as reviews; squash com `--match-head-commit`; Tipo chat exige "sim" novo do usuário). Ver `docs/GOVERNANCA.md`.
-Identidade do agente (`identidade_agente`: token de conta-robô ou GitHub App) para o dono do projeto poder ser o analista; sem ela, a assinatura bloqueia, salvo `aprovacao_pelo_chat` (prova fraca, registrada). Ver `docs/GOVERNANCA.md`.
+`node .agentic-os/bin/github-setup.mjs apply` no projeto. Atualizar: `/governanca-update`. Uso diário: `/cartao <ID>`, `/cartao revisar <ID>`, `/cartao pr <ID>`, `/cartao hom <ID>`, `/cartao assinatura <ID>`, `/cartao merge <ID>`, `/cartao prd <ID>` e `/cartao tocar <ID1> [ID2 ...]` (`automation/procedures/cartao.md`). Travas: o agente nunca faz push na principal, só integra pelo `/cartao merge`, nunca aprova PR, nunca fecha issue sem atualizar o Project e nunca afrouxa proteção. Detalhes: `docs/GOVERNANCA.md`.
+
+- **PRD (Parte 4b):** `/cartao prd <ID>` publica na principal após merge com `--confirmo-prd`, move para `Concluído` e fecha a issue.
+- **Execução autônoma em lote:** `/cartao tocar <ID1> [ID2 ...]` executa 1 ou mais cartões ponta a ponta (plano → branch → implementação → Supervisor 10/10 → PR → HOM no 1º elegível) sem pausas intermediárias, entregando tudo pronto para validação e merge. Falhas registram `BLOQUEIO:` via `card-block` e o lote segue.
+- **Controle de Versões (#6):** `/versao verificar` e `/versao publicar` (`automation/procedures/versao.md`) fecham `v1.0.0` quando todos os cartões do escopo estão em `Concluído` e publicam novas versões SemVer (`fix/` → patch, `feature/` → minor, `--major`) com tag + GitHub Release só na principal e com confirmação explícita.
+- **Controle de Sprints (#8 — Ágil · Scrum Master):** `/sprint` (`automation/procedures/sprint.md`) mantém os campos do Project (`Funcionalidade`, `Camada`, `Tamanho` 1/2/3/5/8 com `Estimativa: X pontos, porque ...`, `Iteração` ~30 pts/sprint; `Concluído` sem Tamanho/Iteração). Sempre exibe tabela e aguarda `"ok"` antes de gravar; nunca calcula % nem fecha sprint.
+- **Motor de Paridade (#7):** `/paridade <alvo>` (`automation/procedures/paridade.md` + `scripts/paridade.mjs` + regra emitida `paridade.mdc`) usa a versão antiga como juíza (`casos.csv` + `config.json` → `diff.json` agrupado por tipo); pronto = `total_diferencas === 0` e critério objetivo **B5** no Supervisor.
 
 ---
 
@@ -551,15 +552,13 @@ Enquanto o resto do Agentic OS organiza o **cérebro do agente**, o Motor organi
 (não prosa de orientação). Comando: `/structure`. Specs: `docs/STRUCTURE-SPEC.md` (regras S/DS) e
 `docs/STRUCTURE-MIGRATION.md` (tiers). Procedimento provider-neutro: `automation/procedures/structure.md`.
 
-**Perfis** (`structure-profiles/<perfil>/`): `next-app` (App Router, colocação C:
-`_components/_actions/_data-access` por rota + `components/{ui,shared}` promovido) e `generico`
-(fallback por feature). Cada perfil tem `blueprint.md` + `rules/` (fonte única, provider-neutra).
+**Perfis** (`structure-profiles/<perfil>/`): `next-app`, `node-api`, `python-fastapi` e `generico`. Cada perfil tem `blueprint.md` + `rules/` (fonte única, provider-neutra).
 
 **Regra única → todos os agentes.** As regras com escopo por glob vivem uma vez em
-`structure-profiles/<perfil>/rules/*.md` e são transpiladas por `scripts/emit-rules.sh` para o
+`structure-profiles/<perfil>/rules/*.md` e são transpiladas por `scripts/emit-rules.mjs` (ou `emit-rules.sh`) para o
 formato nativo de cada agente: Cursor (`.cursor/rules/*.mdc`), Copilot
-(`.github/instructions/*.instructions.md`). O cérebro sempre-ativo é o `AGENTS.md` (lido nativamente
-por Cursor, Copilot, Codex/ChatGPT e Gemini). `scripts/check-rules-sync.sh` + CI garantem que o
+(`.github/instructions/*.instructions.md`) e Claude (`.claude/rules/*.md`). O cérebro sempre-ativo é o `AGENTS.md` (lido nativamente
+por Cursor, Copilot, Codex/ChatGPT e Gemini). `scripts/check-rules-sync.mjs` + CI garantem que o
 emitido nunca divirja da fonte (DS1) — mesma disciplina anti-drift da D5.
 
 **Projeto implantado = Tier 0 por padrão.** Instala só `AGENTS.md` + regras (código intocado; tudo

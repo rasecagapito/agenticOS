@@ -617,9 +617,18 @@ test('install: cria ficha, script, procedimento, comando, blocos; idempotente', 
   const ler = (p) => fs.readFileSync(path.join(dir, p), 'utf8');
   assert.equal(JSON.parse(ler('.agentic-os/governanca.json')).repo, 'dono/app');
   assert.ok(fs.existsSync(path.join(dir, '.agentic-os/bin/github-setup.mjs')));
+  assert.ok(fs.existsSync(path.join(dir, '.agentic-os/bin/paridade.mjs')));
   for (const m of fs.readdirSync(GOV)) assert.ok(fs.existsSync(path.join(dir, '.agentic-os/bin/governanca', m)), m);
   assert.ok(fs.existsSync(path.join(dir, 'automation/procedures/cartao.md')));
+  assert.ok(fs.existsSync(path.join(dir, 'automation/procedures/versao.md')));
+  assert.ok(fs.existsSync(path.join(dir, 'automation/procedures/sprint.md')));
+  assert.ok(fs.existsSync(path.join(dir, 'automation/procedures/paridade.md')));
   assert.ok(ler('.claude/commands/cartao.md').split('\n').length <= 6);
+  assert.ok(ler('.claude/commands/versao.md').split('\n').length <= 6);
+  assert.ok(ler('.claude/commands/sprint.md').split('\n').length <= 6);
+  assert.ok(ler('.claude/commands/paridade.md').split('\n').length <= 6);
+  assert.ok(ler('.claude/commands/governanca-update.md').split('\n').length <= 6);
+  assert.match(ler('.gitignore'), /^\.agentic-os\/prd\/$/m);
   assert.ok(fs.existsSync(path.join(dir, 'docs/tasks/README.md')));
   assert.match(ler('automation/guardrails.md'), /- regra antiga[\s\S]*agentic-os:governanca:start[\s\S]*Sem assinatura/);
   assert.match(ler('.github/CODEOWNERS'), /^docs\/ @escritor\n[\s\S]*^\* @analista @outra$/m);
@@ -672,4 +681,42 @@ test('install: trocar de repo ou Project descarta ids e proteção antigos', asy
   assert.deepEqual(salva.colunas_ids, {});
   assert.equal(salva.protecao_aplicada, null);
   assert.equal(salva.project.id, '');
+});
+
+test('v2.0: ficha 5 colunas scrum, comandosSuspeitos prod, cardBlock e cardQueue', async () => {
+  const { validarFicha } = await imp('ficha.mjs');
+  const { comandosSuspeitos } = await imp('hom.mjs');
+  const { cardBlock, cardQueue } = await imp('cartao.mjs');
+  const fScrum = fichaPadrao({
+    modo_colunas: 'scrum',
+    repo: 'dono/app',
+    project: { owner: 'dono', number: 3, url: 'https://github.com/users/dono/projects/3', id: 'PVT_1', campo_status_id: 'FLD_S' },
+    analistas: ['analista'],
+  });
+  assert.deepEqual(Object.keys(fScrum.colunas), ['backlog', 'a_fazer', 'em_andamento', 'em_validacao', 'concluido']);
+  assert.deepEqual(validarFicha(fScrum), []);
+  assert.deepEqual(comandosSuspeitos({ deploy_hom: 'vercel --prod', ambientes: { prd: 'prd' } }), ['deploy_hom']);
+  assert.deepEqual(comandosSuspeitos({ deploy_hom: 'deploy --production', ambientes: { prd: 'prd' } }), ['deploy_hom']);
+
+  const c = cenario([
+    ok('^project item-list 3', {
+      items: [
+        { id: 'I1', status: 'A Fazer', Tamanho: 3, Camada: 'Back-end', content: { number: 11, title: 'Corrige bug login', repository: 'dono/app' }, labels: ['bug'] },
+        { id: 'I2', status: 'A Fazer', Tamanho: 2, Camada: 'Front End', content: { number: 12, title: 'Tela de filtro', repository: 'dono/app' }, labels: [] },
+        { id: 'I8', status: 'A Fazer', Tamanho: 8, Camada: 'Back-end', content: { number: 13, title: 'Reescrita', repository: 'dono/app' }, labels: [] },
+      ],
+    }),
+    ok('^issue comment 11', ''),
+  ]);
+  const q = cardQueue({ ...fScrum, deploy_hom: 'npm run deploy:hom' }, [11, 12]);
+  assert.equal(q.total, 2);
+  assert.equal(q.fila[0].tipo, 'fix');
+  assert.equal(q.fila[0].publicar_hom_automatico, true);
+  assert.equal(q.fila[1].tipo, 'feature');
+  assert.equal(q.fila[1].publicar_hom_automatico, false);
+  assert.throws(() => cardQueue(fScrum, [13]), (e) => e.codigo === 'TAMANHO_OITO_SEM_QUEBRA');
+
+  const blk = cardBlock(fScrum, 11, { motivo: 'API externa fora' });
+  assert.equal(blk.motivo, 'API externa fora');
+  assert.match(c.chamadas().find((x) => x.args[0] === 'issue').args.join(' '), /BLOQUEIO: API externa fora/);
 });

@@ -201,3 +201,25 @@ test('sem roteador: mesmo layout do projeto com roteador, com seções vazias ex
   for (const key of ['status', 'wrapup', 'handoff']) expect(await ui.find({ type: 'Button', key })).toBeDefined()
   await ui.unmount()
 })
+
+test('governança ativa e alerta de chave Jev aparecem no painel', async ($, on) => {
+  const govLog = [
+    { ts: hoje, sessao: 's-atual', tipo: 'decisao', origem: 'fallback', subagente: 'profundo', modelo: 'Opus', erro: 'sem TYPESAFE_API_KEY', aviso_chave: true, jev_ms: 0 },
+  ]
+    .map(e => JSON.stringify(e))
+    .join('\n')
+  on('fs.read', (_, e) => {
+    if (e.path === '.agentic-os/governanca.json') {
+      return { value: JSON.stringify({ repo: 'dono/app', branch_principal: 'main', project: { number: 7 } }) }
+    }
+    return { value: govLog }
+  })
+  on('fs.exists', () => ({ value: true }))
+  on('command.list', () => ({ value: [cmd('status'), cmd('wrapup'), cmd('handoff'), cmd('cartao')] }))
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'vscode' })
+  expect((await ui.find({ type: 'Text', text: /Chave do Jev ausente ou recusada/ }))?.text).toBeDefined()
+  expect((await ui.find({ type: 'Text', text: /dono\/app · main · Project #7/ }))?.text).toBeDefined()
+  expect(await ui.find({ type: 'Button', key: 'cartao' })).toBeDefined()
+  await ui.unmount()
+})

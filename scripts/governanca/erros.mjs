@@ -50,6 +50,22 @@ export const ERROS = {
   PR_CONFLITO: 'O GitHub diz que o PR não pode ser integrado (conflito ou branch atrás). Atualize a branch; o commit novo exige revisar, hom e assinatura de novo.',
   MERGE_RECUSADO: 'O GitHub recusou o merge. Leia o motivo: proteção da branch, permissão do token/App (contents: write) ou commit novo no PR.',
   CONFIRMACAO_CHAT: 'A assinatura foi pelo chat (sem prova do GitHub). O merge exige um "sim" novo do usuário, escrito por iniciativa dele (--confirmo-merge-chat).',
+  SEM_MERGE: 'O cartão ainda não foi integrado na branch principal. Rode /cartao merge <ID> antes do PRD.',
+  PRD_NAO_APROVADO: 'Publicação em PRD exige autorização explícita do usuário (--confirmo-prd) e aprovação do environment prd quando configurado.',
+  PRD_FALHOU: 'Uma etapa do PRD falhou. Veja o log em .agentic-os/prd/<ID>.log e confira antes de repetir.',
+  VERSAO_BLOQUEADA: 'Ainda há cartões pendentes no Project fora de Concluído. Conclua todos os cartões do escopo antes de fechar a versão.',
+  SEM_ENTREGAS_NOVAS: 'Não há cartões concluídos novos desde a última tag de versão.',
+  BRANCH_NAO_PRINCIPAL: 'A publicação de versão só pode rodar na branch principal limpa e sincronizada com origin.',
+  TAG_EXISTE: 'A tag desta versão já existe no repositório. Escolha outra versão ou remova o conflito.',
+  CONFIRMACAO_RELEASE: 'A publicação da versão no GitHub exige o "sim" explícito do usuário (--confirmo-release).',
+  PARIDADE_DIVERGENTE: 'Há diferenças abertas em paridade/<alvo>/diff.json. Corrija um grupo por vez até zerar antes de concluir.',
+  PARIDADE_INVALIDA: 'Configuração ou arquivo de paridade ausente/inválido (casos.csv, config.json ou diff.json).',
+  TAMANHO_OITO_SEM_QUEBRA: 'Cartão de tamanho 8 (muito grande/incerto) não entra na sprint nem em execução sem ser quebrado antes.',
+  MULTICAMADA_SEM_QUEBRA: 'Cartão mexe em várias camadas: quebre em sub-issues (uma por camada) antes de alocar.',
+  SPRINT_CAPACIDADE_EXCEDIDA: 'A soma de pontos da sprint excede a capacidade configurada (~30 pontos). Reduza ou mova para a próxima sprint.',
+  CAMPOS_SPRINT_AUSENTES: 'O GitHub Project não possui todos os campos de sprint (Funcionalidade, Camada, Tamanho, Iteração).',
+  CONFIRMACAO_SPRINT: 'Exiba a tabela de planejamento e só aplique no Project após o "ok" do usuário (--confirmo-sprint).',
+  CARTAO_BLOQUEADO: 'O cartão travou durante a execução e recebeu comentário BLOQUEIO: na issue.',
 };
 
 export class ErroGov extends Error {

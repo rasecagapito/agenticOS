@@ -115,7 +115,33 @@ Nunca aprove, reprove, comente como analista nem registre review por ele. Nunca 
 Liste os cartões em "A Fazer" e "Em andamento":
 `gh project item-list <project.number> --owner <project.owner> --format json` (valores da ficha).
 
+## `/cartao prd <ID>` — publicar em PRD (Parte 4b)
+
+1. Confirme que o cartão teve `/cartao merge <ID>` concluído e você está na branch principal limpa.
+2. `node .agentic-os/bin/github-setup.mjs card-prd <ID> --dry-run` → mostre o plano ao usuário.
+3. Só com a confirmação explícita ("sim") do usuário:
+   `node .agentic-os/bin/github-setup.mjs card-prd <ID> --confirmo-prd` (+ `--migracao-autorizada` se houver `migracao_prd`).
+   - `modo: manual` → peça para publicar em PRD e depois rode `--confirmo-prd --publicado-manual`.
+4. Sucesso: cartão movido para `Concluído` e issue `#<ID>` fechada explicitamente.
+
+## `/cartao tocar <ID1> [ID2 ...]` — execução autônoma em lote
+
+Executa 1 ou mais cartões do início ao fim **sem interromper o usuário** a cada passo intermediário, parando uma única vez ao final para validação e aprovação do merge.
+
+1. `node .agentic-os/bin/github-setup.mjs card-queue <ID1,ID2,...>` → valida que os cartões estão em `A Fazer`, têm `Tamanho < 8` e 1 única `Camada`, e infere `tipo` e `desc`.
+2. Para cada cartão da fila (sequencialmente, em sua própria branch):
+   a. Criar `changes/<ID>-<desc>/` (`proposal.md` com `## Cartão: #<ID>` e `## Critérios de aceite` extraídos da issue + `tasks.md`), sem pausar para aprovação intermediária.
+   b. `card-start <ID> --tipo <tipo> --desc "<desc>"` (cria branch + TASK + move para `Em andamento`).
+   c. Implementar completo via `/worker`, rodar testes (e `/paridade` se aplicável). Se o escopo crescer além do estimado, atualizar `Tamanho` e comentar o porquê na issue.
+   d. Rodar `/cartao revisar <ID>` e corrigir automaticamente até atingir **nota 10/10** (máx. 3 ciclos).
+   e. Rodar `card-pr <ID>` (push + PR com parecer do Supervisor).
+   f. Se for o 1º cartão elegível, `deploy_hom` automático existir, HOM livre e sem migração/PRD suspeito → rodar `card-hom <ID>` (move para `Em validação`). Caso contrário, deixar com PR aberto + Supervisor 10/10 pronto para o HOM.
+   g. **Resiliência:** se qualquer etapa travar (3 ciclos < 10, dependência externa ou erro sem saída), rodar `card-block <ID> --motivo "<motivo>"` (comenta `BLOQUEIO:` na issue), preservar a branch e **seguir para o próximo cartão**.
+3. Ao fim da fila, apresentar **um único relatório consolidado** (cartões prontos com link do PR, branch, nota do Supervisor, status HOM e o que validar + eventuais bloqueados) aguardando a revisão/aprovação do analista para `/cartao assinatura` e `/cartao merge`.
+
+**Travas preservadas no modo autônomo:** nunca aprovar PR, nunca fazer merge sem assinatura, nunca publicar em PRD e nunca rodar migração destrutiva ou comando citando PRD sem `"sim"`.
+
 ## Proibido (ver `automation/guardrails.md`)
 
 Push na branch principal; merge fora do `/cartao merge`; aprovar PR (próprio ou alheio); alterar regras de proteção do GitHub
-para contornar aprovação; assinar ou simular aprovação em nome do analista.
+para contornar aprovação; assinar ou simular aprovação em nome do analista; fechar issue sem atualizar o Project.

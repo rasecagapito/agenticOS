@@ -1,0 +1,8 @@
+{
+  "alvo": "relatorio-exemplo",
+  "ignorar_ordem": true,
+  "casas_decimais": 2,
+  "colunas_ignoradas": ["gerado_em"],
+  "comando_antigo": "node tools/consulta-antiga.mjs",
+  "comando_novo": "node tools/consulta-nova.mjs"
+}

@@ -63,13 +63,18 @@ export function instalar(dest, ficha, { dryRun = false } = {}) {
   escrever(ARQ_FICHA, JSON.stringify(mesclarFicha(ficha, antiga), null, 2) + '\n');
 
   escrever('.agentic-os/bin/github-setup.mjs', fs.readFileSync(path.join(REPO, 'scripts', 'github-setup.mjs'), 'utf8'));
+  escrever('.agentic-os/bin/paridade.mjs', fs.readFileSync(path.join(REPO, 'scripts', 'paridade.mjs'), 'utf8'));
   for (const f of fs.readdirSync(path.join(REPO, 'scripts', 'governanca')))
     escrever(`.agentic-os/bin/governanca/${f}`, fs.readFileSync(path.join(REPO, 'scripts', 'governanca', f), 'utf8'));
   const versao = JSON.parse(fs.readFileSync(path.join(REPO, '.claude-plugin', 'plugin.json'), 'utf8')).version;
   escrever('.agentic-os/bin/VERSION', `${versao}\n`);
 
-  escrever('automation/procedures/cartao.md', lerSrc('automation/procedures/cartao.md'));
-  escrever('.claude/commands/cartao.md', lerSrc('.claude/commands/cartao.md'));
+  for (const proc of ['cartao.md', 'versao.md', 'sprint.md', 'paridade.md']) {
+    escrever(`automation/procedures/${proc}`, lerSrc(`automation/procedures/${proc}`));
+  }
+  for (const cmd of ['cartao.md', 'versao.md', 'sprint.md', 'paridade.md', 'governanca-update.md']) {
+    escrever(`.claude/commands/${cmd}`, lerSrc(`.claude/commands/${cmd}`));
+  }
   escrever('.claude/agents/supervisor.md', lerSrc('.claude/agents/supervisor.md'));
   if (!fs.existsSync(path.join(dest, 'docs/tasks/README.md'))) escrever('docs/tasks/README.md', lerSrc('docs/tasks/README.md'));
 
@@ -77,7 +82,7 @@ export function instalar(dest, ficha, { dryRun = false } = {}) {
   const hash = (s) => `# ${s}`;
   const donos = ficha.analistas.map((l) => `@${l}`).join(' ');
   escrever('.github/CODEOWNERS', upsertBloco(ler('.github/CODEOWNERS'), 'governanca', `* ${donos}`, hash));
-  escrever('.gitignore', upsertBloco(ler('.gitignore'), 'governanca', '.agentic-os/wizard-estado.json\n.agentic-os/supervisor/\n.agentic-os/hom/', hash));
+  escrever('.gitignore', upsertBloco(ler('.gitignore'), 'governanca', '.agentic-os/wizard-estado.json\n.agentic-os/supervisor/\n.agentic-os/hom/\n.agentic-os/prd/', hash));
   return { ok: true, dry_run: dryRun, plano };
 }
 

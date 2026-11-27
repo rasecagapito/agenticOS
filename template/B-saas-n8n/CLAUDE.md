@@ -37,10 +37,11 @@ Carregar apenas o necessário para a tarefa:
 | Comando | Ação |
 |---------|------|
 | /propose [nome] | Criar mudança estruturada em changes/ |
+| /worker [nome] | Ativar especialista para executar a mudança ativa |
 | /wrapup | Consolidar sessão + arquivar mudança ativa |
 | /status  | Estado atual: features pendentes, bugs, deploys |
-| /review [arquivo] | Code review focado |
-| /novo-workflow | Criar novo workflow n8n com template padrão |
+| /conform | Auditar/corrigir conformidade (loop A/B) |
+| /structure | Auditar/montar estrutura da aplicação |
 
 ## Estado do Projeto
 - **Fase atual**: [MVP / BETA / PRODUÇÃO]

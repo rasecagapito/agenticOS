@@ -7,12 +7,16 @@ const PANE = 'agentic-os-painel'
 const TITLE = 'Agentic OS'
 const LOG = '.claude/router/decisions.jsonl'
 const CONFIG = '.claude/router/config.json'
+const GOV = '.agentic-os/governanca.json'
 
 // Muda o tag quando os campos de Run mudarem: valores de versões antigas são descartados.
-const runs = atom({ plugin: 'agentic-os-painel', key: 'runs' } as const, [] as Run[], { shape: 'runs-3' })
+const runs = atom({ plugin: 'agentic-os-painel', key: 'runs' } as const, [] as Run[], { shape: 'runs-4' })
 const consumo = atom({ plugin: 'agentic-os-painel', key: 'consumo' } as const, { usd: null, ctx: null } as Consumo, {
   shape: 'consumo-1',
 })
+
+// Cache em memória por agent_id (invalidado quando o mesmo subagente termina/retoma no SubagentStop).
+const transcriptCache = new Map<string, { path: string; real: number; opus: number }>()
 
 // Preços US$ por milhão de tokens (fonte: tabela oficial Anthropic, 2026-10). Escrita de cache = 1,25× entrada.
 // Edite aqui quando os preços mudarem. A ordem importa: o primeiro padrão que casar vale.
@@ -77,10 +81,15 @@ export function somaTranscript(texto: string): { real: number; opus: number } {
   return { real, opus }
 }
 
-export const usd = (v: number) => `US$ ${v < 0.01 && v > 0 ? v.toFixed(4) : v.toFixed(2)}`
+export const usd = (v: number) => {
+  const abs = Math.abs(v)
+  const sinal = v < 0 ? '-' : ''
+  return `${sinal}US$ ${abs < 0.01 && abs > 0 ? abs.toFixed(4) : abs.toFixed(2)}`
+}
 
 type Decisao = {
   ts?: string
+  sessao?: string | null
   tipo?: string
   origem?: string
   subagente?: string | null
@@ -89,6 +98,8 @@ type Decisao = {
   escolha_jev?: string
   confianca?: number | null
   jev_ms?: number
+  erro?: string
+  aviso_chave?: boolean
 }
 
 // Mesmo texto da statusline do roteador.
@@ -107,8 +118,12 @@ export function segmento(e: Decisao | undefined): string {
 
 export function resumoLog(texto: string, hoje = new Date()) {
   const porAgente: Record<string, number> = {}
+  const jevPorSessao: Record<string, number> = {}
   let jevChamadas = 0
   let ultima: Decisao | undefined
+  let ultimaSessao: string | null = null
+  let avisoChave = false
+  const hojeStr = hoje.toDateString()
   for (const linha of texto.split('\n')) {
     if (!linha.trim()) continue
     let e: Decisao
@@ -119,26 +134,36 @@ export function resumoLog(texto: string, hoje = new Date()) {
     }
     if ((e.tipo !== 'decisao' && e.tipo !== 'escalonamento') || !e.subagente || e.origem === 'envelope') continue
     ultima = e
-    if (!e.ts || new Date(e.ts).toDateString() !== hoje.toDateString()) continue
+    if (e.sessao) ultimaSessao = e.sessao
+    if (e.aviso_chave || /^(sem |HTTP (401|403)\b)/.test(e.erro || '')) avisoChave = true
+    else if (e.origem === 'jev' && !e.erro) avisoChave = false
+    if (!e.ts || new Date(e.ts).toDateString() !== hojeStr) continue
     if (e.tipo === 'decisao') {
       porAgente[e.subagente] = (porAgente[e.subagente] ?? 0) + 1
-      if ((e.jev_ms ?? 0) > 0) jevChamadas++
+      if ((e.jev_ms ?? 0) > 0) {
+        jevChamadas++
+        if (e.sessao) jevPorSessao[e.sessao] = (jevPorSessao[e.sessao] ?? 0) + 1
+      }
     }
   }
-  return { porAgente, jevChamadas, ultima }
+  const jevSessao = ultimaSessao ? (jevPorSessao[ultimaSessao] ?? 0) : jevChamadas
+  return { porAgente, jevChamadas, jevSessao, ultima, avisoChave }
 }
 
 type Atalho = { rotulo: string; command: string; args?: string }
 
 // Para cada ação: comando próprio do projeto (/status) se existir; senão a skill do plugin
 // (/agentic-os:agentic-os /status). Os três botões aparecem em todo projeto, para o painel ser igual em todos.
-export function atalhos(nomes: string[]): Atalho[] {
+export function atalhos(nomes: string[], comGovernanca = false): Atalho[] {
   const set = new Set(nomes)
   const skill = nomes.find(n => n === 'agentic-os:agentic-os') ?? nomes.find(n => /(^|:)agentic-os$/.test(n))
   const out: Atalho[] = []
   for (const acao of ['status', 'wrapup', 'handoff']) {
     if (set.has(acao)) out.push({ rotulo: `/${acao}`, command: acao })
     else if (skill) out.push({ rotulo: `/${acao}`, command: skill, args: `/${acao}` })
+  }
+  if (comGovernanca && set.has('cartao')) {
+    out.push({ rotulo: '/cartao', command: 'cartao' })
   }
   return out
 }
@@ -149,6 +174,8 @@ async function abrirSeHouverTela($: EngineInterface) {
   const telas = await $.session.surfaces().catch(() => [])
   if (telas.length > 0) await $.ui.open({ id: PANE, title: TITLE }).catch(() => undefined)
 }
+
+type FichaGov = { repo?: string; branch_principal?: string; project?: { number?: number } }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -170,9 +197,10 @@ export const register: Register = on => {
 
   // Guarda o registro de cada subagente que termina, em primeiro ou segundo plano. O resultado do Agent não
   // serve: em segundo plano volta `async_launched`, sem `usage`. A soma fica para o desenho: neste evento a
-  // última resposta ainda não foi gravada por inteiro. Retomado, o subagente substitui a linha, não soma de novo.
+  // última resposta ainda não foi gravada por inteiro. Retomado, o subagente invalida o cache e substitui a linha.
   on('classic.SubagentStop', async ($, e, next) => {
     const r = await next(e)
+    transcriptCache.delete(e.agent_id)
     const run: Run = { id: e.agent_id, agent: e.agent_type, path: e.agent_transcript_path }
     await update($, runs, list => [...list.filter(x => x.id !== run.id), run].slice(-500))
     return r
@@ -202,27 +230,44 @@ export const register: Register = on => {
       /* roteador ainda sem registro */
     }
     const temRoteador = log !== '' || (await $.fs.exists(CONFIG).catch(() => false))
-    const { porAgente, jevChamadas, ultima } = resumoLog(log)
+    const { porAgente, jevSessao, ultima, avisoChave } = resumoLog(log)
+
+    let gov: FichaGov | null = null
+    if (await $.fs.exists(GOV).catch(() => false)) {
+      try {
+        const parsed = JSON.parse(await $.fs.read(GOV))
+        if (parsed && typeof parsed === 'object' && parsed.repo) gov = parsed
+      } catch {
+        /* ficha ilegível ou não JSON */
+      }
+    }
 
     let real = 0
     let opus = 0
     let semDados = 0
     for (const run of lista) {
+      const cached = transcriptCache.get(run.id)
+      if (cached && cached.path === run.path) {
+        real += cached.real
+        opus += cached.opus
+        continue
+      }
       try {
         const t = somaTranscript(await $.fs.read(run.path))
+        transcriptCache.set(run.id, { path: run.path, real: t.real, opus: t.opus })
         real += t.real
         opus += t.opus
       } catch {
         semDados++ // registro ausente ou acima do limite de leitura (4 MiB): fora da conta, sem valor inventado
       }
     }
-    const jev = jevChamadas * JEV_POR_DECISAO
+    const jev = jevSessao * JEV_POR_DECISAO
     const economia = opus - real - jev
     const pct = opus > 0 ? Math.round((economia / opus) * 100) : 0
     const total = Object.values(porAgente).reduce((s, n) => s + n, 0)
 
     const nomes = (await $.command.list().catch(() => [])).map(c => c.name)
-    const botoes = atalhos(nomes)
+    const botoes = atalhos(nomes, !!gov)
     const rodar = (a: Atalho) => () => {
       $.command
         .run({ command: a.command, args: a.args })
@@ -237,33 +282,44 @@ export const register: Register = on => {
         <Text> </Text>
         {/* Mesmo layout em todo projeto: sem roteador, as seções aparecem e dizem por que estão vazias. */}
         <Box flexDirection="column">
-            <Text bold>Economia nesta sessão</Text>
-            {lista.length === 0 ? (
-              <Text dimColor>Nenhum subagente concluído ainda.</Text>
-            ) : (
-              <Box flexDirection="column">
-                <Text>
-                  {usd(economia)} economizados ({pct}%)
-                </Text>
-                <Text dimColor>Gasto real: {usd(real)}</Text>
-                <Text dimColor>Se tudo fosse Opus: {usd(opus)}</Text>
-                <Text dimColor>
-                  Jev: ≈{usd(jev)} · {lista.length} subagente(s)
-                </Text>
-                {semDados > 0 && <Text dimColor>{semDados} subagente(s) sem dados de consumo, fora da conta</Text>}
-              </Box>
-            )}
-            <Text> </Text>
-            <Text bold>Decisões de hoje ({total})</Text>
-            {['rapido', 'padrao', 'profundo'].map(a => (
+          <Text bold>Economia nesta sessão</Text>
+          {lista.length === 0 ? (
+            <Text dimColor>Nenhum subagente concluído ainda.</Text>
+          ) : (
+            <Box flexDirection="column">
               <Text>
-                {a.padEnd(9)} {'█'.repeat(Math.min(12, porAgente[a] ?? 0))} {porAgente[a] ?? 0}
+                {usd(economia)} economizados ({pct}%)
               </Text>
-            ))}
-            <Text dimColor>
-              {temRoteador ? `Última: ${segmento(ultima)}` : 'Roteador de modelos não instalado neste projeto.'}
+              <Text dimColor>Gasto real: {usd(real)}</Text>
+              <Text dimColor>Se tudo fosse Opus: {usd(opus)}</Text>
+              <Text dimColor>
+                Jev: ≈{usd(jev)} · {lista.length} subagente(s)
+              </Text>
+              {semDados > 0 && <Text dimColor>{semDados} subagente(s) sem dados de consumo, fora da conta</Text>}
+            </Box>
+          )}
+          <Text> </Text>
+          <Text bold>Decisões de hoje ({total})</Text>
+          {['rapido', 'padrao', 'profundo'].map(a => (
+            <Text key={a}>
+              {a.padEnd(9)} {'█'.repeat(Math.min(12, porAgente[a] ?? 0))} {porAgente[a] ?? 0}
             </Text>
+          ))}
+          <Text dimColor>
+            {temRoteador ? `Última: ${segmento(ultima)}` : 'Roteador de modelos não instalado neste projeto.'}
+          </Text>
+          {avisoChave && <Text>⚠️ Chave do Jev ausente ou recusada (ver TYPESAFE_API_KEY).</Text>}
         </Box>
+        {gov && (
+          <Box flexDirection="column">
+            <Text> </Text>
+            <Text bold>Governança</Text>
+            <Text dimColor>
+              {gov.repo} · {gov.branch_principal || 'main'}
+              {gov.project?.number ? ` · Project #${gov.project.number}` : ''}
+            </Text>
+          </Box>
+        )}
         <Text> </Text>
         {botoes.length === 0 ? (
           <Text dimColor>Comandos do Agentic OS não encontrados (instale o plugin agentic-os).</Text>

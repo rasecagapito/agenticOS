@@ -1,5 +1,13 @@
 // Colunas do GitHub Project (opções do campo Status).
-export const COLUNAS_PADRAO = {
+export const COLUNAS_SCRUM = {
+  backlog: 'Backlog',
+  a_fazer: 'A Fazer',
+  em_andamento: 'Em andamento',
+  em_validacao: 'Em validação',
+  concluido: 'Concluído',
+};
+
+export const COLUNAS_COMPLETAS = {
   backlog: 'Backlog',
   a_fazer: 'A Fazer',
   em_andamento: 'Em andamento',
@@ -9,16 +17,21 @@ export const COLUNAS_PADRAO = {
   bloqueado: 'Bloqueado',
 };
 
+// Compatibilidade com fichas existentes (7 colunas) e opção de 5 colunas Scrum.
+export const COLUNAS_PADRAO = COLUNAS_COMPLETAS;
+
+export const colunasParaModo = (modo = 'completo') => (modo === 'scrum' ? { ...COLUNAS_SCRUM } : { ...COLUNAS_COMPLETAS });
+
 export const norm = (s) =>
   String(s ?? '')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .trim()
     .toLowerCase();
 
 export function colunasFaltantes(opcoes, colunas) {
   const tem = new Set(opcoes.map((o) => norm(o.name)));
-  return Object.values(colunas).filter((n) => !tem.has(norm(n)));
+  return Object.values(colunas).filter((n) => n && !tem.has(norm(n)));
 }
 
 // A API substitui a lista inteira: as existentes vão primeiro, com id (sem id o GitHub recria a opção e

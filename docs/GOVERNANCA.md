@@ -24,8 +24,11 @@
    projeto poder ser o analista — veja a seção "Identidade do agente".
 
 10. **`/cartao merge <ID>`**: integra na `main` só com a assinatura válida do commit atual — veja "Merge (Parte 4a)".
-
-Próxima parte: publicação PRD (4b).
+11. **`/cartao prd <ID>` (Parte 4b)**: publica em PRD com confirmação explícita, move o cartão para `Concluído` e fecha a issue.
+12. **`/cartao tocar <ID1> [ID2 ...]`**: executa 1 ou mais cartões autonomamente até validação/merge, comentando `BLOQUEIO:` se algum travar.
+13. **`/versao verificar|publicar`**: fecha `v1.0.0` e novas versões SemVer com tag + Release no GitHub quando todos os cartões do escopo estão em `Concluído`.
+14. **`/sprint`** e **`/paridade`**: planejamento de sprints nos campos do GitHub Project (Ágil · Scrum Master) e oracle testing (`diff.json` zerado como critério `B5` no Supervisor).
+15. **`/governanca-update`**: atualiza `.agentic-os/bin/` e procedimentos da camada F preservando `governanca.json`.
 
 ## Supervisor (Parte 2)
 

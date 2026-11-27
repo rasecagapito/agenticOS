@@ -1,0 +1,6 @@
+data_inicio,data_fim,filial,cenario,incluir_cancelados,cliente_com_devolucao
+2026-01-01,2026-01-31,01,mes_fechado,nao,nao
+2026-01-01,2026-01-31,01,com_devolucao,nao,sim
+2026-01-01,2026-01-31,02,com_cancelados,sim,nao
+2026-02-01,2026-02-28,01,bissexto_ou_curto,nao,nao
+2026-03-01,2026-03-31,99,filial_sem_movimento,nao,nao

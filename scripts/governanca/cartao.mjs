@@ -12,12 +12,16 @@ import { arquivosSujos, exigirRevisao, secaoSupervisor } from './supervisor.mjs'
 export function acharCartao(ficha, id) {
   const { owner, number } = ficha.project;
   const lista = ghJson(['project', 'item-list', String(number), '--owner', owner, '--format', 'json', '--limit', '1000']);
+  const items = lista?.items || [];
   const repo = ficha.repo.toLowerCase();
-  const item = (lista?.items || []).find(
+  const item = items.find(
     (i) => i.content?.number === Number(id) && (!i.content.repository || String(i.content.repository).toLowerCase() === repo),
   );
-  if (!item) throw new ErroGov('CARTAO_INEXISTENTE', `Cartão #${id} não encontrado no Project ${ficha.project.url}.`);
-  return { itemId: item.id, titulo: item.content.title || item.title || `cartao-${id}`, status: item.status || '' };
+  if (!item) {
+    const aviso = items.length >= 1000 ? ' (atenção: Project atingiu 1000 itens retornados; arquive cartões antigos)' : '';
+    throw new ErroGov('CARTAO_INEXISTENTE', `Cartão #${id} não encontrado no Project ${ficha.project.url}.${aviso}`);
+  }
+  return { itemId: item.id, titulo: item.content.title || item.title || `cartao-${id}`, status: item.status || '', labels: item.labels || [] };
 }
 
 export function moverCartao(ficha, itemId, chave) {
@@ -187,4 +191,52 @@ export function cardPr(cwd, ficha, id, { dryRun = false } = {}) {
     }
   }
   return { ok: true, branch: atual, pr: url, acoes };
+}
+
+export function cardBlock(ficha, id, { motivo = '' } = {}) {
+  if (!/^\d+$/.test(String(id))) throw new ErroGov('PARAMETRO', 'O ID do cartão é o número da issue.');
+  const txt = String(motivo || '').trim();
+  if (!txt) throw new ErroGov('PARAMETRO', '--motivo é obrigatório para registrar bloqueio.');
+  const c = acharCartao(ficha, id);
+  gh(['issue', 'comment', String(id), '--repo', ficha.repo, '--body', `BLOQUEIO: ${txt}`]);
+  if (ficha.colunas?.bloqueado && ficha.colunas_ids?.bloqueado) {
+    moverCartao(ficha, c.itemId, 'bloqueado');
+  }
+  return { ok: true, id: Number(id), status: ficha.colunas?.bloqueado && ficha.colunas_ids?.bloqueado ? ficha.colunas.bloqueado : c.status, motivo: txt };
+}
+
+// Prepara uma fila ordenada de 1..N cartões para execução autônoma contínua (/cartao tocar).
+export function cardQueue(ficha, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) throw new ErroGov('PARAMETRO', 'Informe ao menos um ID de cartão.');
+  const { owner, number } = ficha.project;
+  const lista = ghJson(['project', 'item-list', String(number), '--owner', owner, '--format', 'json', '--limit', '1000']);
+  const items = lista?.items || [];
+  const repo = ficha.repo.toLowerCase();
+  const fila = [];
+  for (const rawId of ids) {
+    if (!/^\d+$/.test(String(rawId))) throw new ErroGov('PARAMETRO', `ID inválido na fila: ${rawId}`);
+    const n = Number(rawId);
+    const item = items.find((i) => i.content?.number === n && (!i.content.repository || String(i.content.repository).toLowerCase() === repo));
+    if (!item) throw new ErroGov('CARTAO_INEXISTENTE', `Cartão #${n} não encontrado no Project ${ficha.project.url}.`);
+    if (norm(item.status) !== norm(ficha.colunas.a_fazer))
+      throw new ErroGov('CARTAO_FORA_DE_A_FAZER', `Cartão #${n} está em "${item.status || 'sem coluna'}"; a fila autônoma exige "${ficha.colunas.a_fazer}".`);
+    const tam = item[ficha.sprint?.campos?.tamanho || 'Tamanho'] ?? item.tamanho;
+    if (Number(tam) === 8) throw new ErroGov('TAMANHO_OITO_SEM_QUEBRA', `Cartão #${n} tem Tamanho 8 e precisa ser quebrado antes de executar.`);
+    const cam = item[ficha.sprint?.campos?.camada || 'Camada'] ?? item.camada;
+    if (Array.isArray(cam) && cam.length > 1) throw new ErroGov('MULTICAMADA_SEM_QUEBRA', `Cartão #${n} tem múltiplas camadas e precisa ser quebrado.`);
+    const titulo = item.content?.title || item.title || `cartao-${n}`;
+    const labels = (item.labels || []).map((l) => String(typeof l === 'string' ? l : l?.name || '').toLowerCase());
+    const tipo = labels.some((l) => /\b(bug|fix|hotfix)\b/.test(l)) || /\b(bug|corrig|fix|erro|falha)\b/i.test(titulo) ? 'fix' : 'feature';
+    const d = slug(titulo) || `cartao-${n}`;
+    fila.push({
+      id: n,
+      titulo,
+      tipo,
+      desc: d,
+      branch: nomeBranch(ficha, tipo, n, d),
+      task: caminhoTask(n, d),
+      publicar_hom_automatico: fila.length === 0 && !!ficha.deploy_hom,
+    });
+  }
+  return { ok: true, total: fila.length, deploy_hom_automatico: !!ficha.deploy_hom, fila };
 }

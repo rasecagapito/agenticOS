@@ -1,19 +1,21 @@
 // Ficha de governança do projeto (.agentic-os/governanca.json). Nunca guarda segredo.
 import fs from 'node:fs';
 import path from 'node:path';
-import { COLUNAS_PADRAO } from './colunas.mjs';
+import { COLUNAS_COMPLETAS, COLUNAS_SCRUM, colunasParaModo } from './colunas.mjs';
 import { ErroGov } from './erros.mjs';
 
 export const ARQ_FICHA = '.agentic-os/governanca.json';
 const SEGREDO = /token|secret|senha|password|api_?key|credencial/i;
 
 export function fichaPadrao(parcial = {}) {
+  const modo = parcial?.modo_colunas === 'scrum' ? 'scrum' : 'completo';
+  const colunas = parcial?.colunas || colunasParaModo(modo);
   return {
     versao: 1,
     repo: '',
     branch_principal: 'main',
     project: { owner: '', number: 0, url: '', id: '', campo_status_id: '' },
-    colunas: { ...COLUNAS_PADRAO },
+    colunas,
     colunas_ids: {},
     analistas: [],
     ambientes: { hom: 'hom', prd: 'prd' },
@@ -26,6 +28,18 @@ export function fichaPadrao(parcial = {}) {
     testes_hom: null,
     url_hom: null,
     limite_hom_min: 30,
+    deploy_prd: null,
+    migracao_prd: null,
+    testes_prd: null,
+    url_prd: null,
+    limite_prd_min: 30,
+    comando_paridade: null,
+    paridade_dir: 'paridade',
+    versoes: { ignorar_backlog: true, prefixo_tag: 'v' },
+    sprint: {
+      capacidade_pontos: 30,
+      campos: { funcionalidade: 'Funcionalidade', camada: 'Camada', tamanho: 'Tamanho', iteracao: 'Iteração' },
+    },
     identidade_agente: { modo: 'nenhuma', token_env: 'AGENTIC_OS_GH_TOKEN', app_id: null, chave_privada_env: 'AGENTIC_OS_APP_KEY_PATH' },
     aprovacao_pelo_chat: false,
     ...parcial,
@@ -46,10 +60,17 @@ export function validarFicha(f) {
   if (!f?.project?.owner || !Number.isInteger(f.project.number) || f.project.number < 1)
     erros.push('project.owner e project.number são obrigatórios');
   if (!f?.branch_principal) erros.push('branch_principal ausente');
-  for (const k of Object.keys(COLUNAS_PADRAO)) if (!f?.colunas?.[k]) erros.push(`colunas.${k} ausente`);
+  for (const k of Object.keys(COLUNAS_SCRUM)) if (!f?.colunas?.[k]) erros.push(`colunas.${k} ausente`);
+  for (const k of Object.keys(COLUNAS_COMPLETAS)) {
+    if (k in COLUNAS_SCRUM) continue;
+    if (f?.colunas?.[k] !== undefined && f?.colunas?.[k] !== null && typeof f.colunas[k] !== 'string')
+      erros.push(`colunas.${k} inválida`);
+  }
   if (!Array.isArray(f?.analistas) || f.analistas.length === 0) erros.push('analistas: informe ao menos um login');
   if (!f?.ambientes?.hom || !f?.ambientes?.prd) erros.push('ambientes.hom e ambientes.prd são obrigatórios');
   if (!f?.prefixos_branch?.feature || !f?.prefixos_branch?.fix) erros.push('prefixos_branch.feature e .fix são obrigatórios');
+  if (f?.sprint?.capacidade_pontos !== undefined && !(Number(f.sprint.capacidade_pontos) > 0))
+    erros.push('sprint.capacidade_pontos deve ser maior que zero');
   const ia = f?.identidade_agente;
   if (ia !== undefined && ia !== null) {
     if (!['nenhuma', 'token', 'app'].includes(ia.modo)) erros.push('identidade_agente.modo deve ser nenhuma, token ou app');

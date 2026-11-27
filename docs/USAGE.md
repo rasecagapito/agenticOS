@@ -1,7 +1,7 @@
 # Agentic OS — Guia de Uso Completo
 
-> Documentação de uso do plugin **agentic-os** (v1.4.0+): instalação, conceitos, todos os
-> comandos com exemplos, e um capítulo dedicado ao **handoff e à orquestração de agentes**.
+> Documentação de uso do plugin **agentic-os** (v2.0.0): instalação, conceitos, todos os
+> comandos com exemplos, roteador de modelos, painel, governança GitHub (PRD, Sprints, Paridade, Versões) e orquestração de agentes.
 >
 > Documentos relacionados: [CHANGE-WORKFLOW](CHANGE-WORKFLOW.md) · [MULTI-PROVIDER](MULTI-PROVIDER.md) ·
 > [CONFORMANCE-SPEC](CONFORMANCE-SPEC.md) · [CONFORMANCE-LOOP](CONFORMANCE-LOOP.md) ·
@@ -153,6 +153,12 @@ execução → re-auditoria até `PASS`, máx. 3 ciclos):
 | `/conform` | "corre o conform" | `automation/procedures/conform.md` |
 | `/handoff` | "lê/atualiza o handoff" | `automation/procedures/handoff.md` |
 | `/structure` | "monta/audita a estrutura" | `automation/procedures/structure.md` |
+| `/cartao` | "fluxo completo do cartão" | `automation/procedures/cartao.md` |
+| `/versao` | "verifica/publica versão" | `automation/procedures/versao.md` |
+| `/sprint` | "planeja/atualiza sprint" | `automation/procedures/sprint.md` |
+| `/paridade` | "roda paridade do alvo" | `automation/procedures/paridade.md` |
+| `/governanca-update` | "atualiza governança" | `scripts/governanca/update.mjs` |
+| `/router-update` | "atualiza roteador" | `.claude/router/update.mjs` |
 
 ### 6.1 `/propose <nome>` — criar mudança estruturada
 
@@ -471,8 +477,8 @@ necessários aplicados + zero arquivos pré-existentes movidos/apagados sem apro
 Enquanto o resto organiza o **cérebro**, o Motor (`/structure`) organiza e audita o **código-fonte** —
 multi-stack e multi-agent, verificável.
 
-- **Perfis** em `structure-profiles/`: `next-app` (App Router; colocação híbrida C: `_components/_actions/_data-access` por rota + promoção de compartilhados) e `generico` (fallback por feature). Cada perfil = `blueprint.md` + `rules/` (fonte única provider-neutra).
-- **Regra única → todos os agentes**: `scripts/emit-rules.sh` transpila as regras para Cursor (`.cursor/rules/*.mdc`) e Copilot (`.github/instructions/*.instructions.md`). `scripts/check-rules-sync.sh` + CI garantem que o emitido nunca divirja da fonte (DS1).
+- **Perfis** em `structure-profiles/`: `next-app`, `node-api`, `python-fastapi` e `generico`. Cada perfil = `blueprint.md` + `rules/` (fonte única provider-neutra).
+- **Regra única → todos os agentes**: `scripts/emit-rules.mjs` (ou `emit-rules.sh`) transpila as regras para Cursor (`.cursor/rules/*.mdc`), Copilot (`.github/instructions/*.instructions.md`) e Claude (`.claude/rules/*.md`). `scripts/check-rules-sync.mjs` + CI garantem que o emitido nunca divirja da fonte (DS1).
 - **Regras verificáveis**: S1–S7 (perfil declarado, cérebro canônico, regras sincronizadas, colocação, server-first [WARN], validação Zod, auth em profundidade) + DS1–DS2 (fonte única, gate de build) em [STRUCTURE-SPEC](STRUCTURE-SPEC.md).
 - **Brownfield seguro** ([STRUCTURE-MIGRATION](STRUCTURE-MIGRATION.md)): Tier 0 (só convenções — default, risco zero) → Tier 1 (auditoria read-only) → Tier 2 (migração incremental por módulo, reference-safe, gate de build com rollback) → Tier 3 (reorg completo, raros casos).
 
@@ -552,4 +558,4 @@ ler/escrever em `memory/`, `changes/`, `projects/` é automático. Em dúvida �
 
 ---
 
-*Agentic OS v1.4.0 · Este guia vive em `docs/USAGE.md`; updates acompanham o RELEASE-NOTES.*
+*Agentic OS v2.0.0 · Este guia vive em `docs/USAGE.md`; detalhes de governança em `docs/GOVERNANCA.md` e roteador em `docs/ROUTER.md`.*

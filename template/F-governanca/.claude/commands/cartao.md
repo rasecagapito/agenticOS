@@ -1,4 +1,4 @@
 ---
-description: Fluxo do cartão do GitHub Project (branch → Supervisor → PR → HOM → assinatura → merge). Uso: /cartao <ID> | /cartao revisar <ID> | /cartao pr <ID> | /cartao hom <ID> | /cartao assinatura <ID> | /cartao merge <ID>
+description: Fluxo do cartão (branch → Supervisor → PR → HOM → assinatura → merge → PRD | execução autônoma). Uso: /cartao <ID> | revisar | pr | hom | assinatura | merge | prd | tocar <IDs>
 ---
 Siga `automation/procedures/cartao.md` com os argumentos: $ARGUMENTS

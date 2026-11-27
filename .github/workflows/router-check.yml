@@ -16,11 +16,15 @@ on:
 
 jobs:
   check-router:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Agentes sincronizados + testes do roteador
-        run: bash scripts/check-agents-sync.sh
+        run: node template/E-roteador/.claude/router/emit-agents.mjs --check && node --test scripts/tests/router.test.mjs

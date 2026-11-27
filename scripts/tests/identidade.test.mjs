@@ -1,8 +1,9 @@
 // Testes da identidade do agente. Rodar: node --test scripts/tests/identidade.test.mjs
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -207,14 +208,17 @@ test('identidade app: JWT RS256 válido, token de instalação, login <slug>[bot
   desativarIdentidade();
   const c = cenario([
     ok('repos/dono/app/installation$', { id: 9 }),
-    ok('-X POST .*app/installations/9/access_tokens$', { token: 'ghs_inst', expires_at: new Date(Date.now() + 3600000).toISOString() }),
-    ok(' app$', { slug: 'meu-agente' }),
+    ok('-X POST app/installations/9/access_tokens$', { token: 'ghs_inst', expires_at: new Date(Date.now() + 3600000).toISOString() }),
+    ok('^api app$', { slug: 'meu-agente' }),
     ok('^api user$', { login: 'nao-usar' }),
   ]);
   assert.deepEqual(ativarIdentidade(f), { modo: 'app', login: 'meu-agente[bot]' });
   assert.equal(loginAgente(), 'meu-agente[bot]');
-  const h = c.chamadas()[0].args.find((a) => a.startsWith('Authorization: Bearer '));
-  const [cab, carga, sig] = h.slice('Authorization: Bearer '.length).split('.');
+  // JWT nunca vai em argv do processo gh (vai apenas em GH_TOKEN no fake-gh ou via HTTP stdin no modo real)
+  for (const ch of c.chamadas()) {
+    assert.equal(ch.args.some((a) => /Authorization:\s*Bearer/i.test(a)), false);
+  }
+  const [cab, carga, sig] = c.chamadas()[0].gh_token.split('.');
   const dec = (s) => JSON.parse(Buffer.from(s, 'base64url').toString());
   assert.deepEqual(dec(cab), { alg: 'RS256', typ: 'JWT' });
   assert.equal(dec(carga).iss, '42');
@@ -232,4 +236,67 @@ test('identidade app: JWT RS256 válido, token de instalação, login <slug>[bot
   delete process.env.TESTE_APP_PEM;
   assert.throws(() => ativarIdentidade(f), (e) => e.codigo === 'APP_CHAVE_INVALIDA' && /TESTE_APP_PEM/.test(e.message));
   desativarIdentidade();
+});
+
+test('identidade app (HTTP real via stdin): troca JWT sem passar na linha de comando', async (t) => {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const pemArq = path.join(TMP, 'app-http.pem');
+  fs.writeFileSync(pemArq, privateKey.export({ type: 'pkcs1', format: 'pem' }));
+
+  const seenAuth = [];
+  const srv = http.createServer((req, res) => {
+    seenAuth.push(req.headers.authorization || '');
+    if (req.url === '/repos/dono/app/installation' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ id: 77 }));
+      return;
+    }
+    if (req.url === '/app/installations/77/access_tokens' && req.method === 'POST') {
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({ token: 'ghs_http', expires_at: new Date(Date.now() + 3600000).toISOString() }),
+      );
+      return;
+    }
+    if (req.url === '/app' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ slug: 'http-bot' }));
+      return;
+    }
+    res.writeHead(404).end('{}');
+  });
+  await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
+  t.after(() => srv.close());
+
+  // Roda ativarIdentidade em processo filho assíncrono para não bloquear o event loop do mock HTTP no processo pai.
+  const runner = `
+    import { ativarIdentidade, desativarIdentidade } from ${JSON.stringify(pathToFileURL(path.join(GOV, 'identidade.mjs')).href)};
+    const f = ${JSON.stringify(fichaBase({ identidade_agente: { modo: 'app', app_id: 99, chave_privada_env: 'TESTE_APP_HTTP_PEM' } }))};
+    try {
+      const r = ativarIdentidade(f);
+      console.log(JSON.stringify(r));
+    } finally {
+      desativarIdentidade();
+    }
+  `;
+  const res = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['--input-type=module', '-e', runner], {
+      env: {
+        ...process.env,
+        AGENTIC_OS_GITHUB_API_URL: `http://127.0.0.1:${srv.address().port}`,
+        TESTE_APP_HTTP_PEM: pemArq,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let out = '';
+    let err = '';
+    child.stdout.on('data', (c) => (out += c));
+    child.stderr.on('data', (c) => (err += c));
+    child.on('error', reject);
+    child.on('close', (code) => resolve({ code, out, err }));
+  });
+  assert.equal(res.code, 0, res.err);
+  assert.deepEqual(JSON.parse(res.out.trim()), { modo: 'app', login: 'http-bot[bot]' });
+  assert.equal(seenAuth.length, 3);
+  const jwt = seenAuth[0].replace(/^Bearer /, '');
+  const [cab, carga, sig] = jwt.split('.');
+  assert.equal(JSON.parse(Buffer.from(carga, 'base64url').toString()).iss, '99');
+  assert.ok(crypto.verify('RSA-SHA256', Buffer.from(`${cab}.${carga}`), publicKey, Buffer.from(sig, 'base64url')));
 });

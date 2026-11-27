@@ -120,14 +120,14 @@ if (settings.model !== recepcao) {
   settings.model = recepcao;
 }
 const ehRota = (h) => JSON.stringify(h).replace(/\\\\/g, '/').includes('router/route.mjs');
-// Gancho de usuário que já roda o route.mjs de qualquer projeto (ex.: lançador do Agente de Cargas).
+// Gancho global de usuário que já roda o route.mjs de qualquer projeto.
 // Com ele, o gancho do projeto faria cada mensagem rodar o roteador 2x (log e chamadas ao Jev em dobro).
 const globalHook = ['settings.json', 'settings.local.json']
   .flatMap((f) => readJson(path.join(os.homedir(), '.claude', f), {}).hooks?.UserPromptSubmit ?? [])
   .flatMap((g) => g.hooks ?? [])
   .find((h) => {
     const t = JSON.stringify(h).replace(/\\\\/g, '/');
-    return t.includes('jev-com-env.mjs') || (t.includes('CLAUDE_PROJECT_DIR') && t.includes('router/route.mjs'));
+    return t.includes('CLAUDE_PROJECT_DIR') && t.includes('router/route.mjs');
   });
 const ups = settings.hooks?.UserPromptSubmit ?? [];
 if (globalHook) {
@@ -171,10 +171,17 @@ if (shared && !shared.includes('router/statusline.mjs')) {
   write(locRel, JSON.stringify(local, null, 2) + '\n');
 }
 
-// 6. CLAUDE.md: upsert do bloco do roteador entre marcadores
-const block = fs.readFileSync(path.join(SRC, 'CLAUDE.router.md'), 'utf8').trim();
+// 6. CLAUDE.md: upsert do bloco do roteador entre marcadores.
+// Em projetos multi-provedor (AGENTS.md + ponteiro @AGENTS.md), preserva CLAUDE.md como ponteiro fino (M2/D2).
+const rawBlock = fs.readFileSync(path.join(SRC, 'CLAUDE.router.md'), 'utf8').trim();
 const cmdPath = path.join(DEST, 'CLAUDE.md');
 let brain = fs.existsSync(cmdPath) ? fs.readFileSync(cmdPath, 'utf8') : '';
+const multiProvedor = fs.existsSync(path.join(DEST, 'AGENTS.md')) && /^@AGENTS\.md/m.test(brain);
+let block = rawBlock;
+if (multiProvedor) {
+  write(path.join('.claude', 'router', 'CLAUDE.router.md'), rawBlock + '\n');
+  block = `${START} (multi-provedor — não editar entre os marcadores) -->\n@.claude/router/CLAUDE.router.md\n${END}`;
+}
 const s = brain.indexOf(START);
 const e = brain.indexOf(END);
 brain =

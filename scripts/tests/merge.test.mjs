@@ -127,12 +127,12 @@ test('exigirChecks e exigirIntegravel', async () => {
   assert.throws(() => exigirIntegravel(ficha(), PRDADOS({ mergeable: 'UNKNOWN' }), 0), (e) => e.codigo === 'PR_CONFLITO' && /calculando/.test(e.message));
 });
 
-test('corpoSquash: bloco da assinatura, aviso por Tipo e Closes', async () => {
+test('corpoSquash: bloco da assinatura, aviso por Tipo e Ref', async () => {
   const { corpoSquash } = await imp('merge.mjs');
   const a = corpoSquash(ASSIN, 101);
   assert.match(a, /^## Assinatura\n\n\| Campo \| Valor \|/);
   assert.match(a, /\| Commit homologado \| s2 \|/);
-  assert.match(a, /Closes #101\n$/);
+  assert.match(a, /Ref #101\n$/);
   assert.equal(a.includes('⚠️'), false);
   assert.match(corpoSquash({ ...ASSIN, tipo: 'review no GitHub ⚠️ gh local = analista' }, 101), /⚠️ O gh desta máquina estava logado como analista/);
   assert.match(corpoSquash({ ...ASSIN, tipo: 'chat, sem prova do GitHub' }, 101), /⚠️ Assinatura declarada no chat, sem prova do GitHub\./);
@@ -187,7 +187,7 @@ test('card-merge: review válida → squash com assinatura, apaga branch remota,
   const m = c.chamadas().find((x) => x.args[0] === 'pr' && x.args[1] === 'merge');
   assert.equal(m.args[m.args.indexOf('--match-head-commit') + 1], 's2');
   assert.equal(m.args[m.args.indexOf('--subject') + 1], 'Carga (#7)');
-  assert.match(m.body_file, /## Assinatura[\s\S]*\| Analista \| analista \|[\s\S]*Closes #101/);
+  assert.match(m.body_file, /## Assinatura[\s\S]*\| Analista \| analista \|[\s\S]*Ref #101/);
   assert.ok(c.chamadas().some((x) => x.args.join(' ') === 'api -X DELETE repos/dono/app/git/refs/heads/feature/101-carga'));
   assert.match(c.chamadas().find((x) => x.args[0] === 'issue').args.join(' '), /Integrado na main .*squash abc1234.*review no GitHub/);
   assert.equal(c.chamadas().some((x) => x.args[1] === 'item-edit'), false); // cartão fica em Aprovado

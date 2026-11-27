@@ -49,6 +49,7 @@ Noutras IAs (Codex, Gemini…) pede em linguagem natural ("faz o propose X", "fa
 | Estado do projeto | `/status` | `automation/procedures/status.md` |
 | Ler/gravar handoff | `/handoff` | `automation/procedures/handoff.md` |
 | Auditar/corrigir conformidade | `/conform` | `automation/procedures/conform.md` |
+| Auditar/montar estrutura | `/structure` | `automation/procedures/structure.md` |
 
 ## Provedores
 Arquivo de entrada por IA e limitações em `providers/registry.md`.

@@ -695,7 +695,7 @@ test('instalador: gancho global do usuário não duplica o roteador', () => {
 
   // Com gancho global: remove só o do roteador e preserva o alheio.
   fs.mkdirSync(path.join(home, '.claude'));
-  const glob = 'node "${AGENTECARGAB1_HOME}/hooks/jev-com-env.mjs" "${CLAUDE_PROJECT_DIR}/.claude/router/route.mjs"';
+  const glob = 'node "${GLOBAL_HOOKS_DIR}/router-wrapper.mjs" "${CLAUDE_PROJECT_DIR}/.claude/router/route.mjs"';
   fs.writeFileSync(
     path.join(home, '.claude', 'settings.json'),
     JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: [{ type: 'command', command: glob }] }] } }),
@@ -719,4 +719,46 @@ test('instalador: gancho global do usuário não duplica o roteador', () => {
   instalar(home);
   assert.equal(JSON.parse(fs.readFileSync(settingsPath, 'utf8')).hooks, undefined);
   fs.rmSync(base, { recursive: true, force: true });
+});
+
+test('v2.0: parseOverride escapa prefixo e trata NFD; log-escalation isola sessões; multi-provedor mantém ponteiro fino', async () => {
+  assert.deepEqual(parseOverride('nivel:avançado'.normalize('NFD') + ' conserte', cfg.tiers), {
+    tierIndex: 2,
+    prompt: 'conserte',
+  });
+  assert.deepEqual(parseOverride('[tier]basico ajuste', cfg.tiers, '[tier]'), {
+    tierIndex: 0,
+    prompt: 'ajuste',
+  });
+
+  const { rotateLogIfNeeded, previousDecision } = await import(pathToFileURL(path.join(ROUTER, 'lib.mjs')).href);
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'roteador-v2-'));
+  const log = path.join(tmpDir, 'decisions.jsonl');
+  const linha = JSON.stringify({ tipo: 'decisao', sessao: 's1', subagente: 'rapido', origem: 'jev', preview: 'a'.repeat(200) }) + '\n';
+  fs.writeFileSync(log, linha.repeat(30));
+  assert.equal(rotateLogIfNeeded(log, 1024, 512), true);
+  assert.ok(fs.statSync(log).size <= 1024);
+
+  // Escalonamento em s2 não contamina s1
+  fs.writeFileSync(
+    log,
+    [
+      JSON.stringify({ tipo: 'decisao', sessao: 's1', subagente: 'rapido', origem: 'jev', preview: 'oi' }),
+      JSON.stringify({ tipo: 'escalonamento', sessao: 's2', subagente: 'profundo' }),
+    ].join('\n') + '\n',
+  );
+  assert.deepEqual(previousDecision('s1', log), { subagente: 'rapido', pedido: 'oi' });
+
+  // Multi-provedor: install-router preserva CLAUDE.md como ponteiro fino
+  const mp = path.join(tmpDir, 'mp');
+  fs.mkdirSync(mp);
+  fs.writeFileSync(path.join(mp, 'AGENTS.md'), '# Agente\n## Protocolo de Arranque de Sessão\n');
+  fs.writeFileSync(path.join(mp, 'CLAUDE.md'), '# Ponteiro\n\n@AGENTS.md\n');
+  const inst = spawnSync(process.execPath, [path.join(REPO, 'scripts', 'install-router.mjs'), mp, '--no-key-check'], { encoding: 'utf8' });
+  assert.equal(inst.status, 0, inst.stderr);
+  const claude = fs.readFileSync(path.join(mp, 'CLAUDE.md'), 'utf8');
+  assert.match(claude, /^@AGENTS\.md/m);
+  assert.match(claude, /^@\.claude\/router\/CLAUDE\.router\.md/m);
+  assert.ok(fs.existsSync(path.join(mp, '.claude', 'router', 'CLAUDE.router.md')));
+  fs.rmSync(tmpDir, { recursive: true, force: true });
 });
